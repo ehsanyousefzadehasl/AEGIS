@@ -19,4 +19,4 @@ xlnet*
 .venv/
 venv/
 .env
-.DS_Store
+.DS_Storeclear.sh
