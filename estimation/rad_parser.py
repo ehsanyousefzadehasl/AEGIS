@@ -1,5 +1,6 @@
 import os
-from monitor import execute_command
+from telemetry import monitor
+from telemetry.monitor import execute_command
 import pandas as pd
 from statistics import mean 
 

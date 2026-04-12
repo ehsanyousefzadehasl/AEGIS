@@ -5,17 +5,17 @@ from threading import Thread, Lock
 import subprocess
 import os
 import logging
-
 from typing import Set
-
-import monitor
-import rad_parser
-from task_queue import Task, Tasks
 from itertools import cycle, islice
-from load_yaml import load_yaml
-from job_spec import load_job_spec
-from dispatch_utils import format_gpu_identifiers, build_recovery_header
-from candidate_selection import build_candidate_gpus
+
+
+from telemetry import monitor
+import estimation.rad_parser
+from queueing.task_queue import Task, Tasks
+from config.load_yaml import load_yaml
+from workload.job_spec import load_job_spec
+from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
+from placement.candidate_selection import build_candidate_gpus
 
 
 # for getting the launched task PID
