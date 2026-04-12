@@ -1,5 +1,22 @@
-__pycache__
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Logs and runtime artifacts
 *.log
 *.et
 *.csv
+
+# Model and artifact files
+*.model
+
+# Workload / generated files
+*.rad
 mobilenet*
+xlnet*
+
+# Optional local environment / editor files
+.venv/
+venv/
+.env
+.DS_Store
