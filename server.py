@@ -14,6 +14,7 @@ from task_queue import Task, Tasks
 from itertools import cycle, islice
 from load_yaml import load_yaml
 from job_spec import load_job_spec
+from dispatch_utils import format_gpu_identifiers, build_recovery_header
 from candidate_selection import build_candidate_gpus
 
 
@@ -459,12 +460,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
@@ -473,7 +469,7 @@ def scheduler(policy=policy):
                 else:
                     recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {a.task} - {gpus_identifiers}")
 
@@ -560,16 +556,11 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 if main_queue_flag is True:
                     with lock:
@@ -667,16 +658,11 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 if main_queue_flag is True:
                     with lock:
@@ -776,12 +762,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
@@ -792,7 +773,7 @@ def scheduler(policy=policy):
                     with recover_lock:
                         recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -883,12 +864,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
@@ -899,7 +875,7 @@ def scheduler(policy=policy):
                     with recover_lock:
                         recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -979,16 +955,11 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -1081,12 +1052,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
@@ -1097,7 +1063,7 @@ def scheduler(policy=policy):
                     with recover_lock:
                         recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -1182,12 +1148,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -1200,7 +1161,7 @@ def scheduler(policy=policy):
                     with recover_lock:
                         recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 Thread(target=command_executor, args=(to_write,)).start()
                 pid = launch_and_get_pid(command)
@@ -1289,12 +1250,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
@@ -1305,7 +1261,7 @@ def scheduler(policy=policy):
                     with recover_lock:
                         recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -1396,12 +1352,7 @@ def scheduler(policy=policy):
                 a.set_service_time(now)
                 a.set_status("dispatched")
 
-                gpus_identifiers = ""
-                for gpu in assigned_gpus.index:
-                    if len(gpus_identifiers) > 0:
-                        gpus_identifiers += f",{gpu}"
-                    else:
-                        gpus_identifiers += f"{gpu}"
+                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
@@ -1412,7 +1363,7 @@ def scheduler(policy=policy):
                     with recover_lock:
                         recovery_queue.dequeue()
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{a.task_id}" > {dir}/err-{now}-{a.task_id}.log'
+                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
