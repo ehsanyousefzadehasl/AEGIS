@@ -14,6 +14,7 @@ from task_queue import Task, Tasks
 from itertools import cycle, islice
 from load_yaml import load_yaml
 from job_spec import load_job_spec
+from candidate_selection import build_candidate_gpus
 
 
 # for getting the launched task PID
@@ -530,26 +531,12 @@ def scheduler(policy=policy):
 
                 gpus_with_metrics = monitor.analyze_Gmetrics()
 
-                THR_SMACT = 0.80
-                THR_SMOCC = 0.45
-                THR_DRAMA = 0.40
-
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= (gpu_memory_requirement + 2048)
-                ]
-
-                candidate_gpus = temp_.loc[
-                    ~(
-                        (temp_['smact'] >= THR_SMACT)
-                        & (
-                            (temp_['smocc'] >= THR_SMOCC)
-                            | (temp_['drama'] >= THR_DRAMA)
-                        )
-                    )
-                ].copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+                candidate_gpus = build_candidate_gpus(
+                    gpus_with_metrics=gpus_with_metrics,
+                    min_free_mib=gpu_memory_requirement + 2048,
+                    available_gpu_ids=all_available_GPUs(),
+                    use_utilization_gate=True,
+                )
 
                 print("candidate & available GPUs:\n", candidate_gpus)
 
@@ -865,26 +852,12 @@ def scheduler(policy=policy):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                THR_SMACT = 0.80
-                THR_SMOCC = 0.45
-                THR_DRAMA = 0.40
-
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= (gpu_memory_requirement + 2048)
-                ]
-
-                candidate_gpus = temp_.loc[
-                    ~(
-                        (temp_['smact'] >= THR_SMACT)
-                        & (
-                            (temp_['smocc'] >= THR_SMOCC)
-                            | (temp_['drama'] >= THR_DRAMA)
-                        )
-                    )
-                ].copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+                candidate_gpus = build_candidate_gpus(
+                    gpus_with_metrics=gpus_with_metrics,
+                    min_free_mib=gpu_memory_requirement + 2048,
+                    available_gpu_ids=all_available_GPUs(),
+                    use_utilization_gate=True,
+                )
 
                 print(gpus_state)
                 print("candidate and available GPUs:\n", candidate_gpus)
@@ -1076,26 +1049,12 @@ def scheduler(policy=policy):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                THR_SMACT = 0.80
-                THR_SMOCC = 0.45
-                THR_DRAMA = 0.40
-
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= 5120
-                ]
-
-                candidate_gpus = temp_.loc[
-                    ~(
-                        (temp_['smact'] >= THR_SMACT)
-                        & (
-                            (temp_['smocc'] >= THR_SMOCC)
-                            | (temp_['drama'] >= THR_DRAMA)
-                        )
-                    )
-                ].copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+                candidate_gpus = build_candidate_gpus(
+                    gpus_with_metrics=gpus_with_metrics,
+                    min_free_mib=5120,
+                    available_gpu_ids=all_available_GPUs(),
+                    use_utilization_gate=True,
+                )
 
                 print(gpus_state)
                 print("candidate and available GPUs:\n", candidate_gpus)
@@ -1192,24 +1151,12 @@ def scheduler(policy=policy):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                THR_SMACT = 0.80
-                THR_SMOCC = 0.45
-                THR_DRAMA = 0.40
-
-                temp_ = gpus_with_metrics.loc[gpus_with_metrics['GPU_mem_available'] >= 5120]
-
-                candidate_gpus = temp_.loc[
-                    ~(
-                        (temp_['smact'] >= THR_SMACT)
-                        & (
-                            (temp_['smocc'] >= THR_SMOCC)
-                            | (temp_['drama'] >= THR_DRAMA)
-                        )
-                    )
-                ].copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+                candidate_gpus = build_candidate_gpus(
+                    gpus_with_metrics=gpus_with_metrics,
+                    min_free_mib=5120,
+                    available_gpu_ids=all_available_GPUs(),
+                    use_utilization_gate=True,
+                )
 
                 print(gpus_state)
                 print("candidate and available GPUs:\n", candidate_gpus)
@@ -1311,26 +1258,12 @@ def scheduler(policy=policy):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                THR_SMACT = 0.80
-                THR_SMOCC = 0.45
-                THR_DRAMA = 0.40
-
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= (gpu_memory_estimation + 2048)
-                ]
-
-                candidate_gpus = temp_.loc[
-                    ~(
-                        (temp_['smact'] >= THR_SMACT)
-                        & (
-                            (temp_['smocc'] >= THR_SMOCC)
-                            | (temp_['drama'] >= THR_DRAMA)
-                        )
-                    )
-                ].copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+                candidate_gpus = build_candidate_gpus(
+                    gpus_with_metrics=gpus_with_metrics,
+                    min_free_mib=gpu_memory_estimation + 2048,
+                    available_gpu_ids=all_available_GPUs(),
+                    use_utilization_gate=True,
+                )
 
                 print(gpus_state)
                 print("candidate and available GPUs:\n", candidate_gpus)
@@ -1432,26 +1365,12 @@ def scheduler(policy=policy):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                THR_SMACT = 0.80
-                THR_SMOCC = 0.45
-                THR_DRAMA = 0.40
-
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= (gpu_memory_estimation + 2048)
-                ]
-
-                candidate_gpus = temp_.loc[
-                    ~(
-                        (temp_['smact'] >= THR_SMACT)
-                        & (
-                            (temp_['smocc'] >= THR_SMOCC)
-                            | (temp_['drama'] >= THR_DRAMA)
-                        )
-                    )
-                ].copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+                candidate_gpus = build_candidate_gpus(
+                    gpus_with_metrics=gpus_with_metrics,
+                    min_free_mib=gpu_memory_estimation + 2048,
+                    available_gpu_ids=all_available_GPUs(),
+                    use_utilization_gate=True,
+                )
 
                 print(gpus_state)
                 print("candidate and available GPUs:\n", candidate_gpus)
