@@ -437,7 +437,6 @@ def scheduler(policy=policy):
 
             a = selected.task_obj
             user, dir, task = selected.user, selected.dir, selected.task
-            main_queue_flag = not selected.from_recovery_queue
 
             spec = load_job_spec_safe(task, estimator)
             if spec is None:
@@ -487,20 +486,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "oracle-FF" and main_queue.length() != 0 and recovery_queue.length() == 0:
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -557,12 +548,7 @@ def scheduler(policy=policy):
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -586,20 +572,12 @@ def scheduler(policy=policy):
                 continue
 
             elif (policy == "oracle-BF") and (main_queue.length() != 0) and (recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -659,12 +637,7 @@ def scheduler(policy=policy):
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
@@ -688,20 +661,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "oracle-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -761,12 +726,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
@@ -792,20 +752,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "oracle-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -863,12 +815,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
@@ -894,20 +841,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "OR-RR" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -958,12 +897,7 @@ def scheduler(policy=policy):
 
                 logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 Thread(target=command_executor, args=(to_write,)).start()
                 pid = launch_and_get_pid(command)
@@ -985,20 +919,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "OR-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -1051,12 +977,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
@@ -1082,20 +1003,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "OR-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -1149,12 +1062,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
@@ -1178,20 +1086,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -1249,12 +1149,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
@@ -1280,20 +1175,12 @@ def scheduler(policy=policy):
                 continue
 
             elif policy == "EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                a = None
-                user, dir, task = None, None, None
-                main_queue_flag = None
+                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+                if selected is None:
+                    continue
 
-                if recovery_queue.length() != 0:
-                    with recover_lock:
-                        a = recovery_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = False
-                else:
-                    with lock:
-                        a = main_queue.check()
-                    user, dir, task = a.user, a.dir, a.task
-                    main_queue_flag = True
+                a = selected.task_obj
+                user, dir, task = selected.user, selected.dir, selected.task
 
                 spec = load_job_spec_safe(task, estimator)
                 if spec is None:
@@ -1351,12 +1238,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    with lock:
-                        main_queue.dequeue()
-                else:
-                    with recover_lock:
-                        recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
