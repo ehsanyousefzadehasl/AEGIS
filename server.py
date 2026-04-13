@@ -12,6 +12,7 @@ from itertools import cycle, islice
 from telemetry import monitor
 import estimation.rad_parser
 from queueing.task_queue import Task, Tasks
+from queueing.selection import peek_next_job, dequeue_selected_job
 from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
@@ -318,11 +319,15 @@ def recovery(dirs=[globals()["recovery_dir"]]):
     """
     list_of_files = []
 
+    print("======>", dirs)
     for base in dirs:
         for file in os.listdir(base):
             if file.startswith("err") and file.endswith(".log"):
                 file = os.path.join(base, file)
                 list_of_files.append(file)
+
+    print("these are the error files that I found in the recovery dir: ", list_of_files)
+
 
     crashes = 0
     all_executions = 0
@@ -426,20 +431,13 @@ def scheduler(policy=policy):
 
             idle_and_available = [g for g in idle_gpus_to_send_job if g in set(all_available_GPUs())]
 
-            a = None
-            main_queue_flag = None
-            user, dir, task = None, None, None
+            selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
+            if selected is None:
+                continue
 
-            if recovery_queue.length() != 0:
-                with recover_lock:
-                    a = recovery_queue.check()
-                user, dir, task = a.user, a.dir, a.task
-                main_queue_flag = False
-            else:
-                with lock:
-                    a = main_queue.check()
-                user, dir, task = a.user, a.dir, a.task
-                main_queue_flag = True
+            a = selected.task_obj
+            user, dir, task = selected.user, selected.dir, selected.task
+            main_queue_flag = not selected.from_recovery_queue
 
             spec = load_job_spec_safe(task, estimator)
             if spec is None:
@@ -464,10 +462,7 @@ def scheduler(policy=policy):
 
                 command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
 
-                if main_queue_flag is True:
-                    main_queue.dequeue()
-                else:
-                    recovery_queue.dequeue()
+                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
 
                 to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
 
