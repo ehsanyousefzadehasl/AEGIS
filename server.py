@@ -19,6 +19,7 @@ from workload.job_spec import load_job_spec
 from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
 from runtime.dispatch import dispatch_selected_job
 from placement.candidate_selection import build_candidate_gpus
+from recovery.manager import recovery
 
 
 # for getting the launched task PID
@@ -244,60 +245,6 @@ def command_generator(dir, gpus_identifiers, command_to_execute, now, a):
     return command
 
 
-# this function is responsible for implementing recovery method
-def recovery(dirs=[globals()["recovery_dir"]]):
-    """
-    This is the function that checks error files and adds OOM found to the high-priority queue
-    """
-    list_of_files = []
-
-    print("======>", dirs)
-    for base in dirs:
-        for file in os.listdir(base):
-            if file.startswith("err") and file.endswith(".log"):
-                file = os.path.join(base, file)
-                list_of_files.append(file)
-
-    print("these are the error files that I found in the recovery dir: ", list_of_files)
-
-
-    crashes = 0
-    all_executions = 0
-    for iterator in list_of_files:
-        if iterator in handled_crashes:
-            continue
-        else:
-            all_executions += 1
-            file = open(f'{iterator}', 'r')
-            Lines = file.readlines()
-
-            for line in Lines:
-                if "unsuccessful" in line or "OOM" in line or "Non-OK-status" in line or "RESOURCE_EXHAUSTED" in line:
-                    crashes += 1
-
-                    handled_crashes.append(iterator)
-                    opener = open(f'{iterator}', 'r')
-                    Lines = opener.readlines()
-
-                    recovery_data = Lines[0].split('+')
-
-                    tmp_dir = recovery_data[0]
-                    tmp_file = recovery_data[3]
-                    tmp_user = recovery_data[4]
-                    tmp_task_id = recovery_data[5][:-1]
-
-                    recovered_task = Task(tmp_user, tmp_dir, tmp_file)
-                    recovered_task.set_id(tmp_task_id)
-
-                    recovered_task.set_if_recovered()
-                    with recover_lock:
-                        recovery_queue.enqueue(recovered_task)
-                    print("OOM FOUND: recovery queue is filled with the task that has problem: ", recovered_task, recovered_task._to_string())
-                    print("length of the queue:", recovery_queue.length())
-                    logging.info(f"Recovered: {recovered_task}")
-                    break
-
-
 def command_executor(command):
     subprocess.run(command, shell=True, check=True, executable='/bin/bash')
     pass
@@ -345,7 +292,15 @@ def scheduler(policy=policy):
     while True:
         time.sleep(1)
 
-        recovery()
+        recovery(
+            dirs=[recovery_dir],
+            handled_crashes=handled_crashes,
+            task_cls=Task,
+            recovery_queue=recovery_queue,
+            recovery_lock=recover_lock,
+            logger=logger,
+        )
+        
         update()
 
         print("updated the table: ", gpus_state)
