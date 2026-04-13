@@ -17,6 +17,7 @@ from queueing.selection import peek_next_job, dequeue_selected_job
 from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
+from runtime.dispatch import dispatch_selected_job
 from placement.candidate_selection import build_candidate_gpus
 
 
@@ -385,33 +386,27 @@ def scheduler(policy=policy):
             if len(idle_and_available) >= number_of_GPUs_requested:
                 assigned_gpus = idle_and_available[:number_of_GPUs_requested]
 
-                a.set_service_time(now)
-                a.set_status("dispatched")
-
-                gpus_identifiers = format_gpu_identifiers(assigned_gpus)
-
-                command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
-
-                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
-
-                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
-
-                logging.info(f"dispatched {a.task_id} - {a.task} - {gpus_identifiers}")
-
-                Thread(target=command_executor, args=(to_write,)).start()
-                pid = launch_and_get_pid(command)
-
-                if pid is None:
-                    logging.error(f"Failed to capture PID for {a.task_id}; leaving GPUs available")
-                else:
-                    for gpu_uuid in assigned_gpus:
-                        launch_task(gpu_uuid, pid)
-
-                    Thread(
-                        target=_async_resolve_and_update,
-                        args=(pid, list(assigned_gpus)),
-                        daemon=True
-                    ).start()
+                pid = dispatch_selected_job(
+                    selected=selected,
+                    task_obj=a,
+                    user=user,
+                    dir=dir,
+                    task=task,
+                    environment=environment,
+                    command_to_execute=command_to_execute,
+                    assigned_gpu_ids=assigned_gpus,
+                    now=now,
+                    main_queue=main_queue,
+                    recovery_queue=recovery_queue,
+                    main_lock=lock,
+                    recovery_lock=recover_lock,
+                    command_generator=command_generator,
+                    command_executor=command_executor,
+                    launch_and_get_pid=launch_and_get_pid,
+                    launch_task=launch_task,
+                    async_resolve_and_update=_async_resolve_and_update,
+                    logger=logger,
+                )
 
                 print(gpus_state)
                 continue
@@ -469,35 +464,57 @@ def scheduler(policy=policy):
 
                 assigned_gpus = candidate_gpus.head(number_of_GPUs_requested)
 
+                # print("assigned GPUs: ", assigned_gpus)
+                # a.set_service_time(now)
+                # a.set_status("dispatched")
+
+                # gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
+
+                # command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
+
+                # to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
+
+                # dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
+
+                # logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
+
+                # Thread(target=command_executor, args=(to_write,)).start()
+                # pid = launch_and_get_pid(command)
+
+                # if pid is None:
+                #     logging.error(f"Failed to capture PID for {a.task_id}; leaving GPUs available")
+                # else:
+                #     for gpu_uuid in assigned_gpus.index:
+                #         launch_task(gpu_uuid, pid)
+
+                #     Thread(
+                #         target=_async_resolve_and_update,
+                #         args=(pid, list(assigned_gpus.index)),
+                #         daemon=True
+                #     ).start()
                 print("assigned GPUs: ", assigned_gpus)
-                a.set_service_time(now)
-                a.set_status("dispatched")
 
-                gpus_identifiers = format_gpu_identifiers(assigned_gpus.index)
-
-                command = command_generator(dir, gpus_identifiers, command_to_execute, now, a)
-
-                to_write = build_recovery_header(dir, environment, command_to_execute, task, user, a.task_id, now)
-
-                dequeue_selected_job(selected, main_queue, recovery_queue, lock, recover_lock)
-
-                logging.info(f"dispatched {a.task_id} - {gpus_identifiers}")
-
-                Thread(target=command_executor, args=(to_write,)).start()
-                pid = launch_and_get_pid(command)
-
-                if pid is None:
-                    logging.error(f"Failed to capture PID for {a.task_id}; leaving GPUs available")
-                else:
-                    for gpu_uuid in assigned_gpus.index:
-                        launch_task(gpu_uuid, pid)
-
-                    Thread(
-                        target=_async_resolve_and_update,
-                        args=(pid, list(assigned_gpus.index)),
-                        daemon=True
-                    ).start()
-
+                pid = dispatch_selected_job(
+                    selected=selected,
+                    task_obj=a,
+                    user=user,
+                    dir=dir,
+                    task=task,
+                    environment=environment,
+                    command_to_execute=command_to_execute,
+                    assigned_gpu_ids=assigned_gpus.index,
+                    now=now,
+                    main_queue=main_queue,
+                    recovery_queue=recovery_queue,
+                    main_lock=lock,
+                    recovery_lock=recover_lock,
+                    command_generator=command_generator,
+                    command_executor=command_executor,
+                    launch_and_get_pid=launch_and_get_pid,
+                    launch_task=launch_task,
+                    async_resolve_and_update=_async_resolve_and_update,
+                    logger=logger,
+                )
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
                 print(time_point, "Oracle-FF Collocated task on GPUs")
                 continue
