@@ -18,6 +18,11 @@ from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from placement.candidate_selection import build_candidate_gpus
+from placement.policies import (
+    select_oracle_bf,
+    select_oracle_magm,
+    select_oracle_lug,
+)
 from recovery.manager import recovery
 
 
@@ -472,33 +477,16 @@ def scheduler(policy=policy, estimator=estimator):
 
                 gpus_with_metrics = monitor.analyze_Gmetrics()
 
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= (gpu_memory_requirement + 2048)
-                ]
+                assigned_gpus = select_oracle_bf(
+                    gpus_with_metrics=gpus_with_metrics,
+                    gpu_memory_requirement=gpu_memory_requirement,
+                    available_gpu_ids=all_available_GPUs(),
+                    number_of_gpus_requested=number_of_GPUs_requested,
+                )
 
-                candidate_gpus = temp_.copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
-
-                print("candidate & available GPUs:\n", candidate_gpus)
-
-                if candidate_gpus.empty:
-                    print("no candidate gpus at all!")
-                    continue
-
-                print("number of gpus requested: ", number_of_GPUs_requested)
-
-                if len(candidate_gpus) < number_of_GPUs_requested:
+                if assigned_gpus is None:
                     print("Not enough GPUs to submit the task to!")
                     continue
-                else:
-                    print("The gpus that we can send the task to: \n", candidate_gpus)
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                sorted_ = candidate_gpus.sort_values(by="GPU_mem_available", ascending=True, kind="mergesort")
-                assigned_gpus = sorted_.head(number_of_GPUs_requested)
 
                 print("assigned GPUs: ", assigned_gpus)
 
@@ -558,34 +546,16 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                temp_ = gpus_with_metrics.loc[
-                    gpus_with_metrics['GPU_mem_available'] >= (gpu_memory_requirement + 2048)
-                ]
+                assigned_gpus = select_oracle_magm(
+                    gpus_with_metrics=gpus_with_metrics,
+                    gpu_memory_requirement=gpu_memory_requirement,
+                    available_gpu_ids=all_available_GPUs(),
+                    number_of_gpus_requested=number_of_GPUs_requested,
+                )
 
-                candidate_gpus = temp_.copy()
-
-                avail = set(all_available_GPUs())
-                candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
-
-                print(gpus_state)
-                print("candidate and available GPUs:\n", candidate_gpus)
-
-                if candidate_gpus.empty:
-                    print("no candidate gpus at all!")
-                    continue
-
-                print("number of gpus requested: ", number_of_GPUs_requested)
-
-                if len(candidate_gpus) < number_of_GPUs_requested:
+                if assigned_gpus is None:
                     print("Not enough GPUs to submit the task to!")
                     continue
-                else:
-                    print("The gpus that we can send the task to: \n", candidate_gpus)
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                sorted_ = candidate_gpus.sort_values(by="GPU_mem_available", ascending=False, kind="mergesort")
-                assigned_gpus = sorted_.head(number_of_GPUs_requested)
 
                 print("assigned GPUs: ", assigned_gpus)
 
@@ -644,32 +614,16 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                candidate_gpus = build_candidate_gpus(
+                assigned_gpus = select_oracle_lug(
                     gpus_with_metrics=gpus_with_metrics,
-                    min_free_mib=gpu_memory_requirement + 2048,
+                    gpu_memory_requirement=gpu_memory_requirement,
                     available_gpu_ids=all_available_GPUs(),
-                    use_utilization_gate=True,
+                    number_of_gpus_requested=number_of_GPUs_requested,
                 )
 
-                print(gpus_state)
-                print("candidate and available GPUs:\n", candidate_gpus)
-
-                if candidate_gpus.empty:
-                    print("no candidate gpus at all!")
-                    continue
-
-                print("number of gpus requested: ", number_of_GPUs_requested)
-
-                if len(candidate_gpus) < number_of_GPUs_requested:
+                if assigned_gpus is None:
                     print("Not enough GPUs to submit the task to!")
                     continue
-                else:
-                    print("The gpus that we can send the task to: \n", candidate_gpus)
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                sorted_ = candidate_gpus.sort_values(by="smact", ascending=True, kind="mergesort")
-                assigned_gpus = sorted_.head(number_of_GPUs_requested)
 
                 print("assigned GPUs: ", assigned_gpus)
 
