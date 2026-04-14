@@ -177,3 +177,30 @@ def select_est_lug(
         kind="mergesort",
     )
     return sorted_.head(number_of_gpus_requested)
+
+
+def select_or_rr(
+    *,
+    round_robin_generator,
+    available_gpu_ids,
+    number_of_gpus_requested: int,
+    gpu_ids,
+):
+    avail = set(available_gpu_ids)
+    assigned_gpus = []
+
+    n = len(gpu_ids)
+    seen = set()
+
+    while len(assigned_gpus) < number_of_gpus_requested and len(seen) < n:
+        gid = next(round_robin_generator)
+        if gid in seen:
+            continue
+        seen.add(gid)
+        if gid in avail and gid not in assigned_gpus:
+            assigned_gpus.append(gid)
+
+    if len(assigned_gpus) < number_of_gpus_requested:
+        return None
+
+    return assigned_gpus

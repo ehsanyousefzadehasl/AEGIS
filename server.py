@@ -22,6 +22,7 @@ from placement.policies import (
     select_oracle_bf,
     select_oracle_magm,
     select_oracle_lug,
+    select_or_rr,
     select_or_magm,
     select_or_lug,
     select_est_magm,
@@ -680,24 +681,17 @@ def scheduler(policy=policy, estimator=estimator):
 
                 now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
-                avail = set(all_available_GPUs())
-                assigned_gpus = []
-
                 print(gpus_state)
-                print("available GPUs: ", avail)
+                print("available GPUs: ", all_available_GPUs())
 
-                N = len(GPU_IDs)
-                seen = set()
+                assigned_gpus = select_or_rr(
+                    round_robin_generator=round_robin_generator,
+                    available_gpu_ids=all_available_GPUs(),
+                    number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_ids=GPU_IDs,
+                )
 
-                while len(assigned_gpus) < number_of_GPUs_requested and len(seen) < N:
-                    gid = next(round_robin_generator)
-                    if gid in seen:
-                        continue
-                    seen.add(gid)
-                    if gid in avail and gid not in assigned_gpus:
-                        assigned_gpus.append(gid)
-
-                if len(assigned_gpus) < number_of_GPUs_requested:
+                if assigned_gpus is None:
                     print("OR-RR: not enough available GPUs in this RR pass; skipping dispatch.")
                     continue
 
