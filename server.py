@@ -375,23 +375,7 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "oracle-FF" and main_queue.length() != 0 and recovery_queue.length() == 0:
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
                 gpu_memory_requirement = spec.gpu_memory_requirement_mib
-                number_of_GPUs_requested = spec.num_gpus_requested
-
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
                     continue
@@ -455,22 +439,7 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif (policy == "oracle-BF") and (main_queue.length() != 0) and (recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
                 gpu_memory_requirement = spec.gpu_memory_requirement_mib
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
@@ -523,22 +492,7 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "oracle-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
                 gpu_memory_requirement = spec.gpu_memory_requirement_mib
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
@@ -591,22 +545,7 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "oracle-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
                 gpu_memory_requirement = spec.gpu_memory_requirement_mib
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
@@ -659,21 +598,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "OR-RR" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 print("this is what we want to parse and work on and collocate: ", task)
                 print("conda environment to activate: ", env_name, environment)
@@ -724,21 +648,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "OR-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 print("this is what we want collocate: ", task)
                 print("environment: ", env_name, environment)
@@ -785,21 +694,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "OR-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 print("this is what we want to parse and work on and collocate: ", task)
                 print("environment: ", env_name, environment)
@@ -846,22 +740,7 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
                 gpu_memory_estimation = spec.gpu_memory_estimate_mib
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 if gpu_memory_estimation is None:
                     print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
@@ -914,22 +793,7 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                selected = peek_next_job(main_queue, recovery_queue, lock, recover_lock)
-                if selected is None:
-                    continue
-
-                a = selected.task_obj
-                user, dir, task = selected.user, selected.dir, selected.task
-
-                spec = load_job_spec_safe(task, estimator)
-                if spec is None:
-                    continue
-
-                env_name = spec.env_name
-                environment = spec.env_path
-                command_to_execute = spec.command_to_execute
                 gpu_memory_estimation = spec.gpu_memory_estimate_mib
-                number_of_GPUs_requested = spec.num_gpus_requested
 
                 if gpu_memory_estimation is None:
                     print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
