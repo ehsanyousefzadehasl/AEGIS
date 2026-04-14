@@ -9,7 +9,6 @@ from itertools import cycle, islice
 
 
 from telemetry import monitor
-import estimation.rad_parser
 from telemetry.gpu_state import init_gpu_state, launch_task, update, all_available_GPUs
 from queueing.task_queue import Task, Tasks
 from queueing.selection import peek_next_job
@@ -29,7 +28,7 @@ from placement.policies import (
     select_est_lug,
 )
 from recovery.manager import recovery
-
+from estimation.online_estimator import estimate_online_gpu_memory
 
 # for getting the launched task PID
 def launch_and_get_pid(cmd: str) -> int | None:
@@ -735,98 +734,121 @@ def scheduler(policy=policy, estimator=estimator):
 
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
                 print(time_point, "EST-LUG Collocated task on GPUs")
+                continue
 
-            elif policy == "ml_predictor" and recovery_queue.length() == 0:
-                a = None
-                user, dir, file = None, None, None
-
-                with lock:
-                    a = main_queue.dequeue()
-                    user, dir, file = a.user, a.dir, a.file
-                    a.set_service_time(datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S"))
-                    a.set_status("dispatched")
-
-                command = f"cd {dir} ; cat {file}"
-                ret = subprocess.run(command, capture_output=True, shell=True)
-                commands = ret.stdout.decode()
-                commands_to_execute = commands.split("\n")
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                env_name = None
-                for command in commands_to_execute:
-                    if "activate" in command:
-                        env_name = commands_to_execute[1].split("activate")[1].strip()
-                        break
-                if env_name is None:
-                    env_name = "tf"
-
-                environment = f"/home/{user}/.conda/envs/{env_name}"
-                print(env_name, environment)
-
-                command_to_execute = None
-                for command in commands_to_execute:
-                    if "python" in command:
-                        command_to_execute = command
-                        break
-                if command_to_execute is None:
-                    print("the command could not be found in the submitted job profile!")
-
-                print("command to execute found: ", command_to_execute)
-
-                cnn_features, fc_features, overhead = rad_parser.analyze_model_summary(
-                    f"{dir}/{commands_to_execute[3]}",
-                    commands_to_execute[4],
-                    int(commands_to_execute[5])
+            elif policy == "ONLINE-EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
+                gpu_memory_estimation = estimate_online_gpu_memory(
+                    spec=spec,
+                    workdir=dir,
+                    estimator_name=estimator,
                 )
 
-                global cnn_loaded_model
-                global fc_loaded_model
-
-                cnn_memory_predictor = cnn_loaded_model
-                fc_memory_predictor = fc_loaded_model
-
-                cnn_predicted_memory = cnn_memory_predictor.predict(cnn_features)
-                fc_predicted_memory = fc_memory_predictor.predict(fc_features)
-
-                print(cnn_predicted_memory, fc_predicted_memory, overhead)
-
-                all_memory_estimation = cnn_predicted_memory[0] + fc_predicted_memory[0] + overhead
-
-                time.sleep(61)
-                gpus_with_metrics = monitor.Gmetrics
-                temp_ = gpus_with_metrics.loc[gpus_with_metrics['GPU_mem_available'] > (all_memory_estimation)]
-                candidate_gpus = temp_.loc[gpus_with_metrics['smact'] <= 0.8]
-
-                sorted_ = candidate_gpus.sort_values(by="GPU_mem_available", ascending=False, kind="mergesort")
-
-                print("gpus sorted:\n", sorted_)
-
-                if candidate_gpus.empty:
-                    print("No GPUs to submit job to!")
-                    with lock:
-                        main_queue.put_it_back(a)
+                if gpu_memory_estimation is None:
+                    print(f"Could not compute online GPU memory estimate for task {task}")
                     continue
-                else:
-                    print("The gpus that we can send job to :) \n", candidate_gpus)
-                    candidate_gpu_to_collocate_job = sorted_.index[0]
-                    print("candidate GPU: ", candidate_gpu_to_collocate_job)
 
-                logging.info(f"dispatched {a.task_id} - {candidate_gpu_to_collocate_job}")
+                print("this is what we want to parse and work on and collocate: ", task)
+                print("conda environment to activate: ", env_name, environment)
+                print("online memory estimation: ", gpu_memory_estimation)
 
-                command = f"""cd {dir} ; . /opt/anaconda/etc/profile.d/conda.sh ; conda activate {environment} ; export CUDA_VISIBLE_DEVICES={candidate_gpu_to_collocate_job} ; {{ time {command_to_execute} 1> out-{user}-{now}-{file}-{a.task_id}.log 2>> err-{user}-{now}-{file}-{a.task_id}.log ; }} 2> time-{user}-{now}-{file}-{a.task_id}.et & pid=$!
-                    wait $pid 
-                    if [ $? -eq 0 ]; then
-                        echo 'Successful' >> err-{user}-{now}-{file}-{a.task_id}.log
-                    else
-                        echo 'unsuccessful' >>  err-{user}-{now}-{file}-{a.task_id}.log
-                    fi
-                    """
+                gpus_with_metrics = monitor.analyze_Gmetrics()
+                print(gpus_with_metrics)
 
-                to_write = f'echo "{dir}+{environment}+{command_to_execute}+{file}+{user}+{a.task_id}" > err-{user}-{now}-{file}-{a.task_id}.log'
+                assigned_gpus = select_est_magm(
+                    gpus_with_metrics=gpus_with_metrics,
+                    gpu_memory_estimation=gpu_memory_estimation,
+                    available_gpu_ids=all_available_GPUs(),
+                    number_of_gpus_requested=number_of_GPUs_requested,
+                )
 
-                Thread(target=command_executor, args=(to_write,)).start()
-                Thread(target=command_executor, args=(command,)).start()
+                if assigned_gpus is None:
+                    print("Not enough GPUs to submit the task to!")
+                    continue
+
+                print("assigned GPUs: ", assigned_gpus)
+
+                dispatch_selected_job(
+                    selected=selected,
+                    task_obj=a,
+                    user=user,
+                    dir=dir,
+                    task=task,
+                    environment=environment,
+                    command_to_execute=command_to_execute,
+                    assigned_gpu_ids=assigned_gpus.index,
+                    now=now,
+                    main_queue=main_queue,
+                    recovery_queue=recovery_queue,
+                    main_lock=lock,
+                    recovery_lock=recover_lock,
+                    command_generator=command_generator,
+                    command_executor=command_executor,
+                    launch_and_get_pid=launch_and_get_pid,
+                    launch_task=launch_task,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
+                    logger=logger,
+                )
+
+                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+                print(time_point, "ONLINE-EST-MAGM Collocated task on GPUs")
+                continue
+
+            elif policy == "ONLINE-EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
+                gpu_memory_estimation = estimate_online_gpu_memory(
+                    spec=spec,
+                    workdir=dir,
+                    estimator_name=estimator,
+                )
+
+                if gpu_memory_estimation is None:
+                    print(f"Could not compute online GPU memory estimate for task {task}")
+                    continue
+
+                print("this is what we want to parse and work on and collocate: ", task)
+                print("environment: ", env_name, environment)
+                print("online memory estimation: ", gpu_memory_estimation)
+
+                gpus_with_metrics = monitor.analyze_Gmetrics()
+                print(gpus_with_metrics)
+
+                assigned_gpus = select_est_lug(
+                    gpus_with_metrics=gpus_with_metrics,
+                    gpu_memory_estimation=gpu_memory_estimation,
+                    available_gpu_ids=all_available_GPUs(),
+                    number_of_gpus_requested=number_of_GPUs_requested,
+                )
+
+                if assigned_gpus is None:
+                    print("Not enough GPUs to submit the task to!")
+                    continue
+
+                print("assigned GPUs: ", assigned_gpus)
+
+                dispatch_selected_job(
+                    selected=selected,
+                    task_obj=a,
+                    user=user,
+                    dir=dir,
+                    task=task,
+                    environment=environment,
+                    command_to_execute=command_to_execute,
+                    assigned_gpu_ids=assigned_gpus.index,
+                    now=now,
+                    main_queue=main_queue,
+                    recovery_queue=recovery_queue,
+                    main_lock=lock,
+                    recovery_lock=recover_lock,
+                    command_generator=command_generator,
+                    command_executor=command_executor,
+                    launch_and_get_pid=launch_and_get_pid,
+                    launch_task=launch_task,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
+                    logger=logger,
+                )
+
+                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+                print(time_point, "ONLINE-EST-LUG Collocated task on GPUs")
+                continue
 
             timepoint = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
             print(timepoint, "Number of tasks waiting in the queue: ", main_queue.length())
