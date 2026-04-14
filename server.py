@@ -13,10 +13,9 @@ from telemetry import monitor
 import estimation.rad_parser
 from telemetry.gpu_state import init_gpu_state, launch_task, mark_seen_now, update, all_available_GPUs
 from queueing.task_queue import Task, Tasks
-from queueing.selection import peek_next_job, dequeue_selected_job
+from queueing.selection import peek_next_job
 from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
-from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
 from runtime.dispatch import dispatch_selected_job
 from placement.candidate_selection import build_candidate_gpus
 from recovery.manager import recovery
@@ -286,8 +285,7 @@ def server():
         conn.close()
 
 
-def scheduler(policy=policy):
-    estimator = globals()["estimator"]
+def scheduler(policy=policy, estimator=estimator):
 
     while True:
         time.sleep(1)
