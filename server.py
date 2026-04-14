@@ -5,18 +5,18 @@ from threading import Thread, Lock
 import subprocess
 import os
 import logging
-from typing import Set
 from itertools import cycle, islice
 
 
 from telemetry import monitor
 import estimation.rad_parser
-from telemetry.gpu_state import init_gpu_state, launch_task, mark_seen_now, update, all_available_GPUs
+from telemetry.gpu_state import init_gpu_state, launch_task, update, all_available_GPUs
 from queueing.task_queue import Task, Tasks
 from queueing.selection import peek_next_job
 from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
+from runtime.pid_resolution import resolve_and_update_gpu_pid
 from placement.candidate_selection import build_candidate_gpus
 from placement.policies import (
     select_oracle_bf,
@@ -49,114 +49,6 @@ def launch_and_get_pid(cmd: str) -> int | None:
     except ValueError:
         return None
 # ending the logic for getting PID
-
-
-# --- add helpers (just above descendants) ---
-def _proc_children_once(pid: int) -> list[int]:
-    PROC_CHILDREN_HELPER = "/usr/bin/proc_children_helper"
-    """Direct children via /proc (more reliable than pgrep)."""
-    try:
-        out = subprocess.check_output([PROC_CHILDREN_HELPER, str(pid)], text=True)
-        return [int(x) for x in out.split() if x.isdigit()]
-    except Exception:
-        print("could not read children")
-        return []
-
-
-def _session_id(pid: int) -> str | None:
-    """Return POSIX session id (SID) of a pid, or None."""
-    try:
-        out = subprocess.check_output(["ps", "-o", "sid=", "-p", str(pid)], text=True).strip()
-        return out if out else None
-    except subprocess.CalledProcessError:
-        return None
-
-
-def _pids_in_same_session(launcher_pid: int) -> Set[int]:
-    """All PIDs that share the same SID as launcher (helps with MPS, fork/exec)."""
-    sid = _session_id(launcher_pid)
-    if not sid:
-        return set()
-    try:
-        # List all pids with their sid, filter by sid
-        out = subprocess.check_output(["ps", "-e", "-o", "pid=,sid="], text=True)
-    except subprocess.CalledProcessError:
-        return set()
-    s = set()
-    for line in out.splitlines():
-        parts = line.split()
-        if len(parts) == 2 and parts[1] == sid and parts[0].isdigit():
-            s.add(int(parts[0]))
-    return s
-
-
-# --- replace descendants() with a proc-based, recursive walk + SID union ---
-def descendants(pid: int) -> set[int]:
-    """All descendants of pid (via /proc), plus same-session PIDs for MPS cases."""
-    seen: Set[int] = set()
-    frontier = [pid]
-    while frontier:
-        p = frontier.pop()
-        if p in seen:
-            continue
-        seen.add(p)
-        kids = _proc_children_once(p)
-        frontier.extend(kids)
-    return seen | _pids_in_same_session(pid)
-
-
-# --- pid resolve logic: also accept same-session matches ---
-def resolve_gpu_pid(launcher_pid: int, timeout=30, poll=0.5) -> int:
-    deadline = time.time() + timeout
-    sid_l = _session_id(launcher_pid)
-    last_seen = None
-
-    while time.time() < deadline:
-        if not monitor.pid_on_system(str(launcher_pid)):
-            return last_seen or launcher_pid
-
-        cand = descendants(launcher_pid)
-        if sid_l:
-            cand |= _pids_in_same_session(launcher_pid)
-
-        found = None
-        for row in monitor.pmon_rows():
-            cmd = row.get("cmd", "")
-
-            if cmd in {"nvidia-cuda-mps", "nvidia-cuda-mps-control"}:
-                continue
-
-            pid_s = row.get("pid", "")
-            if pid_s.isdigit():
-                gpu_pid = int(pid_s)
-                if gpu_pid in cand:
-                    found = gpu_pid
-                    break
-
-        if found is not None:
-            if last_seen == found:
-                return found
-            last_seen = found
-
-        time.sleep(poll)
-
-    return last_seen or launcher_pid
-
-
-def _async_resolve_and_update(launcher_pid: int, gpu_uuids: list[str]) -> None:
-    try:
-        real_pid = resolve_gpu_pid(launcher_pid, timeout=1000, poll=0.5)
-        print("resolved the PID, and will update the table")
-        for u in gpu_uuids:
-            gpus_state.at[u, "CPU_task_PID"] = int(real_pid)
-            print("updated the validity table!", gpus_state)
-
-            if monitor.is_in_pmon(str(real_pid)):
-                print("oh! wait, I saw it here right after resolving!")
-                mark_seen_now(u)
-
-    except Exception as e:
-        logging.exception("async resolve failed for %s: %s", launcher_pid, e)
 
 
 def load_job_spec_safe(task_path: str, estimator_name: str):
@@ -367,7 +259,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -431,7 +323,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -482,7 +374,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -536,7 +428,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -589,7 +481,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -639,7 +531,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -685,7 +577,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -731,7 +623,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -784,7 +676,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
@@ -837,7 +729,7 @@ def scheduler(policy=policy, estimator=estimator):
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
-                    async_resolve_and_update=_async_resolve_and_update,
+                    async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
                 )
 
