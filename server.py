@@ -27,6 +27,7 @@ from placement.policies import (
     select_est_magm,
     select_est_lug,
 )
+from placement.dispatcher import dispatch_placement
 from recovery.manager import recovery
 from estimation.online_estimator import estimate_online_gpu_memory
 
@@ -277,30 +278,19 @@ def scheduler(policy=policy, estimator=estimator):
 
                 gpus_with_metrics = monitor.analyze_Gmetrics()
 
-                candidate_gpus = build_candidate_gpus(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    min_free_mib=gpu_memory_requirement + 2048,
                     available_gpu_ids=all_available_GPUs(),
-                    use_utilization_gate=True,
+                    number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_requirement=gpu_memory_requirement,
                 )
 
-                print("candidate & available GPUs:\n", candidate_gpus)
-
-                if candidate_gpus.empty:
-                    print("no candidate gpus at all!")
-                    continue
-
-                print("number of gpus requested: ", number_of_GPUs_requested)
-
-                if len(candidate_gpus) < number_of_GPUs_requested:
+                if assigned_gpus is None:
                     print("Not enough GPUs to submit the task to!")
                     continue
-                else:
-                    print("The gpus that we can send the task to: \n", candidate_gpus)
 
                 now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                assigned_gpus = candidate_gpus.head(number_of_GPUs_requested)
 
                 print("assigned GPUs: ", assigned_gpus)
 
@@ -342,11 +332,12 @@ def scheduler(policy=policy, estimator=estimator):
 
                 gpus_with_metrics = monitor.analyze_Gmetrics()
 
-                assigned_gpus = select_oracle_bf(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_requirement=gpu_memory_requirement,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_requirement=gpu_memory_requirement,
                 )
 
                 if assigned_gpus is None:
@@ -396,11 +387,12 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_oracle_magm(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_requirement=gpu_memory_requirement,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_requirement=gpu_memory_requirement,
                 )
 
                 if assigned_gpus is None:
@@ -449,11 +441,12 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_oracle_lug(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_requirement=gpu_memory_requirement,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_requirement=gpu_memory_requirement,
                 )
 
                 if assigned_gpus is None:

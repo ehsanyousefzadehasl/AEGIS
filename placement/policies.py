@@ -204,3 +204,23 @@ def select_or_rr(
         return None
 
     return assigned_gpus
+
+
+def select_oracle_ff(
+    *,
+    gpus_with_metrics: pd.DataFrame,
+    gpu_memory_requirement: int,
+    available_gpu_ids,
+    number_of_gpus_requested: int,
+):
+    candidate_gpus = build_candidate_gpus(
+        gpus_with_metrics=gpus_with_metrics,
+        min_free_mib=gpu_memory_requirement + 2048,
+        available_gpu_ids=available_gpu_ids,
+        use_utilization_gate=True,
+    )
+
+    if candidate_gpus.empty or len(candidate_gpus) < number_of_gpus_requested:
+        return None
+
+    return candidate_gpus.head(number_of_gpus_requested)
