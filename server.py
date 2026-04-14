@@ -344,7 +344,7 @@ def scheduler(policy=policy, estimator=estimator):
             if len(idle_and_available) >= number_of_GPUs_requested:
                 assigned_gpus = idle_and_available[:number_of_GPUs_requested]
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -424,7 +424,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -490,7 +490,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -559,7 +559,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -627,7 +627,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -699,7 +699,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -778,7 +778,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -856,7 +856,7 @@ def scheduler(policy=policy, estimator=estimator):
                 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -940,7 +940,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
@@ -1024,7 +1024,7 @@ def scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                pid = dispatch_selected_job(
+                dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
                     user=user,
