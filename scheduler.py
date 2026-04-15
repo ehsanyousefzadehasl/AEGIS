@@ -1,19 +1,19 @@
 import time
 import datetime
 import logging
-from itertools import cycle, islice
+from itertools import islice
 
 
 from telemetry import monitor
-from telemetry.gpu_state import init_gpu_state, launch_task, update, all_available_GPUs
+from telemetry.gpu_state import launch_task, update, all_available_GPUs
 from queueing.task_queue import Task
 from queueing.selection import peek_next_job
-from config.settings import load_scheduler_settings
 from workload.job_spec import load_job_spec
 from runtime.state import lock, recover_lock, main_queue, recovery_queue
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
+from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
 from placement.dispatcher import dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
 from recovery.manager import recovery
@@ -28,18 +28,11 @@ def load_job_spec_safe(task_path: str, estimator_name: str):
         return None
 
 
-# logger for keeping track of submission, dispatch, and termination time
-logging.basicConfig(
-    filename='std.log',
-    filemode='w',
-    format='%(asctime)s %(message)s',
-    datefmt='%d-%b-%y %H:%M:%S'
-)
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger = configure_scheduler_logger()
 
+runtime_state = initialize_scheduler_runtime()
 
-settings = load_scheduler_settings()
+settings = runtime_state["settings"]
 
 policy = settings.policy
 print("Configured mapping policy:", policy)
@@ -50,17 +43,16 @@ print("Configured mapping estimator:", estimator)
 recovery_dir = settings.recovery_dir
 print("Configured recovery directory:", recovery_dir)
 
+gpu_UUIDs = runtime_state["gpu_uuids"]
+GPU_IDs = runtime_state["gpu_ids"]
+round_robin_generator = runtime_state["round_robin_generator"]
+gpus_state = runtime_state["gpus_state"]
+handled_crashes = runtime_state["handled_crashes"]
+
+print("Initialized the gpus_state tracker: ", gpus_state)
+
 patience = settings.patience
 monitoring_window_size = settings.monitoring_window_size
-
-# ============= for having Round-Robin selection logic of GPUs ============
-gpu_UUIDs = monitor.gpu_uuids()
-
-GPU_IDs = []
-for gpu in gpu_UUIDs:
-    GPU_IDs.append(gpu)
-
-round_robin_generator = cycle(GPU_IDs)
 
 
 def select_ids(n):
@@ -72,18 +64,6 @@ def select_ids(n):
         list: List of selected IDs.
     """
     return list(islice(round_robin_generator, n))
-
-
-# ============= End of Round Robin selection logic of GPUs =================
-
-# keeps track of the handled crashes
-handled_crashes = []
-
-
-
-#  ====== initialized GPUs ======
-gpus_state = init_gpu_state(gpu_UUIDs)
-print("Initialized the gpus_state tracker: ", gpus_state)
 
 def run_scheduler(policy=policy, estimator=estimator):
 
