@@ -16,6 +16,7 @@ from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
+from runtime.submission_server import run_submission_server
 from placement.dispatcher import dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
 from recovery.manager import recovery
@@ -143,38 +144,12 @@ def command_executor(command):
 
 def server():
     host = socket.gethostname()
-    port = 5001
-
-    server_socket = socket.socket()
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-    server_socket.bind((host, port))
-
-    while True:
-        server_socket.listen(10)
-        while True:
-            conn, address = server_socket.accept()
-            print("Connection from: " + str(address))
-            data = conn.recv(1024).decode()
-
-            if not data:
-                break
-            message = "Got your task and queued it."
-
-            conn.send(message.encode())
-
-            user, dir, task = data.split('+')
-            task = "/" + task[1:]
-
-            print(user, dir, task)
-
-            a = Task(user, dir, task)
-
-            with lock:
-                main_queue.enqueue(a)
-                logging.info(f"queued {a.task_id} - {a.task}")
-
-        conn.close()
+    run_submission_server(
+        main_queue=main_queue,
+        main_lock=lock,
+        host=host,
+        port=5001,
+    )
 
 
 def scheduler(policy=policy, estimator=estimator):
