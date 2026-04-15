@@ -17,8 +17,9 @@ from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from placement.dispatcher import dispatch_placement
+from placement.inputs import resolve_policy_inputs
 from recovery.manager import recovery
-from estimation.online_estimator import estimate_online_gpu_memory
+
 
 # for getting the launched task PID
 def launch_and_get_pid(cmd: str) -> int | None:
@@ -227,6 +228,13 @@ def scheduler(policy=policy, estimator=estimator):
 
             now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
+            gpu_memory_requirement, gpu_memory_estimation = resolve_policy_inputs(
+                policy=policy,
+                spec=spec,
+                workdir=dir,
+                estimator_name=estimator,
+            )
+
             if len(idle_and_available) >= number_of_GPUs_requested:
                 assigned_gpus = idle_and_available[:number_of_GPUs_requested]
 
@@ -256,7 +264,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "oracle-FF" and main_queue.length() != 0 and recovery_queue.length() == 0:
-                gpu_memory_requirement = spec.gpu_memory_requirement_mib
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
                     continue
@@ -309,8 +316,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif (policy == "oracle-BF") and (main_queue.length() != 0) and (recovery_queue.length() == 0):
-                gpu_memory_requirement = spec.gpu_memory_requirement_mib
-
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
                     continue
@@ -363,8 +368,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "oracle-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                gpu_memory_requirement = spec.gpu_memory_requirement_mib
-
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
                     continue
@@ -417,8 +420,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "oracle-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                gpu_memory_requirement = spec.gpu_memory_requirement_mib
-
                 if gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
                     continue
@@ -617,8 +618,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                gpu_memory_estimation = spec.gpu_memory_estimate_mib
-
                 if gpu_memory_estimation is None:
                     print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
                     continue
@@ -671,8 +670,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                gpu_memory_estimation = spec.gpu_memory_estimate_mib
-
                 if gpu_memory_estimation is None:
                     print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
                     continue
@@ -725,12 +722,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "ONLINE-EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                gpu_memory_estimation = estimate_online_gpu_memory(
-                    spec=spec,
-                    workdir=dir,
-                    estimator_name=estimator,
-                )
-
                 if gpu_memory_estimation is None:
                     print(f"Could not compute online GPU memory estimate for task {task}")
                     continue
@@ -783,12 +774,6 @@ def scheduler(policy=policy, estimator=estimator):
                 continue
 
             elif policy == "ONLINE-EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                gpu_memory_estimation = estimate_online_gpu_memory(
-                    spec=spec,
-                    workdir=dir,
-                    estimator_name=estimator,
-                )
-
                 if gpu_memory_estimation is None:
                     print(f"Could not compute online GPU memory estimate for task {task}")
                     continue
