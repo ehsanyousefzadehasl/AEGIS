@@ -1,7 +1,7 @@
 from threading import Thread
 
 from telemetry import monitor
-from server import run_ingress, run_scheduler
+from scheduler import run_ingress, run_scheduler
 
 
 if __name__ == "__main__":
