@@ -256,10 +256,3 @@ def run_scheduler(policy=policy, estimator=estimator):
             print(timepoint, "Number of tasks waiting in the queue: ", main_queue.length())
         else:
             pass
-
-
-if __name__ == '__main__':
-    Thread(target=run_ingress).start()
-    Thread(target=run_scheduler).start()
-    Thread(target=monitor.monitor_logger).start()
-    Thread(target=monitor.top_system_logger).start()
