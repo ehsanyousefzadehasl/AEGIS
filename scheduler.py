@@ -30,7 +30,7 @@ logger = configure_scheduler_logger()
 
 runtime_state = initialize_scheduler_runtime()
 
-settings = runtime_state["settings"]
+settings = runtime_state.settings
 
 policy = settings.policy
 print("Configured mapping policy:", policy)
@@ -41,11 +41,11 @@ print("Configured mapping estimator:", estimator)
 recovery_dir = settings.recovery_dir
 print("Configured recovery directory:", recovery_dir)
 
-gpu_UUIDs = runtime_state["gpu_uuids"]
-GPU_IDs = runtime_state["gpu_ids"]
-round_robin_generator = runtime_state["round_robin_generator"]
-gpus_state = runtime_state["gpus_state"]
-handled_crashes = runtime_state["handled_crashes"]
+gpu_UUIDs = runtime_state.gpu_uuids
+GPU_IDs = runtime_state.gpu_ids
+round_robin_generator = runtime_state.round_robin_generator
+gpus_state = runtime_state.gpus_state
+handled_crashes = runtime_state.handled_crashes
 
 print("Initialized the gpus_state tracker: ", gpus_state)
 
