@@ -8,7 +8,7 @@ from telemetry import monitor
 from telemetry.gpu_state import init_gpu_state, launch_task, update, all_available_GPUs
 from queueing.task_queue import Task
 from queueing.selection import peek_next_job
-from config.load_yaml import load_yaml
+from config.settings import load_scheduler_settings
 from workload.job_spec import load_job_spec
 from runtime.state import lock, recover_lock, main_queue, recovery_queue
 from runtime.dispatch import dispatch_selected_job
@@ -38,17 +38,20 @@ logging.basicConfig(
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-# loading mapping policy
-cfg = load_yaml()
 
-policy = cfg.get("mapper", {}).get("policy", "exclusive")
+settings = load_scheduler_settings()
+
+policy = settings.policy
 print("Configured mapping policy:", policy)
 
-estimator = cfg.get("mapper", {}).get("estimator", "None")
+estimator = settings.estimator
 print("Configured mapping estimator:", estimator)
 
-recovery_dir = cfg.get("recovery", {}).get("dir", "/home/ehyo/rad-scheduler")
+recovery_dir = settings.recovery_dir
 print("Configured recovery directory:", recovery_dir)
+
+patience = settings.patience
+monitoring_window_size = settings.monitoring_window_size
 
 # ============= for having Round-Robin selection logic of GPUs ============
 gpu_UUIDs = monitor.gpu_uuids()
@@ -76,8 +79,6 @@ def select_ids(n):
 # keeps track of the handled crashes
 handled_crashes = []
 
-patience = cfg.get("monitor", {}).get("patience", "10")
-monitoring_window_size = cfg.get("monitor", {}).get("window", "30")
 
 
 #  ====== initialized GPUs ======
