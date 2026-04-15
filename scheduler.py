@@ -1,8 +1,6 @@
 import time
 import datetime
 import logging
-from itertools import islice
-
 
 from telemetry import monitor
 from telemetry.gpu_state import launch_task, update, all_available_GPUs
@@ -53,17 +51,6 @@ print("Initialized the gpus_state tracker: ", gpus_state)
 
 patience = settings.patience
 monitoring_window_size = settings.monitoring_window_size
-
-
-def select_ids(n):
-    """
-    Selects n IDs in a round-robin manner.
-    Args:
-        n (int): Number of IDs to select.
-    Returns:
-        list: List of selected IDs.
-    """
-    return list(islice(round_robin_generator, n))
 
 def run_scheduler(policy=policy, estimator=estimator):
 
