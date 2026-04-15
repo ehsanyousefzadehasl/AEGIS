@@ -12,7 +12,7 @@ from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
-from placement.dispatcher import dispatch_placement, is_dispatcher_policy
+from placement.dispatcher import PlacementRequest, dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
 from recovery.manager import recovery
 
@@ -153,14 +153,16 @@ def run_scheduler(policy=policy, estimator=estimator):
                     print(gpus_with_metrics)
 
                 assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_requirement=gpu_memory_requirement,
-                    gpu_memory_estimation=gpu_memory_estimation,
-                    round_robin_generator=round_robin_generator,
-                    gpu_ids=GPU_IDs,
+                    PlacementRequest(
+                        policy=policy,
+                        gpus_with_metrics=gpus_with_metrics,
+                        available_gpu_ids=all_available_GPUs(),
+                        number_of_gpus_requested=number_of_GPUs_requested,
+                        gpu_memory_requirement=gpu_memory_requirement,
+                        gpu_memory_estimation=gpu_memory_estimation,
+                        round_robin_generator=round_robin_generator,
+                        gpu_ids=GPU_IDs,
+                    )
                 )
 
                 if assigned_gpus is None:
