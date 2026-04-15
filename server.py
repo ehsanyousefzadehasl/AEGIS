@@ -17,29 +17,10 @@ from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.submission_server import run_submission_server
+from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
 from placement.dispatcher import dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
 from recovery.manager import recovery
-
-
-# for getting the launched task PID
-def launch_and_get_pid(cmd: str) -> int | None:
-    p = subprocess.Popen(
-        ["bash", "-lc", cmd],
-        stdout=subprocess.PIPE,      # receives the echoed PID
-        stderr=subprocess.DEVNULL,
-        text=True,
-        bufsize=1,
-        preexec_fn=os.setsid,   # <<< unique SID per launch
-    )
-    pid_line = p.stdout.readline().strip() if p.stdout else ""
-    if p.stdout:
-        p.stdout.close()            # don't wait; job keeps running
-    try:
-        return int(pid_line)
-    except ValueError:
-        return None
-# ending the logic for getting PID
 
 
 def load_job_spec_safe(task_path: str, estimator_name: str):
@@ -114,32 +95,6 @@ monitoring_window_size = cfg.get("monitor", {}).get("window", "30")
 #  ====== initialized GPUs ======
 gpus_state = init_gpu_state(gpu_UUIDs)
 print("Initialized the gpus_state tracker: ", gpus_state)
-
-
-# command generator function
-def command_generator(dir, gpus_identifiers, command_to_execute, now, a):
-    command = f"""cd {dir} ; \
-                export CUDA_VISIBLE_DEVICES={gpus_identifiers} ; \
-                exec 3>&1 ; \
-                {{ time ( \
-                    {{ \
-                        conda run --no-capture-output -p /opt/miniconda3/envs/tf {command_to_execute} & pid=$! ; \
-                        echo $pid >&3 ; \
-                        wait $pid ; \
-                        if [ $? -eq 0 ]; then \
-                            echo 'Successful' >> {dir}/err-{now}-{a.task_id}.log ; \
-                        else \
-                            echo 'unsuccessful' >> {dir}/err-{now}-{a.task_id}.log ; \
-                        fi ; \
-                    }} 1> {dir}/out-{now}-{a.task_id}.log 2>> {dir}/err-{now}-{a.task_id}.log \
-                ) ; }} 2> {dir}/time-{now}-{a.task_id}.et ; \
-                exec 3>&-"""
-    return command
-
-
-def command_executor(command):
-    subprocess.run(command, shell=True, check=True, executable='/bin/bash')
-    pass
 
 
 def server():
@@ -227,7 +182,7 @@ def scheduler(policy=policy, estimator=estimator):
                     recovery_queue=recovery_queue,
                     main_lock=lock,
                     recovery_lock=recover_lock,
-                    command_generator=command_generator,
+                    command_generator=build_launch_command,
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
@@ -285,7 +240,7 @@ def scheduler(policy=policy, estimator=estimator):
                     recovery_queue=recovery_queue,
                     main_lock=lock,
                     recovery_lock=recover_lock,
-                    command_generator=command_generator,
+                    command_generator=build_launch_command,
                     command_executor=command_executor,
                     launch_and_get_pid=launch_and_get_pid,
                     launch_task=launch_task,
