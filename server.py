@@ -97,7 +97,7 @@ gpus_state = init_gpu_state(gpu_UUIDs)
 print("Initialized the gpus_state tracker: ", gpus_state)
 
 
-def server():
+def run_ingress():
     host = socket.gethostname()
     run_submission_server(
         main_queue=main_queue,
@@ -107,7 +107,7 @@ def server():
     )
 
 
-def scheduler(policy=policy, estimator=estimator):
+def run_scheduler(policy=policy, estimator=estimator):
 
     while True:
         time.sleep(1)
@@ -259,7 +259,7 @@ def scheduler(policy=policy, estimator=estimator):
 
 
 if __name__ == '__main__':
-    Thread(target=server).start()
-    Thread(target=scheduler).start()
+    Thread(target=run_ingress).start()
+    Thread(target=run_scheduler).start()
     Thread(target=monitor.monitor_logger).start()
     Thread(target=monitor.top_system_logger).start()
