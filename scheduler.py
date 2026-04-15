@@ -1,18 +1,16 @@
 import time
 import datetime
-from threading import Thread, Lock
-import subprocess
-import os
 import logging
 from itertools import cycle, islice
 
 
 from telemetry import monitor
 from telemetry.gpu_state import init_gpu_state, launch_task, update, all_available_GPUs
-from queueing.task_queue import Task, Tasks
+from queueing.task_queue import Task
 from queueing.selection import peek_next_job
 from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
+from runtime.state import lock, recover_lock, main_queue, recovery_queue
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
@@ -51,14 +49,6 @@ print("Configured mapping estimator:", estimator)
 
 recovery_dir = cfg.get("recovery", {}).get("dir", "/home/ehyo/rad-scheduler")
 print("Configured recovery directory:", recovery_dir)
-
-# locks for avoiding race condition
-lock = Lock()
-recover_lock = Lock()
-
-# queues for submitted jobs
-main_queue = Tasks()
-recovery_queue = Tasks()
 
 # ============= for having Round-Robin selection logic of GPUs ============
 gpu_UUIDs = monitor.gpu_uuids()
