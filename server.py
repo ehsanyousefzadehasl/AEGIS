@@ -16,7 +16,7 @@ from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
-from placement.dispatcher import dispatch_placement
+from placement.dispatcher import dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
 from recovery.manager import recovery
 
@@ -263,16 +263,19 @@ def scheduler(policy=policy, estimator=estimator):
                 print(gpus_state)
                 continue
 
-            elif policy == "oracle-FF" and main_queue.length() != 0 and recovery_queue.length() == 0:
-                if gpu_memory_requirement is None:
+            if is_dispatcher_policy(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
+                if policy.startswith("oracle-") and gpu_memory_requirement is None:
                     print(f"Could not parse GPU memory requirement for task {task}")
                     continue
 
-                print("environment: ", env_name, environment)
-                print("command to execute found: ", command_to_execute)
-                print("memory requirement: ", gpu_memory_requirement)
+                if (policy.startswith("EST-") or policy.startswith("ONLINE-EST-")) and gpu_memory_estimation is None:
+                    print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
+                    continue
 
-                gpus_with_metrics = monitor.analyze_Gmetrics()
+                gpus_with_metrics = None
+                if policy != "OR-RR":
+                    gpus_with_metrics = monitor.analyze_Gmetrics()
+                    print(gpus_with_metrics)
 
                 assigned_gpus = dispatch_placement(
                     policy=policy,
@@ -280,270 +283,19 @@ def scheduler(policy=policy, estimator=estimator):
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
                     gpu_memory_requirement=gpu_memory_requirement,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "Oracle-FF Collocated task on GPUs")
-                continue
-
-            elif (policy == "oracle-BF") and (main_queue.length() != 0) and (recovery_queue.length() == 0):
-                if gpu_memory_requirement is None:
-                    print(f"Could not parse GPU memory requirement for task {task}")
-                    continue
-
-                print("environment: ", env_name, environment)
-                print("command to execute found: ", command_to_execute)
-                print("memory requirement: ", gpu_memory_requirement)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_requirement=gpu_memory_requirement,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "Oracle-BF Collocated task on GPUs")
-                continue
-
-            elif policy == "oracle-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if gpu_memory_requirement is None:
-                    print(f"Could not parse GPU memory requirement for task {task}")
-                    continue
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("conda environment to activate: ", env_name, environment)
-                print("memory requirement: ", gpu_memory_requirement)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_requirement=gpu_memory_requirement,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "Oracle-MAGM Collocated task on GPUs")
-                continue
-
-            elif policy == "oracle-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if gpu_memory_requirement is None:
-                    print(f"Could not parse GPU memory requirement for task {task}")
-                    continue
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("environment: ", env_name, environment)
-                print("memory requirement: ", gpu_memory_requirement)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_requirement=gpu_memory_requirement,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "Oracle-LUG Collocated task on GPUs")
-                continue
-
-            elif policy == "OR-RR" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("conda environment to activate: ", env_name, environment)
-                print("number of gpus requested: ", number_of_GPUs_requested)
-
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-                print(gpus_state)
-                print("available GPUs: ", all_available_GPUs())
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=None,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_estimation=gpu_memory_estimation,
                     round_robin_generator=round_robin_generator,
                     gpu_ids=GPU_IDs,
                 )
 
                 if assigned_gpus is None:
-                    print("OR-RR: not enough available GPUs in this RR pass; skipping dispatch.")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "Only Recovery - Round Robin Collocated!")
-                continue
-
-            elif policy == "OR-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-
-                print("this is what we want collocate: ", task)
-                print("environment: ", env_name, environment)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                )
-
-                if assigned_gpus is None:
                     print("Not enough GPUs to submit the task to!")
                     continue
 
                 print("assigned GPUs: ", assigned_gpus)
 
+                assigned_gpu_ids = assigned_gpus if policy == "OR-RR" else assigned_gpus.index
+
                 dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
@@ -552,7 +304,7 @@ def scheduler(policy=policy, estimator=estimator):
                     task=task,
                     environment=environment,
                     command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
+                    assigned_gpu_ids=assigned_gpu_ids,
                     now=now,
                     main_queue=main_queue,
                     recovery_queue=recovery_queue,
@@ -567,262 +319,7 @@ def scheduler(policy=policy, estimator=estimator):
                 )
 
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "OR-MAGM (>= 5GB free) collocated task on GPUs.")
-                continue
-
-            elif policy == "OR-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("environment: ", env_name, environment)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "OR-LUG collocated task on GPUs.")
-                continue
-
-            elif policy == "EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if gpu_memory_estimation is None:
-                    print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
-                    continue
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("conda environment to activate: ", env_name, environment)
-                print("memory estimation: ", gpu_memory_estimation)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_estimation=gpu_memory_estimation,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "Oracle-MAGM Collocated task on GPUs")
-                continue
-
-            elif policy == "EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if gpu_memory_estimation is None:
-                    print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
-                    continue
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("environment: ", env_name, environment)
-                print("memory requirement: ", gpu_memory_estimation)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_estimation=gpu_memory_estimation,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "EST-LUG Collocated task on GPUs")
-                continue
-
-            elif policy == "ONLINE-EST-MAGM" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if gpu_memory_estimation is None:
-                    print(f"Could not compute online GPU memory estimate for task {task}")
-                    continue
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("conda environment to activate: ", env_name, environment)
-                print("online memory estimation: ", gpu_memory_estimation)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_estimation=gpu_memory_estimation,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "ONLINE-EST-MAGM Collocated task on GPUs")
-                continue
-
-            elif policy == "ONLINE-EST-LUG" and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if gpu_memory_estimation is None:
-                    print(f"Could not compute online GPU memory estimate for task {task}")
-                    continue
-
-                print("this is what we want to parse and work on and collocate: ", task)
-                print("environment: ", env_name, environment)
-                print("online memory estimation: ", gpu_memory_estimation)
-
-                gpus_with_metrics = monitor.analyze_Gmetrics()
-                print(gpus_with_metrics)
-
-                assigned_gpus = dispatch_placement(
-                    policy=policy,
-                    gpus_with_metrics=gpus_with_metrics,
-                    available_gpu_ids=all_available_GPUs(),
-                    number_of_gpus_requested=number_of_GPUs_requested,
-                    gpu_memory_estimation=gpu_memory_estimation,
-                )
-
-                if assigned_gpus is None:
-                    print("Not enough GPUs to submit the task to!")
-                    continue
-
-                print("assigned GPUs: ", assigned_gpus)
-
-                dispatch_selected_job(
-                    selected=selected,
-                    task_obj=a,
-                    user=user,
-                    dir=dir,
-                    task=task,
-                    environment=environment,
-                    command_to_execute=command_to_execute,
-                    assigned_gpu_ids=assigned_gpus.index,
-                    now=now,
-                    main_queue=main_queue,
-                    recovery_queue=recovery_queue,
-                    main_lock=lock,
-                    recovery_lock=recover_lock,
-                    command_generator=command_generator,
-                    command_executor=command_executor,
-                    launch_and_get_pid=launch_and_get_pid,
-                    launch_task=launch_task,
-                    async_resolve_and_update=resolve_and_update_gpu_pid,
-                    logger=logger,
-                )
-
-                time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-                print(time_point, "ONLINE-EST-LUG Collocated task on GPUs")
+                print(time_point, f"{policy} placed task on GPUs")
                 continue
 
             timepoint = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
