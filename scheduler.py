@@ -1,4 +1,3 @@
-import socket
 import time
 import datetime
 from threading import Thread, Lock
@@ -16,7 +15,6 @@ from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
-from runtime.submission_server import run_submission_server
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
 from placement.dispatcher import dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
@@ -95,17 +93,6 @@ monitoring_window_size = cfg.get("monitor", {}).get("window", "30")
 #  ====== initialized GPUs ======
 gpus_state = init_gpu_state(gpu_UUIDs)
 print("Initialized the gpus_state tracker: ", gpus_state)
-
-
-def run_ingress():
-    host = socket.gethostname()
-    run_submission_server(
-        main_queue=main_queue,
-        main_lock=lock,
-        host=host,
-        port=5001,
-    )
-
 
 def run_scheduler(policy=policy, estimator=estimator):
 
