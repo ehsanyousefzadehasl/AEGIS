@@ -16,17 +16,6 @@ from config.load_yaml import load_yaml
 from workload.job_spec import load_job_spec
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
-from placement.candidate_selection import build_candidate_gpus
-from placement.policies import (
-    select_oracle_bf,
-    select_oracle_magm,
-    select_oracle_lug,
-    select_or_rr,
-    select_or_magm,
-    select_or_lug,
-    select_est_magm,
-    select_est_lug,
-)
 from placement.dispatcher import dispatch_placement
 from recovery.manager import recovery
 from estimation.online_estimator import estimate_online_gpu_memory
@@ -492,10 +481,12 @@ def scheduler(policy=policy, estimator=estimator):
                 print(gpus_state)
                 print("available GPUs: ", all_available_GPUs())
 
-                assigned_gpus = select_or_rr(
-                    round_robin_generator=round_robin_generator,
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
+                    gpus_with_metrics=None,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    round_robin_generator=round_robin_generator,
                     gpu_ids=GPU_IDs,
                 )
 
@@ -539,7 +530,8 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_or_magm(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
@@ -585,7 +577,8 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_or_lug(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
@@ -637,11 +630,12 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_est_magm(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_estimation=gpu_memory_estimation,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_estimation=gpu_memory_estimation,
                 )
 
                 if assigned_gpus is None:
@@ -690,11 +684,12 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_est_lug(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_estimation=gpu_memory_estimation,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_estimation=gpu_memory_estimation,
                 )
 
                 if assigned_gpus is None:
@@ -747,11 +742,12 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_est_magm(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_estimation=gpu_memory_estimation,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_estimation=gpu_memory_estimation,
                 )
 
                 if assigned_gpus is None:
@@ -804,11 +800,12 @@ def scheduler(policy=policy, estimator=estimator):
                 gpus_with_metrics = monitor.analyze_Gmetrics()
                 print(gpus_with_metrics)
 
-                assigned_gpus = select_est_lug(
+                assigned_gpus = dispatch_placement(
+                    policy=policy,
                     gpus_with_metrics=gpus_with_metrics,
-                    gpu_memory_estimation=gpu_memory_estimation,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    gpu_memory_estimation=gpu_memory_estimation,
                 )
 
                 if assigned_gpus is None:
