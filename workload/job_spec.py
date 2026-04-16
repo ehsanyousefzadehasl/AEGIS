@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import subprocess
 from typing import Optional
 
+from workload.yaml_job_spec import load_yaml_job_spec
 
 ESTIMATOR_INDEX = {
     "None": None,
@@ -64,7 +65,65 @@ def _safe_int_at(lines: list[str], idx: int) -> Optional[int]:
         return None
 
 
+def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
+    data = load_yaml_job_spec(task_path)
+
+    job = data.get("job", {})
+    resources = data.get("resources", {})
+    estimates = data.get("estimates", {})
+    online_estimation = data.get("online_estimation", {})
+
+    env_name = job.get("conda_env", "tf")
+    env_path = f"/opt/miniconda3/envs/{env_name}"
+    command_to_execute = job["command"]
+
+    num_gpus_requested = resources.get("num_gpus")
+    if num_gpus_requested is None:
+        raise ValueError(f"Could not parse requested GPU count from {task_path}")
+
+    gpu_memory_requirement_mib = resources.get("gpu_memory_requirement_mib")
+
+    estimate_key_map = {
+        "None": None,
+        "horus": "horus_mib",
+        "faketensor": "faketensor_mib",
+        "GPUMemNet": "gpumemnet_mib",
+    }
+
+    estimate_key = estimate_key_map.get(estimator_name)
+    gpu_memory_estimate_mib = None if estimate_key is None else estimates.get(estimate_key)
+
+    raw_lines = [
+        f"# YAML job spec: {task_path}",
+        f"conda activate {env_name}",
+        command_to_execute,
+        str(online_estimation.get("summary_path", "")),
+        str(online_estimation.get("parser_arg_1", "")),
+        str(online_estimation.get("parser_arg_2", "")),
+        "",
+        str(num_gpus_requested),
+        "" if gpu_memory_requirement_mib is None else str(gpu_memory_requirement_mib),
+        "" if estimates.get("horus_mib") is None else str(estimates.get("horus_mib")),
+        "" if estimates.get("faketensor_mib") is None else str(estimates.get("faketensor_mib")),
+        "" if estimates.get("gpumemnet_mib") is None else str(estimates.get("gpumemnet_mib")),
+    ]
+
+    return JobSpec(
+        task_path=task_path,
+        raw_lines=raw_lines,
+        env_name=env_name,
+        env_path=env_path,
+        command_to_execute=command_to_execute,
+        num_gpus_requested=int(num_gpus_requested),
+        gpu_memory_requirement_mib=None if gpu_memory_requirement_mib is None else int(float(gpu_memory_requirement_mib)),
+        gpu_memory_estimate_mib=None if gpu_memory_estimate_mib is None else int(float(gpu_memory_estimate_mib)),
+    )
+
+
 def load_job_spec(task_path: str, estimator_name: str) -> JobSpec:
+    if task_path.endswith(".yaml") or task_path.endswith(".yml"):
+        return _load_yaml_format_job_spec(task_path, estimator_name)
+    
     lines = _read_task_lines(task_path)
 
     env_name = _extract_env_name(lines)
