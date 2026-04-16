@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from config.load_yaml import load_yaml
-from placement.profiles import get_policy_profile
+from placement.profiles import get_policy_profile, policy_requires_estimator
+
 
 @dataclass(frozen=True)
 class SchedulerSettings:
@@ -19,6 +20,10 @@ def load_scheduler_settings() -> SchedulerSettings:
 
     policy = cfg.get("mapper", {}).get("policy", "exclusive")
     get_policy_profile(policy)
+
+    estimator = cfg.get("mapper", {}).get("estimator", "None")
+    if policy_requires_estimator(policy) and estimator == "None":
+        raise ValueError(f"Policy '{policy}' requires a configured estimator")
 
     return SchedulerSettings(
         policy=cfg.get("mapper", {}).get("policy", "exclusive"),
