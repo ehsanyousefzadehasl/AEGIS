@@ -1,21 +1,7 @@
 from __future__ import annotations
 
-from placement.policies import (
-    select_oracle_ff,
-    select_oracle_bf,
-    select_oracle_magm,
-    select_oracle_lug,
-    select_or_rr,
-    select_or_magm,
-    select_or_lug,
-    select_est_magm,
-    select_est_lug,
-)
-
 from placement.strategies import execute_placement_strategy
-
 from placement.profiles import get_policy_profile
-
 from dataclasses import dataclass
 
 
