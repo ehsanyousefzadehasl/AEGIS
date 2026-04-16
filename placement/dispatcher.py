@@ -31,7 +31,10 @@ class PlacementRequest:
 
     
 def dispatch_placement(request: PlacementRequest):
-    if request.policy == "oracle-FF":
+    profile = get_policy_profile(request.policy)
+    strategy = profile.placement_strategy
+
+    if strategy == "oracle_ff":
         if request.gpu_memory_requirement is None:
             return None
         return select_oracle_ff(
@@ -41,7 +44,7 @@ def dispatch_placement(request: PlacementRequest):
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
     
-    if request.policy == "oracle-BF":
+    if strategy == "oracle_bf":
         if request.gpu_memory_requirement is None:
             return None
         return select_oracle_bf(
@@ -51,7 +54,7 @@ def dispatch_placement(request: PlacementRequest):
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
-    if request.policy == "oracle-MAGM":
+    if strategy == "oracle_magm":
         if request.gpu_memory_requirement is None:
             return None
         return select_oracle_magm(
@@ -61,7 +64,7 @@ def dispatch_placement(request: PlacementRequest):
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
-    if request.policy == "oracle-LUG":
+    if strategy == "oracle_lug":
         if request.gpu_memory_requirement is None:
             return None
         return select_oracle_lug(
@@ -71,7 +74,7 @@ def dispatch_placement(request: PlacementRequest):
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
     
-    if request.policy == "OR-RR":
+    if strategy == "or_rr":
         if request.round_robin_generator is None or request.gpu_ids is None:
             return None
         return select_or_rr(
@@ -81,21 +84,21 @@ def dispatch_placement(request: PlacementRequest):
             gpu_ids=request.gpu_ids,
         )
     
-    if request.policy == "OR-MAGM":
+    if strategy == "or_magm":
         return select_or_magm(
             gpus_with_metrics=request.gpus_with_metrics,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
-    if request.policy == "OR-LUG":
+    if strategy == "or_lug":
         return select_or_lug(
             gpus_with_metrics=request.gpus_with_metrics,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
-    if request.policy == "EST-MAGM":
+    if strategy == "est_magm":
         if request.gpu_memory_estimation is None:
             return None
         return select_est_magm(
@@ -105,7 +108,7 @@ def dispatch_placement(request: PlacementRequest):
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
-    if request.policy == "EST-LUG":
+    if strategy == "est_lug":
         if request.gpu_memory_estimation is None:
             return None
         return select_est_lug(

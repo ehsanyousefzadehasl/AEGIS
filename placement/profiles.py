@@ -9,6 +9,7 @@ class PolicyProfile:
     estimate_source: str
     exclusive_first: bool
     uses_dispatcher: bool
+    placement_strategy: str | None
 
 
 POLICY_PROFILES = {
@@ -17,72 +18,84 @@ POLICY_PROFILES = {
         estimate_source="none",
         exclusive_first=True,
         uses_dispatcher=False,
+        placement_strategy=None,
     ),
     "oracle-FF": PolicyProfile(
         name="oracle-FF",
         estimate_source="oracle",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="oracle_ff",
     ),
     "oracle-BF": PolicyProfile(
         name="oracle-BF",
         estimate_source="oracle",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="oracle_bf",
     ),
     "oracle-MAGM": PolicyProfile(
         name="oracle-MAGM",
         estimate_source="oracle",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="oracle_magm",
     ),
     "oracle-LUG": PolicyProfile(
         name="oracle-LUG",
         estimate_source="oracle",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="oracle_lug",
     ),
     "OR-RR": PolicyProfile(
         name="OR-RR",
         estimate_source="none",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="or_rr",
     ),
     "OR-MAGM": PolicyProfile(
         name="OR-MAGM",
         estimate_source="none",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="or_magm",
     ),
     "OR-LUG": PolicyProfile(
         name="OR-LUG",
         estimate_source="none",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="or_lug",
     ),
     "EST-MAGM": PolicyProfile(
         name="EST-MAGM",
         estimate_source="task_file_estimate",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="est_magm",
     ),
     "EST-LUG": PolicyProfile(
         name="EST-LUG",
         estimate_source="task_file_estimate",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="est_lug",
     ),
     "ONLINE-EST-MAGM": PolicyProfile(
         name="ONLINE-EST-MAGM",
         estimate_source="online_estimate",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="est_magm",
     ),
     "ONLINE-EST-LUG": PolicyProfile(
         name="ONLINE-EST-LUG",
         estimate_source="online_estimate",
         exclusive_first=True,
         uses_dispatcher=True,
+        placement_strategy="est_lug"
     ),
 }
 
