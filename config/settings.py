@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from config.load_yaml import load_yaml
-
+from placement.profiles import get_policy_profile
 
 @dataclass(frozen=True)
 class SchedulerSettings:
@@ -16,6 +16,9 @@ class SchedulerSettings:
 
 def load_scheduler_settings() -> SchedulerSettings:
     cfg = load_yaml()
+
+    policy = cfg.get("mapper", {}).get("policy", "exclusive")
+    get_policy_profile(policy)
 
     return SchedulerSettings(
         policy=cfg.get("mapper", {}).get("policy", "exclusive"),
