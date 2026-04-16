@@ -14,6 +14,20 @@ from placement.policies import (
     select_est_lug,
 )
 
+from placement.profiles import get_policy_profile
+
+def _get_required_profile_metrics(request):
+    profile = get_policy_profile(request.policy)
+    metrics: dict[str, object] = {}
+
+    for metric_name in profile.required_profile_metrics:
+        value = _get_profile_metric(request, metric_name)
+        if value is None:
+            return None
+        metrics[metric_name] = value
+
+    return metrics
+
 def _get_profile_metric(request, metric_name: str):
     if request.placement_estimate is None:
         return None
@@ -94,7 +108,10 @@ def execute_placement_strategy(strategy: str, request):
     if strategy == "est_magm":
         gpu_memory_estimation = request.gpu_memory_estimation
         if gpu_memory_estimation is None:
-            gpu_memory_estimation = _get_peak_memory_mib_from_estimate(request)
+            required_profile_metrics = _get_required_profile_metrics(request)
+            if required_profile_metrics is not None:
+                gpu_memory_estimation = required_profile_metrics.get("peak_memory_mib")
+
         if gpu_memory_estimation is None:
             return None
         
@@ -108,7 +125,10 @@ def execute_placement_strategy(strategy: str, request):
     if strategy == "est_lug":
         gpu_memory_estimation = request.gpu_memory_estimation
         if gpu_memory_estimation is None:
-            gpu_memory_estimation = _get_peak_memory_mib_from_estimate(request)
+            required_profile_metrics = _get_required_profile_metrics(request)
+            if required_profile_metrics is not None:
+                gpu_memory_estimation = required_profile_metrics.get("peak_memory_mib")
+
         if gpu_memory_estimation is None:
             return None
         
