@@ -67,23 +67,26 @@ def resolve_policy_inputs(
     workdir: str,
     estimator_name: str,
 ):
+    estimate = resolve_placement_estimate(
+        spec=spec,
+        policy=policy,
+        workdir=workdir,
+        estimator_name=estimator_name,
+    )
+
     gpu_memory_requirement = None
     gpu_memory_estimation = None
 
+    if estimate is None or estimate.resource_profile is None:
+        return gpu_memory_requirement, gpu_memory_estimation
+
+    peak_memory_mib = estimate.resource_profile.peak_memory_mib
+
     profile = get_policy_profile(policy)
-
     if profile.estimate_source == "oracle":
-        gpu_memory_requirement = spec.gpu_memory_requirement_mib
-
-    elif profile.estimate_source == "task_file_estimate":
-        gpu_memory_estimation = spec.gpu_memory_estimate_mib
-
-    elif profile.estimate_source == "online_estimate":
-        gpu_memory_estimation = estimate_online_gpu_memory(
-            spec=spec,
-            workdir=workdir,
-            estimator_name=estimator_name,
-        )
+        gpu_memory_requirement = peak_memory_mib
+    elif profile.estimate_source in {"task_file_estimate", "online_estimate"}:
+        gpu_memory_estimation = peak_memory_mib
 
     return gpu_memory_requirement, gpu_memory_estimation
 
