@@ -12,6 +12,8 @@ from placement.policies import (
     select_est_lug,
 )
 
+from placement.profiles import get_policy_profile
+
 from dataclasses import dataclass
 
 
@@ -137,16 +139,4 @@ def dispatch_placement(request: PlacementRequest):
 
 
 def is_dispatcher_policy(policy: str) -> bool:
-    return policy in {
-        "oracle-FF",
-        "oracle-BF",
-        "oracle-MAGM",
-        "oracle-LUG",
-        "OR-RR",
-        "OR-MAGM",
-        "OR-LUG",
-        "EST-MAGM",
-        "EST-LUG",
-        "ONLINE-EST-MAGM",
-        "ONLINE-EST-LUG",
-    }
+    return get_policy_profile(policy).uses_dispatcher

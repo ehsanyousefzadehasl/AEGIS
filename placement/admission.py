@@ -1,14 +1,10 @@
 from __future__ import annotations
 
+from placement.profiles import get_policy_profile
+
 
 def use_exclusive_first_admission(policy: str) -> bool:
-    """
-    Current default admission behavior.
-
-    For now, all existing policies keep the same semantics:
-    prefer exclusive placement when enough idle GPUs are available.
-    """
-    return True
+    return get_policy_profile(policy).exclusive_first
 
 
 def should_dispatch_exclusive_first(
