@@ -56,7 +56,13 @@ def resolve_placement_estimate(
                 source="online_estimate",
             ) if online_estimate_mib is not None else None,
         )
-
+    
+    if profile.estimate_source == "profiled_metadata":
+        return PlacementEstimate(
+            source="profiled_metadata",
+            resource_profile=spec.resource_profile,
+        )
+    
     return None
 
 

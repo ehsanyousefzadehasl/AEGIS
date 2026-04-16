@@ -97,6 +97,20 @@ POLICY_PROFILES = {
         uses_dispatcher=True,
         placement_strategy="est_lug"
     ),
+    "PROFILED-MAGM": PolicyProfile(
+        name="PROFILED-MAGM",
+        estimate_source="profiled_metadata",
+        exclusive_first=True,
+        uses_dispatcher=True,
+        placement_strategy="est_magm",
+    ),
+    "PROFILED-LUG": PolicyProfile(
+        name="PROFILED-LUG",
+        estimate_source="profiled_metadata",
+        exclusive_first=True,
+        uses_dispatcher=True,
+        placement_strategy="est_lug",
+    ),
 }
 
 
