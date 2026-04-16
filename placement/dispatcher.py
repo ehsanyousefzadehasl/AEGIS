@@ -15,6 +15,7 @@ class PlacementRequest:
     gpu_memory_estimation: int | None = None
     round_robin_generator: object | None = None
     gpu_ids: object | None = None
+    placement_estimate: object | None = None
 
 
     

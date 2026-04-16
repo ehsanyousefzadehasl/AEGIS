@@ -15,6 +15,7 @@ from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_r
 from placement.dispatcher import PlacementRequest, dispatch_placement, is_dispatcher_policy
 from placement.inputs import (
     resolve_policy_inputs,
+    resolve_placement_estimate,
     get_missing_policy_input_message,
 )
 from placement.admission import should_dispatch_exclusive_first
@@ -114,6 +115,13 @@ def run_scheduler(policy=policy, estimator=estimator):
                 estimator_name=estimator,
             )
 
+            placement_estimate = resolve_placement_estimate(
+                policy=policy,
+                spec=spec,
+                workdir=dir,
+                estimator_name=estimator,
+            )
+
             if should_dispatch_exclusive_first(
                 policy=policy,
                 idle_and_available=idle_and_available,
@@ -172,6 +180,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                         number_of_gpus_requested=number_of_GPUs_requested,
                         gpu_memory_requirement=gpu_memory_requirement,
                         gpu_memory_estimation=gpu_memory_estimation,
+                        placement_estimate=placement_estimate,
                         round_robin_generator=round_robin_generator,
                         gpu_ids=GPU_IDs,
                     )
