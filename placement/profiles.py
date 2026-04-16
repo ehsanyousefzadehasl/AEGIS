@@ -10,6 +10,7 @@ class PolicyProfile:
     exclusive_first: bool
     uses_dispatcher: bool
     placement_strategy: str | None
+    required_profile_metrics: tuple[str, ...] = ()
 
 
 POLICY_PROFILES = {
@@ -103,6 +104,7 @@ POLICY_PROFILES = {
         exclusive_first=True,
         uses_dispatcher=True,
         placement_strategy="est_magm",
+        required_profile_metrics=("peak_memory_mib",)
     ),
     "PROFILED-LUG": PolicyProfile(
         name="PROFILED-LUG",
@@ -110,6 +112,7 @@ POLICY_PROFILES = {
         exclusive_first=True,
         uses_dispatcher=True,
         placement_strategy="est_lug",
+        required_profile_metrics=("peak_memory_mib",)
     ),
 }
 

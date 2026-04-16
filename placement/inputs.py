@@ -115,10 +115,18 @@ def get_missing_policy_input_message(
         return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
 
     if profile.estimate_source == "profiled_metadata":
-        if (
-            spec.resource_profile is None
-            or spec.resource_profile.peak_memory_mib is None
-        ):
-            return f"Could not resolve profiled metadata memory estimate for task {task}"
+        if spec.resource_profile is None:
+            return f"Could not resolve profiled metadata for task {task}"
+
+        for metric_name in profile.required_profile_metrics:
+            value = getattr(spec.resource_profile, metric_name, None)
+            if value is None:
+                extra_metrics = spec.resource_profile.extra_metrics or {}
+                value = extra_metrics.get(metric_name)
+            if value is None:
+                return (
+                    f"Could not resolve required profiled metric "
+                    f"'{metric_name}' for task {task}"
+                )
     
     return None
