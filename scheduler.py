@@ -14,6 +14,7 @@ from runtime.launcher import launch_and_get_pid, build_launch_command, command_e
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
 from placement.dispatcher import PlacementRequest, dispatch_placement, is_dispatcher_policy
 from placement.inputs import resolve_policy_inputs
+from placement.admission import should_dispatch_exclusive_first
 from recovery.manager import recovery
 
 
@@ -110,7 +111,10 @@ def run_scheduler(policy=policy, estimator=estimator):
                 estimator_name=estimator,
             )
 
-            if len(idle_and_available) >= number_of_GPUs_requested:
+            if should_dispatch_exclusive_first(
+                idle_and_available=idle_and_available,
+                number_of_gpus_requested=number_of_GPUs_requested,
+            ):
                 assigned_gpus = idle_and_available[:number_of_GPUs_requested]
 
                 dispatch_selected_job(
