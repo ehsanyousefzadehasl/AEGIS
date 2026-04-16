@@ -12,6 +12,12 @@ from placement.policies import (
     select_est_lug,
 )
 
+def _get_peak_memory_mib_from_estimate(request):
+    if request.placement_estimate is None:
+        return None
+    if request.placement_estimate.resource_profile is None:
+        return None
+    return request.placement_estimate.resource_profile.peak_memory_mib
 
 def execute_placement_strategy(strategy: str, request):
     if strategy == "oracle_ff":
@@ -79,21 +85,29 @@ def execute_placement_strategy(strategy: str, request):
         )
 
     if strategy == "est_magm":
-        if request.gpu_memory_estimation is None:
+        gpu_memory_estimation = request.gpu_memory_estimation
+        if gpu_memory_estimation is None:
+            gpu_memory_estimation = _get_peak_memory_mib_from_estimate(request)
+        if gpu_memory_estimation is None:
             return None
+        
         return select_est_magm(
             gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=request.gpu_memory_estimation,
+            gpu_memory_estimation=gpu_memory_estimation,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
     if strategy == "est_lug":
-        if request.gpu_memory_estimation is None:
+        gpu_memory_estimation = request.gpu_memory_estimation
+        if gpu_memory_estimation is None:
+            gpu_memory_estimation = _get_peak_memory_mib_from_estimate(request)
+        if gpu_memory_estimation is None:
             return None
+        
         return select_est_lug(
             gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=request.gpu_memory_estimation,
+            gpu_memory_estimation=gpu_memory_estimation,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
