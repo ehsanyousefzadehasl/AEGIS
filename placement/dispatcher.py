@@ -12,6 +12,8 @@ from placement.policies import (
     select_est_lug,
 )
 
+from placement.strategies import execute_placement_strategy
+
 from placement.profiles import get_policy_profile
 
 from dataclasses import dataclass
@@ -33,111 +35,7 @@ class PlacementRequest:
 def dispatch_placement(request: PlacementRequest):
     profile = get_policy_profile(request.policy)
     strategy = profile.placement_strategy
-
-    if strategy == "oracle_ff":
-        if request.gpu_memory_requirement is None:
-            return None
-        return select_oracle_ff(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-    
-    if strategy == "oracle_bf":
-        if request.gpu_memory_requirement is None:
-            return None
-        return select_oracle_bf(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "oracle_magm":
-        if request.gpu_memory_requirement is None:
-            return None
-        return select_oracle_magm(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "oracle_lug":
-        if request.gpu_memory_requirement is None:
-            return None
-        return select_oracle_lug(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-    
-    if strategy == "or_rr":
-        if request.round_robin_generator is None or request.gpu_ids is None:
-            return None
-        return select_or_rr(
-            round_robin_generator=request.round_robin_generator,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-            gpu_ids=request.gpu_ids,
-        )
-    
-    if strategy == "or_magm":
-        return select_or_magm(
-            gpus_with_metrics=request.gpus_with_metrics,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "or_lug":
-        return select_or_lug(
-            gpus_with_metrics=request.gpus_with_metrics,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "est_magm":
-        if request.gpu_memory_estimation is None:
-            return None
-        return select_est_magm(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=request.gpu_memory_estimation,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "est_lug":
-        if request.gpu_memory_estimation is None:
-            return None
-        return select_est_lug(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=request.gpu_memory_estimation,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if request.policy == "ONLINE-EST-MAGM":
-        if request.gpu_memory_estimation is None:
-            return None
-        return select_est_magm(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=request.gpu_memory_estimation,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if request.policy == "ONLINE-EST-LUG":
-        if request.gpu_memory_estimation is None:
-            return None
-        return select_est_lug(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=request.gpu_memory_estimation,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-    return None
+    return execute_placement_strategy(strategy, request)
 
 
 
