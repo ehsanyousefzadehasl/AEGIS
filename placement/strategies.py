@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from workload.resource_profile import get_resource_profile_metric
+
 from placement.policies import (
     select_oracle_ff,
     select_oracle_bf,
@@ -15,18 +17,10 @@ from placement.policies import (
 def _get_profile_metric(request, metric_name: str):
     if request.placement_estimate is None:
         return None
-    resource_profile = request.placement_estimate.resource_profile
-    if resource_profile is None:
-        return None
-
-    if hasattr(resource_profile, metric_name):
-        return getattr(resource_profile, metric_name)
-
-    extra_metrics = resource_profile.extra_metrics
-    if extra_metrics is None:
-        return None
-
-    return extra_metrics.get(metric_name)
+    return get_resource_profile_metric(
+        request.placement_estimate.resource_profile,
+        metric_name,
+    )
 
 
 def _get_peak_memory_mib_from_estimate(request):

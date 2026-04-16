@@ -16,6 +16,20 @@ class ResourceProfile:
     extra_metrics: Optional[dict[str, float]] = None
 
 
+def get_resource_profile_metric(
+    resource_profile: ResourceProfile | None,
+    metric_name: str,
+):
+    if resource_profile is None:
+        return None
+
+    if hasattr(resource_profile, metric_name):
+        return getattr(resource_profile, metric_name)
+
+    extra_metrics = resource_profile.extra_metrics or {}
+    return extra_metrics.get(metric_name)
+
+
 def load_resource_profile(data: dict | None) -> ResourceProfile | None:
     if not data:
         return None
