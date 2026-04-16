@@ -82,7 +82,7 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
     resources = data.get("resources", {})
     estimates = data.get("estimates", {})
     online_estimation = data.get("online_estimation", {})
-    profile = data.get("profile", {})
+    resource_profile_data = data.get("profile", {})
 
     env_name = job.get("conda_env", "tf")
     env_path = f"/opt/miniconda3/envs/{env_name}"
@@ -131,7 +131,7 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
         online_summary_path=online_estimation.get("summary_path"),
         online_parser_arg_1=None if online_estimation.get("parser_arg_1") is None else str(online_estimation.get("parser_arg_1")),
         online_parser_arg_2=None if online_estimation.get("parser_arg_2") is None else str(online_estimation.get("parser_arg_2")),
-        resource_profile=load_resource_profile(profile),
+        resource_profile=load_resource_profile(resource_profile_data),
     )
 
 
