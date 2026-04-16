@@ -29,3 +29,22 @@ def resolve_policy_inputs(
         )
 
     return gpu_memory_requirement, gpu_memory_estimation
+
+
+def get_missing_policy_input_message(
+    *,
+    policy: str,
+    task: str,
+    estimator_name: str,
+    gpu_memory_requirement,
+    gpu_memory_estimation,
+) -> str | None:
+    profile = get_policy_profile(policy)
+
+    if profile.estimate_source == "oracle" and gpu_memory_requirement is None:
+        return f"Could not parse GPU memory requirement for task {task}"
+
+    if profile.estimate_source in {"task_file_estimate", "online_estimate"} and gpu_memory_estimation is None:
+        return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
+
+    return None

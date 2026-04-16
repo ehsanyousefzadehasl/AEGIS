@@ -13,7 +13,10 @@ from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
 from placement.dispatcher import PlacementRequest, dispatch_placement, is_dispatcher_policy
-from placement.inputs import resolve_policy_inputs
+from placement.inputs import (
+    resolve_policy_inputs,
+    get_missing_policy_input_message,
+)
 from placement.admission import should_dispatch_exclusive_first
 from recovery.manager import recovery
 
@@ -144,12 +147,16 @@ def run_scheduler(policy=policy, estimator=estimator):
                 continue
 
             if is_dispatcher_policy(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                if policy.startswith("oracle-") and gpu_memory_requirement is None:
-                    print(f"Could not parse GPU memory requirement for task {task}")
-                    continue
+                missing_input_message = get_missing_policy_input_message(
+                    policy=policy,
+                    task=task,
+                    estimator_name=estimator,
+                    gpu_memory_requirement=gpu_memory_requirement,
+                    gpu_memory_estimation=gpu_memory_estimation,
+                )
 
-                if (policy.startswith("EST-") or policy.startswith("ONLINE-EST-")) and gpu_memory_estimation is None:
-                    print(f"Could not parse GPU memory estimate for task {task} using estimator {estimator}")
+                if missing_input_message is not None:
+                    print(missing_input_message)
                     continue
 
                 gpus_with_metrics = None
