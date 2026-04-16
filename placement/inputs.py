@@ -100,6 +100,7 @@ def resolve_policy_inputs(
 def get_missing_policy_input_message(
     *,
     policy: str,
+    spec: JobSpec,
     task: str,
     estimator_name: str,
     gpu_memory_requirement,
@@ -113,4 +114,11 @@ def get_missing_policy_input_message(
     if profile.estimate_source in {"task_file_estimate", "online_estimate"} and gpu_memory_estimation is None:
         return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
 
+    if profile.estimate_source == "profiled_metadata":
+        if (
+            spec.resource_profile is None
+            or spec.resource_profile.peak_memory_mib is None
+        ):
+            return f"Could not resolve profiled metadata memory estimate for task {task}"
+    
     return None
