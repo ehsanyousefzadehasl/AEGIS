@@ -26,8 +26,8 @@ def load_scheduler_settings() -> SchedulerSettings:
         raise ValueError(f"Policy '{policy}' requires a configured estimator")
 
     return SchedulerSettings(
-        policy=cfg.get("mapper", {}).get("policy", "exclusive"),
-        estimator=cfg.get("mapper", {}).get("estimator", "None"),
+        policy=policy,
+        estimator=estimator,
         recovery_dir=cfg.get("recovery", {}).get("dir", "/home/ehyo/rad-scheduler"),
         patience=cfg.get("monitor", {}).get("patience", "10"),
         monitoring_window_size=cfg.get("monitor", {}).get("window", "30"),
