@@ -29,6 +29,19 @@ def get_resource_profile_metric(
     extra_metrics = resource_profile.extra_metrics or {}
     return extra_metrics.get(metric_name)
 
+def resolve_required_profile_metrics(
+    resource_profile: ResourceProfile | None,
+    metric_names: tuple[str, ...],
+):
+    metrics: dict[str, object] = {}
+
+    for metric_name in metric_names:
+        value = get_resource_profile_metric(resource_profile, metric_name)
+        if value is None:
+            return None
+        metrics[metric_name] = value
+
+    return metrics
 
 def load_resource_profile(data: dict | None) -> ResourceProfile | None:
     if not data:

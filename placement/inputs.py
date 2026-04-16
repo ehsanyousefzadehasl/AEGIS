@@ -6,8 +6,10 @@ from typing import Any
 from estimation.online_estimator import estimate_online_gpu_memory
 from placement.profiles import get_policy_profile
 from workload.job_spec import JobSpec
-from workload.resource_profile import ResourceProfile, get_resource_profile_metric
-
+from workload.resource_profile import (
+    ResourceProfile,
+    resolve_required_profile_metrics,
+)
 
 @dataclass(frozen=True)
 class PlacementEstimate:
@@ -115,15 +117,11 @@ def get_missing_policy_input_message(
         return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
 
     if profile.estimate_source == "profiled_metadata":
-        if spec.resource_profile is None:
-            return f"Could not resolve profiled metadata for task {task}"
-
-        for metric_name in profile.required_profile_metrics:
-            value = get_resource_profile_metric(spec.resource_profile, metric_name)
-            if value is None:
-                return (
-                    f"Could not resolve required profiled metric "
-                    f"'{metric_name}' for task {task}"
-                )
+        required_metrics = resolve_required_profile_metrics(
+            spec.resource_profile,
+            profile.required_profile_metrics,
+        )
+        if required_metrics is None:
+            return f"Could not resolve required profiled metrics for task {task}"
     
     return None

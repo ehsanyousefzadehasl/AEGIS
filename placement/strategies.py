@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from workload.resource_profile import get_resource_profile_metric
-
+from workload.resource_profile import (
+    get_resource_profile_metric,
+    resolve_required_profile_metrics,
+)
 from placement.policies import (
     select_oracle_ff,
     select_oracle_bf,
@@ -17,16 +19,14 @@ from placement.policies import (
 from placement.profiles import get_policy_profile
 
 def _get_required_profile_metrics(request):
+    if request.placement_estimate is None:
+        return None
+
     profile = get_policy_profile(request.policy)
-    metrics: dict[str, object] = {}
-
-    for metric_name in profile.required_profile_metrics:
-        value = _get_profile_metric(request, metric_name)
-        if value is None:
-            return None
-        metrics[metric_name] = value
-
-    return metrics
+    return resolve_required_profile_metrics(
+        request.placement_estimate.resource_profile,
+        profile.required_profile_metrics,
+    )
 
 def _get_profile_metric(request, metric_name: str):
     if request.placement_estimate is None:
