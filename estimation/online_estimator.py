@@ -7,14 +7,6 @@ from estimation import rad_parser
 
 DEFAULT_ESTIMATE_MIB = 5120
 
-
-def _line_at(lines: list[str], idx: int) -> str | None:
-    if idx < 0 or idx >= len(lines):
-        return None
-    value = lines[idx].strip()
-    return value if value else None
-
-
 def estimate_online_gpu_memory(
     *,
     spec,
@@ -22,14 +14,9 @@ def estimate_online_gpu_memory(
     estimator_name: str,
 ) -> int:
     try:
-        lines = getattr(spec, "raw_lines", None)
-        if not isinstance(lines, list):
-            logging.warning("Online estimator '%s': missing raw_lines, using fallback", estimator_name)
-            return DEFAULT_ESTIMATE_MIB
-
-        summary_path_raw = _line_at(lines, 3)
-        model_name = _line_at(lines, 4)
-        model_arg_raw = _line_at(lines, 5)
+        summary_path_raw = getattr(spec, "online_summary_path", None)
+        model_name = getattr(spec, "online_parser_arg_1", None)
+        model_arg_raw = getattr(spec, "online_parser_arg_2", None)
 
         if summary_path_raw is None or model_name is None or model_arg_raw is None:
             logging.warning("Online estimator '%s': missing parser fields, using fallback", estimator_name)

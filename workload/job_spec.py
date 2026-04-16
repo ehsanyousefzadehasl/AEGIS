@@ -25,7 +25,9 @@ class JobSpec:
     num_gpus_requested: int
     gpu_memory_requirement_mib: Optional[int]
     gpu_memory_estimate_mib: Optional[int]
-
+    online_summary_path: Optional[str]
+    online_parser_arg_1: Optional[str]
+    online_parser_arg_2: Optional[str]
 
 def _read_task_lines(task_path: str) -> list[str]:
     ret = subprocess.run(
@@ -63,6 +65,12 @@ def _safe_int_at(lines: list[str], idx: int) -> Optional[int]:
         return int(float(value))
     except ValueError:
         return None
+
+def _string_at(lines: list[str], idx: int) -> Optional[str]:
+    if idx < 0 or idx >= len(lines):
+        return None
+    value = lines[idx].strip()
+    return value if value else None
 
 
 def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
@@ -117,6 +125,9 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
         num_gpus_requested=int(num_gpus_requested),
         gpu_memory_requirement_mib=None if gpu_memory_requirement_mib is None else int(float(gpu_memory_requirement_mib)),
         gpu_memory_estimate_mib=None if gpu_memory_estimate_mib is None else int(float(gpu_memory_estimate_mib)),
+        online_summary_path=online_estimation.get("summary_path"),
+        online_parser_arg_1=None if online_estimation.get("parser_arg_1") is None else str(online_estimation.get("parser_arg_1")),
+        online_parser_arg_2=None if online_estimation.get("parser_arg_2") is None else str(online_estimation.get("parser_arg_2")),
     )
 
 
@@ -148,4 +159,7 @@ def load_job_spec(task_path: str, estimator_name: str) -> JobSpec:
         num_gpus_requested=num_gpus_requested,
         gpu_memory_requirement_mib=gpu_memory_requirement_mib,
         gpu_memory_estimate_mib=gpu_memory_estimate_mib,
+        online_summary_path=_string_at(lines, 3),
+        online_parser_arg_1=_string_at(lines, 4),
+        online_parser_arg_2=_string_at(lines, 5),
     )
