@@ -6,7 +6,7 @@ import subprocess
 from typing import Optional
 
 from workload.yaml_job_spec import load_yaml_job_spec
-from workload.resource_profile import ResourceProfile
+from workload.resource_profile import ResourceProfile, load_resource_profile
 
 ESTIMATOR_INDEX = {
     "None": None,
@@ -131,16 +131,7 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
         online_summary_path=online_estimation.get("summary_path"),
         online_parser_arg_1=None if online_estimation.get("parser_arg_1") is None else str(online_estimation.get("parser_arg_1")),
         online_parser_arg_2=None if online_estimation.get("parser_arg_2") is None else str(online_estimation.get("parser_arg_2")),
-        resource_profile=ResourceProfile(
-            peak_memory_mib=None if profile.get("peak_memory_mib") is None else int(float(profile.get("peak_memory_mib"))),
-            avg_smact=None if profile.get("avg_smact") is None else float(profile.get("avg_smact")),
-            avg_smocc=None if profile.get("avg_smocc") is None else float(profile.get("avg_smocc")),
-            avg_drama=None if profile.get("avg_drama") is None else float(profile.get("avg_drama")),
-            class_label=profile.get("class_label"),
-            profiling_duration_s=None if profile.get("profiling_duration_s") is None else int(float(profile.get("profiling_duration_s"))),
-            source=profile.get("source"),
-            extra_metrics=profile.get("extra_metrics"),
-        ) if profile else None,
+        resource_profile=load_resource_profile(profile),
     )
 
 

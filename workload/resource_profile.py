@@ -14,3 +14,19 @@ class ResourceProfile:
     profiling_duration_s: Optional[int] = None
     source: Optional[str] = None
     extra_metrics: Optional[dict[str, float]] = None
+
+
+def load_resource_profile(data: dict | None) -> ResourceProfile | None:
+    if not data:
+        return None
+
+    return ResourceProfile(
+        peak_memory_mib=None if data.get("peak_memory_mib") is None else int(float(data.get("peak_memory_mib"))),
+        avg_smact=None if data.get("avg_smact") is None else float(data.get("avg_smact")),
+        avg_smocc=None if data.get("avg_smocc") is None else float(data.get("avg_smocc")),
+        avg_drama=None if data.get("avg_drama") is None else float(data.get("avg_drama")),
+        class_label=data.get("class_label"),
+        profiling_duration_s=None if data.get("profiling_duration_s") is None else int(float(data.get("profiling_duration_s"))),
+        source=data.get("source"),
+        extra_metrics=data.get("extra_metrics"),
+    )
