@@ -112,6 +112,7 @@ def run_scheduler(policy=policy, estimator=estimator):
             )
 
             if should_dispatch_exclusive_first(
+                policy=policy,
                 idle_and_available=idle_and_available,
                 number_of_gpus_requested=number_of_GPUs_requested,
             ):
