@@ -12,12 +12,25 @@ from placement.policies import (
     select_est_lug,
 )
 
-def _get_peak_memory_mib_from_estimate(request):
+def _get_profile_metric(request, metric_name: str):
     if request.placement_estimate is None:
         return None
-    if request.placement_estimate.resource_profile is None:
+    resource_profile = request.placement_estimate.resource_profile
+    if resource_profile is None:
         return None
-    return request.placement_estimate.resource_profile.peak_memory_mib
+
+    if hasattr(resource_profile, metric_name):
+        return getattr(resource_profile, metric_name)
+
+    extra_metrics = resource_profile.extra_metrics
+    if extra_metrics is None:
+        return None
+
+    return extra_metrics.get(metric_name)
+
+
+def _get_peak_memory_mib_from_estimate(request):
+    return _get_profile_metric(request, "peak_memory_mib")
 
 def execute_placement_strategy(strategy: str, request):
     if strategy == "oracle_ff":
