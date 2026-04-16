@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from workload.resource_profile import (
-    get_resource_profile_metric,
     resolve_required_profile_metrics,
 )
 from placement.policies import (
@@ -27,18 +26,6 @@ def _get_required_profile_metrics(request):
         request.placement_estimate.resource_profile,
         profile.required_profile_metrics,
     )
-
-def _get_profile_metric(request, metric_name: str):
-    if request.placement_estimate is None:
-        return None
-    return get_resource_profile_metric(
-        request.placement_estimate.resource_profile,
-        metric_name,
-    )
-
-
-def _get_peak_memory_mib_from_estimate(request):
-    return _get_profile_metric(request, "peak_memory_mib")
 
 def _resolve_gpu_memory_estimation(request):
     gpu_memory_estimation = request.gpu_memory_estimation
