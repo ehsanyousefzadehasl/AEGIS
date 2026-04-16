@@ -6,6 +6,7 @@ import subprocess
 from typing import Optional
 
 from workload.yaml_job_spec import load_yaml_job_spec
+from workload.resource_profile import ResourceProfile
 
 ESTIMATOR_INDEX = {
     "None": None,
@@ -28,6 +29,7 @@ class JobSpec:
     online_summary_path: Optional[str]
     online_parser_arg_1: Optional[str]
     online_parser_arg_2: Optional[str]
+    resource_profile: Optional[ResourceProfile] = None
 
 def _read_task_lines(task_path: str) -> list[str]:
     ret = subprocess.run(
@@ -80,6 +82,7 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
     resources = data.get("resources", {})
     estimates = data.get("estimates", {})
     online_estimation = data.get("online_estimation", {})
+    profile = data.get("profile", {})
 
     env_name = job.get("conda_env", "tf")
     env_path = f"/opt/miniconda3/envs/{env_name}"
@@ -128,6 +131,16 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
         online_summary_path=online_estimation.get("summary_path"),
         online_parser_arg_1=None if online_estimation.get("parser_arg_1") is None else str(online_estimation.get("parser_arg_1")),
         online_parser_arg_2=None if online_estimation.get("parser_arg_2") is None else str(online_estimation.get("parser_arg_2")),
+        resource_profile=ResourceProfile(
+            peak_memory_mib=None if profile.get("peak_memory_mib") is None else int(float(profile.get("peak_memory_mib"))),
+            avg_smact=None if profile.get("avg_smact") is None else float(profile.get("avg_smact")),
+            avg_smocc=None if profile.get("avg_smocc") is None else float(profile.get("avg_smocc")),
+            avg_drama=None if profile.get("avg_drama") is None else float(profile.get("avg_drama")),
+            class_label=profile.get("class_label"),
+            profiling_duration_s=None if profile.get("profiling_duration_s") is None else int(float(profile.get("profiling_duration_s"))),
+            source=profile.get("source"),
+            extra_metrics=profile.get("extra_metrics"),
+        ) if profile else None,
     )
 
 
