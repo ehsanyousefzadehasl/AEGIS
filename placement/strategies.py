@@ -40,6 +40,17 @@ def _get_profile_metric(request, metric_name: str):
 def _get_peak_memory_mib_from_estimate(request):
     return _get_profile_metric(request, "peak_memory_mib")
 
+def _resolve_gpu_memory_estimation(request):
+    gpu_memory_estimation = request.gpu_memory_estimation
+    if gpu_memory_estimation is not None:
+        return gpu_memory_estimation
+
+    required_profile_metrics = _get_required_profile_metrics(request)
+    if required_profile_metrics is None:
+        return None
+
+    return required_profile_metrics.get("peak_memory_mib")
+
 def execute_placement_strategy(strategy: str, request):
     if strategy == "oracle_ff":
         if request.gpu_memory_requirement is None:
@@ -106,12 +117,7 @@ def execute_placement_strategy(strategy: str, request):
         )
 
     if strategy == "est_magm":
-        gpu_memory_estimation = request.gpu_memory_estimation
-        if gpu_memory_estimation is None:
-            required_profile_metrics = _get_required_profile_metrics(request)
-            if required_profile_metrics is not None:
-                gpu_memory_estimation = required_profile_metrics.get("peak_memory_mib")
-
+        gpu_memory_estimation = _resolve_gpu_memory_estimation(request)
         if gpu_memory_estimation is None:
             return None
         
@@ -123,12 +129,7 @@ def execute_placement_strategy(strategy: str, request):
         )
 
     if strategy == "est_lug":
-        gpu_memory_estimation = request.gpu_memory_estimation
-        if gpu_memory_estimation is None:
-            required_profile_metrics = _get_required_profile_metrics(request)
-            if required_profile_metrics is not None:
-                gpu_memory_estimation = required_profile_metrics.get("peak_memory_mib")
-
+        gpu_memory_estimation = _resolve_gpu_memory_estimation(request)
         if gpu_memory_estimation is None:
             return None
         
