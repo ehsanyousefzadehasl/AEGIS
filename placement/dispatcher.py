@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from placement.strategies import execute_placement_strategy
 from placement.profiles import get_policy_profile
+from placement.inputs import PlacementEstimate
 from dataclasses import dataclass
 
 
@@ -11,12 +12,12 @@ class PlacementRequest:
     gpus_with_metrics: object
     available_gpu_ids: object
     number_of_gpus_requested: int
+    # Legacy scalar inputs remain for existing policies; placement_estimate is the normalized path.
     gpu_memory_requirement: int | None = None
     gpu_memory_estimation: int | None = None
+    placement_estimate: PlacementEstimate | None = None
     round_robin_generator: object | None = None
     gpu_ids: object | None = None
-    placement_estimate: object | None = None
-
 
     
 def dispatch_placement(request: PlacementRequest):
