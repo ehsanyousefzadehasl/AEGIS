@@ -18,7 +18,6 @@ from placement.dispatcher import (
     is_dispatcher_policy,
 )
 from placement.inputs import (
-    resolve_legacy_peak_memory_policy_inputs,
     resolve_placement_estimate,
     get_missing_policy_input_message,
 )
