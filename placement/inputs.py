@@ -67,28 +67,6 @@ def resolve_placement_estimate(
             source="profiled_metadata",
             resource_profile=spec.resource_profile,
         )
-    
-    return None
-
-def resolve_legacy_peak_memory_policy_inputs(
-    *,
-    placement_estimate: PlacementEstimate | None,
-):
-    gpu_memory_requirement = None
-    gpu_memory_estimation = None
-
-    if placement_estimate is None or placement_estimate.resource_profile is None:
-        return gpu_memory_requirement, gpu_memory_estimation
-
-    peak_memory_mib = placement_estimate.resource_profile.peak_memory_mib
-    estimate_source = placement_estimate.source
-
-    if estimate_source == "oracle_requirement":
-        gpu_memory_requirement = peak_memory_mib
-    elif estimate_source in {"task_file_estimate", "online_estimate"}:
-        gpu_memory_estimation = peak_memory_mib
-
-    return gpu_memory_requirement, gpu_memory_estimation
 
 
 def resolve_required_policy_profile_metrics(
