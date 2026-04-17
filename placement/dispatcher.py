@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from placement.strategies import execute_placement_strategy
-from placement.profiles import get_policy_profile, policy_placement_strategy
+from placement.profiles import policy_placement_strategy, policy_uses_dispatcher
 from placement.inputs import PlacementEstimate
 from dataclasses import dataclass
 
@@ -27,4 +27,4 @@ def dispatch_placement(request: PlacementRequest):
 
 
 def is_dispatcher_policy(policy: str) -> bool:
-    return get_policy_profile(policy).uses_dispatcher
+    return policy_uses_dispatcher(policy)

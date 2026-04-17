@@ -137,3 +137,6 @@ def policy_estimate_source(policy: str) -> str:
 
 def policy_placement_strategy(policy: str) -> str | None:
     return get_policy_profile(policy).placement_strategy
+
+def policy_uses_dispatcher(policy: str) -> bool:
+    return get_policy_profile(policy).uses_dispatcher
