@@ -17,6 +17,13 @@ from placement.policies import (
     select_est_lug,
 )
 
+ORACLE_SELECTORS = {
+    "oracle_ff": select_oracle_ff,
+    "oracle_bf": select_oracle_bf,
+    "oracle_magm": select_oracle_magm,
+    "oracle_lug": select_oracle_lug,
+}
+
 def _resolve_gpu_memory_requirement(request):
     return resolve_peak_memory_requirement_from_estimate(
         placement_estimate=request.placement_estimate,
@@ -29,48 +36,12 @@ def _resolve_gpu_memory_estimation(request):
     )
 
 def execute_placement_strategy(strategy: str, request):
-    if strategy == "oracle_ff":
+    if strategy in ORACLE_SELECTORS:
         gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
         if gpu_memory_requirement is None:
             return None
-        
-        return select_oracle_ff(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
 
-    if strategy == "oracle_bf":
-        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
-        if gpu_memory_requirement is None:
-            return None
-        
-        return select_oracle_bf(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "oracle_magm":
-        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
-        if gpu_memory_requirement is None:
-            return None
-        
-        return select_oracle_magm(
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "oracle_lug":
-        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
-        if gpu_memory_requirement is None:
-            return None
-        
-        return select_oracle_lug(
+        return ORACLE_SELECTORS[strategy](
             gpus_with_metrics=request.gpus_with_metrics,
             gpu_memory_requirement=gpu_memory_requirement,
             available_gpu_ids=request.available_gpu_ids,
