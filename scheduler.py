@@ -12,7 +12,11 @@ from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
-from placement.dispatcher import PlacementRequest, dispatch_placement, is_dispatcher_policy
+from placement.dispatcher import (
+    build_placement_request,
+    dispatch_placement,
+    is_dispatcher_policy,
+)
 from placement.inputs import (
     resolve_legacy_peak_memory_policy_inputs,
     resolve_placement_estimate,
@@ -115,10 +119,6 @@ def run_scheduler(policy=policy, estimator=estimator):
                 estimator_name=estimator,
             )
 
-            gpu_memory_requirement, gpu_memory_estimation = resolve_legacy_peak_memory_policy_inputs(
-                placement_estimate=placement_estimate,
-            )
-
             if should_dispatch_exclusive_first(
                 policy=policy,
                 idle_and_available=idle_and_available,
@@ -169,13 +169,11 @@ def run_scheduler(policy=policy, estimator=estimator):
                     print(gpus_with_metrics)
 
                 assigned_gpus = dispatch_placement(
-                    PlacementRequest(
+                    build_placement_request(
                         policy=policy,
                         gpus_with_metrics=gpus_with_metrics,
                         available_gpu_ids=all_available_GPUs(),
                         number_of_gpus_requested=number_of_GPUs_requested,
-                        gpu_memory_requirement=gpu_memory_requirement,
-                        gpu_memory_estimation=gpu_memory_estimation,
                         placement_estimate=placement_estimate,
                         round_robin_generator=round_robin_generator,
                         gpu_ids=GPU_IDs,
