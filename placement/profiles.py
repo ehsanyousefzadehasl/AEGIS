@@ -129,9 +129,6 @@ def policy_requires_estimator(policy: str) -> bool:
         "online_estimate",
     }
 
-def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
-    return get_policy_profile(policy).required_profile_metrics
-
 def policy_estimate_source(policy: str) -> str:
     return get_policy_profile(policy).estimate_source
 

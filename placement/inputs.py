@@ -5,7 +5,6 @@ from typing import Any
 
 from estimation.online_estimator import estimate_online_gpu_memory
 from placement.profiles import (
-    get_policy_profile,
     policy_estimate_source,
     policy_required_profile_metrics,
 )
@@ -116,15 +115,15 @@ def get_missing_policy_input_message(
     gpu_memory_requirement,
     gpu_memory_estimation,
 ) -> str | None:
-    profile = get_policy_profile(policy)
+    estimate_source = policy_estimate_source(policy)
 
-    if profile.estimate_source == "oracle" and gpu_memory_requirement is None:
+    if estimate_source == "oracle" and gpu_memory_requirement is None:
         return f"Could not parse GPU memory requirement for task {task}"
 
-    if profile.estimate_source in {"task_file_estimate", "online_estimate"} and gpu_memory_estimation is None:
+    if estimate_source in {"task_file_estimate", "online_estimate"} and gpu_memory_estimation is None:
         return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
 
-    if profile.estimate_source == "profiled_metadata":
+    if estimate_source == "profiled_metadata":
         required_metrics = resolve_required_profile_metrics(
             spec.resource_profile,
             policy_required_profile_metrics(policy),
