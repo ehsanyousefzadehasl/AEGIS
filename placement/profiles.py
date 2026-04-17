@@ -12,18 +12,6 @@ class PolicyProfile:
     placement_strategy: str | None
     required_profile_metrics: tuple[str, ...] = ()
 
-def policy_requires_estimator(policy: str) -> bool:
-    return get_policy_profile(policy).estimate_source in {
-        "task_file_estimate",
-        "online_estimate",
-    }
-
-def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
-    return get_policy_profile(policy).required_profile_metrics
-
-def policy_estimate_source(policy: str) -> str:
-    return get_policy_profile(policy).estimate_source
-
 
 POLICY_PROFILES = {
     "exclusive": PolicyProfile(
@@ -134,3 +122,18 @@ def get_policy_profile(policy: str) -> PolicyProfile:
 
 def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
     return get_policy_profile(policy).required_profile_metrics
+
+def policy_requires_estimator(policy: str) -> bool:
+    return get_policy_profile(policy).estimate_source in {
+        "task_file_estimate",
+        "online_estimate",
+    }
+
+def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
+    return get_policy_profile(policy).required_profile_metrics
+
+def policy_estimate_source(policy: str) -> str:
+    return get_policy_profile(policy).estimate_source
+
+def policy_placement_strategy(policy: str) -> str | None:
+    return get_policy_profile(policy).placement_strategy

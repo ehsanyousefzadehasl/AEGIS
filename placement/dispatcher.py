@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from placement.strategies import execute_placement_strategy
-from placement.profiles import get_policy_profile
+from placement.profiles import get_policy_profile, policy_placement_strategy
 from placement.inputs import PlacementEstimate
 from dataclasses import dataclass
 
@@ -21,8 +21,7 @@ class PlacementRequest:
 
     
 def dispatch_placement(request: PlacementRequest):
-    profile = get_policy_profile(request.policy)
-    strategy = profile.placement_strategy
+    strategy = policy_placement_strategy(request.policy)
     return execute_placement_strategy(strategy, request)
 
 
