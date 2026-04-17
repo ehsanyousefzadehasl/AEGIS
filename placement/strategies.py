@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from placement.inputs import resolve_required_policy_profile_metrics
+from placement.inputs import (
+    resolve_peak_memory_estimation_from_estimate,
+    resolve_peak_memory_requirement_from_estimate,
+    resolve_required_policy_profile_metrics,
+)
+
 from placement.policies import (
     select_oracle_ff,
     select_oracle_bf,
@@ -22,30 +27,24 @@ def _get_required_profile_metrics(request):
         placement_estimate=request.placement_estimate,
     )
 
-def _resolve_gpu_memory_estimation(request):
-    gpu_memory_estimation = request.gpu_memory_estimation
-    if gpu_memory_estimation is not None:
-        return gpu_memory_estimation
-
-    required_profile_metrics = _get_required_profile_metrics(request)
-    if required_profile_metrics is None:
-        return None
-
-    return required_profile_metrics.get("peak_memory_mib")
-
 def _resolve_gpu_memory_requirement(request):
     gpu_memory_requirement = request.gpu_memory_requirement
     if gpu_memory_requirement is not None:
         return gpu_memory_requirement
 
-    estimate = request.placement_estimate
-    if estimate is None or estimate.source != "oracle_requirement":
-        return None
+    return resolve_peak_memory_requirement_from_estimate(
+        placement_estimate=request.placement_estimate,
+    )
 
-    if estimate.resource_profile is None:
-        return None
+def _resolve_gpu_memory_estimation(request):
+    gpu_memory_estimation = request.gpu_memory_estimation
+    if gpu_memory_estimation is not None:
+        return gpu_memory_estimation
 
-    return estimate.resource_profile.peak_memory_mib
+    return resolve_peak_memory_estimation_from_estimate(
+        policy=request.policy,
+        placement_estimate=request.placement_estimate,
+    )
 
 def execute_placement_strategy(strategy: str, request):
     if strategy == "oracle_ff":
