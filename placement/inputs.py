@@ -111,6 +111,18 @@ def resolve_policy_inputs(
         placement_estimate=placement_estimate,
     )
 
+def resolve_required_policy_profile_metrics(
+    *,
+    policy: str,
+    placement_estimate: PlacementEstimate | None,
+):
+    if placement_estimate is None or placement_estimate.resource_profile is None:
+        return None
+
+    return resolve_required_profile_metrics(
+        placement_estimate.resource_profile,
+        policy_required_profile_metrics(policy),
+    )
 
 def get_missing_policy_input_message(
     *,
@@ -143,10 +155,11 @@ def get_missing_policy_input_message(
         if placement_estimate is None or placement_estimate.resource_profile is None:
             return f"Could not resolve required profiled metrics for task {task}"
 
-        required_metrics = resolve_required_profile_metrics(
-            placement_estimate.resource_profile,
-            policy_required_profile_metrics(policy),
+        required_metrics = resolve_required_policy_profile_metrics(
+            policy=policy,
+            placement_estimate=placement_estimate,
         )
+
         if required_metrics is None:
             return f"Could not resolve required profiled metrics for task {task}"
 

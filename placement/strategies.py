@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from workload.resource_profile import (
-    resolve_required_profile_metrics,
-)
+from placement.inputs import resolve_required_policy_profile_metrics
 from placement.policies import (
     select_oracle_ff,
     select_oracle_bf,
@@ -19,12 +17,9 @@ from placement.profiles import policy_required_profile_metrics
 
 
 def _get_required_profile_metrics(request):
-    if request.placement_estimate is None:
-        return None
-
-    return resolve_required_profile_metrics(
-        request.placement_estimate.resource_profile,
-        policy_required_profile_metrics(request.policy),
+    return resolve_required_policy_profile_metrics(
+        policy=request.policy,
+        placement_estimate=request.placement_estimate,
     )
 
 def _resolve_gpu_memory_estimation(request):
