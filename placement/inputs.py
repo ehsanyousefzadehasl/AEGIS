@@ -4,7 +4,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from estimation.online_estimator import estimate_online_gpu_memory
-from placement.profiles import get_policy_profile, policy_required_profile_metrics
+from placement.profiles import (
+    get_policy_profile,
+    policy_estimate_source,
+    policy_required_profile_metrics,
+)
 from workload.job_spec import JobSpec
 from workload.resource_profile import (
     ResourceProfile,
@@ -25,9 +29,9 @@ def resolve_placement_estimate(
     workdir: str,
     estimator_name: str,
 ) -> PlacementEstimate | None:
-    profile = get_policy_profile(policy)
+    estimate_source = policy_estimate_source(policy)
 
-    if profile.estimate_source == "oracle":
+    if estimate_source == "oracle":
         return PlacementEstimate(
             source="oracle_requirement",
             resource_profile=ResourceProfile(
@@ -36,7 +40,7 @@ def resolve_placement_estimate(
             ) if spec.gpu_memory_requirement_mib is not None else None,
         )
 
-    if profile.estimate_source == "task_file_estimate":
+    if estimate_source == "task_file_estimate":
         return PlacementEstimate(
             source="task_file_estimate",
             resource_profile=ResourceProfile(
@@ -45,7 +49,7 @@ def resolve_placement_estimate(
             ) if spec.gpu_memory_estimate_mib is not None else None,
         )
 
-    if profile.estimate_source == "online_estimate":
+    if estimate_source == "online_estimate":
         online_estimate_mib = estimate_online_gpu_memory(
             spec=spec,
             workdir=workdir,
@@ -59,7 +63,7 @@ def resolve_placement_estimate(
             ) if online_estimate_mib is not None else None,
         )
     
-    if profile.estimate_source == "profiled_metadata":
+    if estimate_source == "profiled_metadata":
         return PlacementEstimate(
             source="profiled_metadata",
             resource_profile=spec.resource_profile,
@@ -90,10 +94,10 @@ def resolve_policy_inputs(
 
     peak_memory_mib = estimate.resource_profile.peak_memory_mib
 
-    profile = get_policy_profile(policy)
-    if profile.estimate_source == "oracle":
+    estimate_source = policy_estimate_source(policy)
+    if estimate_source == "oracle":
         gpu_memory_requirement = peak_memory_mib
-    elif profile.estimate_source in {"task_file_estimate", "online_estimate"}:
+    elif estimate_source in {"task_file_estimate", "online_estimate"}:
         gpu_memory_estimation = peak_memory_mib
 
     return gpu_memory_requirement, gpu_memory_estimation

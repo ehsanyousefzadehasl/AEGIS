@@ -21,6 +21,10 @@ def policy_requires_estimator(policy: str) -> bool:
 def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
     return get_policy_profile(policy).required_profile_metrics
 
+def policy_estimate_source(policy: str) -> str:
+    return get_policy_profile(policy).estimate_source
+
+
 POLICY_PROFILES = {
     "exclusive": PolicyProfile(
         name="exclusive",
@@ -127,3 +131,6 @@ POLICY_PROFILES = {
 
 def get_policy_profile(policy: str) -> PolicyProfile:
     return POLICY_PROFILES[policy]
+
+def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
+    return get_policy_profile(policy).required_profile_metrics
