@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from placement.profiles import get_policy_profile
-
+from placement.profiles import policy_is_exclusive_first
 
 def use_exclusive_first_admission(policy: str) -> bool:
-    return get_policy_profile(policy).exclusive_first
+    return policy_is_exclusive_first(policy)
 
 
 def should_dispatch_exclusive_first(

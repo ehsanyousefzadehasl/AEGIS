@@ -140,3 +140,6 @@ def policy_placement_strategy(policy: str) -> str | None:
 
 def policy_uses_dispatcher(policy: str) -> bool:
     return get_policy_profile(policy).uses_dispatcher
+
+def policy_is_exclusive_first(policy: str) -> bool:
+    return get_policy_profile(policy).exclusive_first
