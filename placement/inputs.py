@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from estimation.online_estimator import estimate_online_gpu_memory
-from placement.profiles import get_policy_profile
+from placement.profiles import get_policy_profile, policy_required_profile_metrics
 from workload.job_spec import JobSpec
 from workload.resource_profile import (
     ResourceProfile,
@@ -119,7 +119,7 @@ def get_missing_policy_input_message(
     if profile.estimate_source == "profiled_metadata":
         required_metrics = resolve_required_profile_metrics(
             spec.resource_profile,
-            profile.required_profile_metrics,
+            policy_required_profile_metrics(policy),
         )
         if required_metrics is None:
             return f"Could not resolve required profiled metrics for task {task}"

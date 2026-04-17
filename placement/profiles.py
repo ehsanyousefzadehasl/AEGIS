@@ -18,6 +18,9 @@ def policy_requires_estimator(policy: str) -> bool:
         "online_estimate",
     }
 
+def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
+    return get_policy_profile(policy).required_profile_metrics
+
 POLICY_PROFILES = {
     "exclusive": PolicyProfile(
         name="exclusive",

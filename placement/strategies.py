@@ -15,16 +15,16 @@ from placement.policies import (
     select_est_lug,
 )
 
-from placement.profiles import get_policy_profile
+from placement.profiles import policy_required_profile_metrics
+
 
 def _get_required_profile_metrics(request):
     if request.placement_estimate is None:
         return None
 
-    profile = get_policy_profile(request.policy)
     return resolve_required_profile_metrics(
         request.placement_estimate.resource_profile,
-        profile.required_profile_metrics,
+        policy_required_profile_metrics(request.policy),
     )
 
 def _resolve_gpu_memory_estimation(request):
