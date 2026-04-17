@@ -38,43 +38,65 @@ def _resolve_gpu_memory_estimation(request):
 
     return required_profile_metrics.get("peak_memory_mib")
 
+def _resolve_gpu_memory_requirement(request):
+    gpu_memory_requirement = request.gpu_memory_requirement
+    if gpu_memory_requirement is not None:
+        return gpu_memory_requirement
+
+    estimate = request.placement_estimate
+    if estimate is None or estimate.source != "oracle_requirement":
+        return None
+
+    if estimate.resource_profile is None:
+        return None
+
+    return estimate.resource_profile.peak_memory_mib
+
 def execute_placement_strategy(strategy: str, request):
     if strategy == "oracle_ff":
-        if request.gpu_memory_requirement is None:
+        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
+        if gpu_memory_requirement is None:
             return None
+        
         return select_oracle_ff(
             gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
+            gpu_memory_requirement=gpu_memory_requirement,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
     if strategy == "oracle_bf":
-        if request.gpu_memory_requirement is None:
+        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
+        if gpu_memory_requirement is None:
             return None
+        
         return select_oracle_bf(
             gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
+            gpu_memory_requirement=gpu_memory_requirement,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
     if strategy == "oracle_magm":
-        if request.gpu_memory_requirement is None:
+        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
+        if gpu_memory_requirement is None:
             return None
+        
         return select_oracle_magm(
             gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
+            gpu_memory_requirement=gpu_memory_requirement,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
 
     if strategy == "oracle_lug":
-        if request.gpu_memory_requirement is None:
+        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
+        if gpu_memory_requirement is None:
             return None
+        
         return select_oracle_lug(
             gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=request.gpu_memory_requirement,
+            gpu_memory_requirement=gpu_memory_requirement,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
         )
