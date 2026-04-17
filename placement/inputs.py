@@ -91,26 +91,6 @@ def resolve_legacy_peak_memory_policy_inputs(
     return gpu_memory_requirement, gpu_memory_estimation
 
 
-def resolve_policy_inputs(
-    *,
-    policy: str,
-    spec: JobSpec,
-    workdir: str,
-    estimator_name: str,
-    placement_estimate: PlacementEstimate | None = None,
-):
-    if placement_estimate is None:
-        placement_estimate = resolve_placement_estimate(
-            spec=spec,
-            policy=policy,
-            workdir=workdir,
-            estimator_name=estimator_name,
-        )
-
-    return resolve_legacy_peak_memory_policy_inputs(
-        placement_estimate=placement_estimate,
-    )
-
 def resolve_required_policy_profile_metrics(
     *,
     policy: str,
@@ -123,6 +103,42 @@ def resolve_required_policy_profile_metrics(
         placement_estimate.resource_profile,
         policy_required_profile_metrics(policy),
     )
+
+def resolve_peak_memory_requirement_from_estimate(
+    *,
+    placement_estimate: PlacementEstimate | None,
+):
+    if placement_estimate is None or placement_estimate.source != "oracle_requirement":
+        return None
+
+    if placement_estimate.resource_profile is None:
+        return None
+
+    return placement_estimate.resource_profile.peak_memory_mib
+
+
+def resolve_peak_memory_estimation_from_estimate(
+    *,
+    policy: str,
+    placement_estimate: PlacementEstimate | None,
+):
+    if placement_estimate is None:
+        return None
+
+    if placement_estimate.source in {"task_file_estimate", "online_estimate"}:
+        if placement_estimate.resource_profile is None:
+            return None
+        return placement_estimate.resource_profile.peak_memory_mib
+
+    required_metrics = resolve_required_policy_profile_metrics(
+        policy=policy,
+        placement_estimate=placement_estimate,
+    )
+    if required_metrics is None:
+        return None
+
+    return required_metrics.get("peak_memory_mib")
+
 
 def get_missing_policy_input_message(
     *,
