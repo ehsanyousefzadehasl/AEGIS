@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from placement.strategies import execute_placement_strategy
 from placement.profiles import policy_placement_strategy, policy_uses_dispatcher
-from placement.inputs import (
-    PlacementEstimate,
-    resolve_legacy_peak_memory_policy_inputs,
-)
+from placement.inputs import PlacementEstimate
 from dataclasses import dataclass
 
 
@@ -15,9 +12,6 @@ class PlacementRequest:
     gpus_with_metrics: object
     available_gpu_ids: object
     number_of_gpus_requested: int
-    # Legacy scalar inputs remain for existing policies; placement_estimate is the normalized path.
-    gpu_memory_requirement: int | None = None
-    gpu_memory_estimation: int | None = None
     placement_estimate: PlacementEstimate | None = None
     round_robin_generator: object | None = None
     gpu_ids: object | None = None
@@ -33,19 +27,12 @@ def build_placement_request(
     round_robin_generator=None,
     gpu_ids=None,
 ):
-    gpu_memory_requirement, gpu_memory_estimation = (
-        resolve_legacy_peak_memory_policy_inputs(
-            placement_estimate=placement_estimate,
-        )
-    )
 
     return PlacementRequest(
         policy=policy,
         gpus_with_metrics=gpus_with_metrics,
         available_gpu_ids=available_gpu_ids,
         number_of_gpus_requested=number_of_gpus_requested,
-        gpu_memory_requirement=gpu_memory_requirement,
-        gpu_memory_estimation=gpu_memory_estimation,
         placement_estimate=placement_estimate,
         round_robin_generator=round_robin_generator,
         gpu_ids=gpu_ids,
