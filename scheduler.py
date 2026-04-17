@@ -158,11 +158,9 @@ def run_scheduler(policy=policy, estimator=estimator):
             if is_dispatcher_policy(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
                 missing_input_message = get_missing_policy_input_message(
                     policy=policy,
-                    spec=spec,
                     task=task,
                     estimator_name=estimator,
-                    gpu_memory_requirement=gpu_memory_requirement,
-                    gpu_memory_estimation=gpu_memory_estimation,
+                    placement_estimate=placement_estimate,
                 )
 
                 if missing_input_message is not None:

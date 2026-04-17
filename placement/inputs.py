@@ -115,26 +115,39 @@ def resolve_policy_inputs(
 def get_missing_policy_input_message(
     *,
     policy: str,
-    spec: JobSpec,
     task: str,
     estimator_name: str,
-    gpu_memory_requirement,
-    gpu_memory_estimation,
+    placement_estimate: PlacementEstimate | None,
 ) -> str | None:
     estimate_source = policy_estimate_source(policy)
 
-    if estimate_source == "oracle" and gpu_memory_requirement is None:
-        return f"Could not parse GPU memory requirement for task {task}"
+    if estimate_source == "oracle":
+        if (
+            placement_estimate is None
+            or placement_estimate.source != "oracle_requirement"
+            or placement_estimate.resource_profile is None
+            or placement_estimate.resource_profile.peak_memory_mib is None
+        ):
+            return f"Could not parse GPU memory requirement for task {task}"
 
-    if estimate_source in {"task_file_estimate", "online_estimate"} and gpu_memory_estimation is None:
-        return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
+    if estimate_source in {"task_file_estimate", "online_estimate"}:
+        if (
+            placement_estimate is None
+            or placement_estimate.source not in {"task_file_estimate", "online_estimate"}
+            or placement_estimate.resource_profile is None
+            or placement_estimate.resource_profile.peak_memory_mib is None
+        ):
+            return f"Could not parse GPU memory estimate for task {task} using estimator {estimator_name}"
 
     if estimate_source == "profiled_metadata":
+        if placement_estimate is None or placement_estimate.resource_profile is None:
+            return f"Could not resolve required profiled metrics for task {task}"
+
         required_metrics = resolve_required_profile_metrics(
-            spec.resource_profile,
+            placement_estimate.resource_profile,
             policy_required_profile_metrics(policy),
         )
         if required_metrics is None:
             return f"Could not resolve required profiled metrics for task {task}"
-    
+
     return None
