@@ -14,7 +14,7 @@ from runtime.launcher import launch_and_get_pid, build_launch_command, command_e
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
 from placement.dispatcher import PlacementRequest, dispatch_placement, is_dispatcher_policy
 from placement.inputs import (
-    resolve_policy_inputs,
+    resolve_legacy_peak_memory_policy_inputs,
     resolve_placement_estimate,
     get_missing_policy_input_message,
 )
@@ -115,11 +115,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                 estimator_name=estimator,
             )
 
-            gpu_memory_requirement, gpu_memory_estimation = resolve_policy_inputs(
-                policy=policy,
-                spec=spec,
-                workdir=dir,
-                estimator_name=estimator,
+            gpu_memory_requirement, gpu_memory_estimation = resolve_legacy_peak_memory_policy_inputs(
                 placement_estimate=placement_estimate,
             )
 
