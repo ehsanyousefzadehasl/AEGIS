@@ -108,18 +108,19 @@ def run_scheduler(policy=policy, estimator=estimator):
 
             now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
-            gpu_memory_requirement, gpu_memory_estimation = resolve_policy_inputs(
+            placement_estimate = resolve_placement_estimate(
                 policy=policy,
                 spec=spec,
                 workdir=dir,
                 estimator_name=estimator,
             )
 
-            placement_estimate = resolve_placement_estimate(
+            gpu_memory_requirement, gpu_memory_estimation = resolve_policy_inputs(
                 policy=policy,
                 spec=spec,
                 workdir=dir,
                 estimator_name=estimator,
+                placement_estimate=placement_estimate,
             )
 
             if should_dispatch_exclusive_first(

@@ -78,13 +78,17 @@ def resolve_policy_inputs(
     spec: JobSpec,
     workdir: str,
     estimator_name: str,
+    placement_estimate: PlacementEstimate | None = None,
 ):
-    estimate = resolve_placement_estimate(
-        spec=spec,
-        policy=policy,
-        workdir=workdir,
-        estimator_name=estimator_name,
-    )
+    if placement_estimate is None:
+        placement_estimate = resolve_placement_estimate(
+            spec=spec,
+            policy=policy,
+            workdir=workdir,
+            estimator_name=estimator_name,
+        )
+
+    estimate = placement_estimate
 
     gpu_memory_requirement = None
     gpu_memory_estimation = None
