@@ -18,19 +18,11 @@ from placement.policies import (
 )
 
 def _resolve_gpu_memory_requirement(request):
-    gpu_memory_requirement = request.gpu_memory_requirement
-    if gpu_memory_requirement is not None:
-        return gpu_memory_requirement
-
     return resolve_peak_memory_requirement_from_estimate(
         placement_estimate=request.placement_estimate,
     )
 
 def _resolve_gpu_memory_estimation(request):
-    gpu_memory_estimation = request.gpu_memory_estimation
-    if gpu_memory_estimation is not None:
-        return gpu_memory_estimation
-
     return resolve_peak_memory_estimation_from_estimate(
         policy=request.policy,
         placement_estimate=request.placement_estimate,
