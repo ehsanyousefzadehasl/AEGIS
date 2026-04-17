@@ -3,7 +3,6 @@ from __future__ import annotations
 from placement.inputs import (
     resolve_peak_memory_estimation_from_estimate,
     resolve_peak_memory_requirement_from_estimate,
-    resolve_required_policy_profile_metrics,
 )
 
 from placement.policies import (
@@ -17,15 +16,6 @@ from placement.policies import (
     select_est_magm,
     select_est_lug,
 )
-
-from placement.profiles import policy_required_profile_metrics
-
-
-def _get_required_profile_metrics(request):
-    return resolve_required_policy_profile_metrics(
-        policy=request.policy,
-        placement_estimate=request.placement_estimate,
-    )
 
 def _resolve_gpu_memory_requirement(request):
     gpu_memory_requirement = request.gpu_memory_requirement
