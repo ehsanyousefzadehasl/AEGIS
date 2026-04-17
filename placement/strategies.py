@@ -29,6 +29,11 @@ EST_SELECTORS = {
     "est_lug": select_est_lug,
 }
 
+OR_SELECTORS = {
+    "or_magm": select_or_magm,
+    "or_lug": select_or_lug,
+}
+
 def _resolve_gpu_memory_requirement(request):
     return resolve_peak_memory_requirement_from_estimate(
         placement_estimate=request.placement_estimate,
@@ -63,15 +68,8 @@ def execute_placement_strategy(strategy: str, request):
             gpu_ids=request.gpu_ids,
         )
 
-    if strategy == "or_magm":
-        return select_or_magm(
-            gpus_with_metrics=request.gpus_with_metrics,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
-
-    if strategy == "or_lug":
-        return select_or_lug(
+    if strategy in OR_SELECTORS:
+        return OR_SELECTORS[strategy](
             gpus_with_metrics=request.gpus_with_metrics,
             available_gpu_ids=request.available_gpu_ids,
             number_of_gpus_requested=request.number_of_gpus_requested,
