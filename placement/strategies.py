@@ -90,17 +90,26 @@ def _execute_or_rr_selector(request):
     )
 
 
+STRATEGY_REGISTRY = {
+    "oracle_ff": (_execute_oracle_selector, select_oracle_ff),
+    "oracle_bf": (_execute_oracle_selector, select_oracle_bf),
+    "oracle_magm": (_execute_oracle_selector, select_oracle_magm),
+    "oracle_lug": (_execute_oracle_selector, select_oracle_lug),
+    "or_rr": (_execute_or_rr_selector, None),
+    "or_magm": (_execute_or_selector, select_or_magm),
+    "or_lug": (_execute_or_selector, select_or_lug),
+    "est_magm": (_execute_est_selector, select_est_magm),
+    "est_lug": (_execute_est_selector, select_est_lug),
+}
+
+
 def execute_placement_strategy(strategy: str, request):
-    if strategy in ORACLE_SELECTORS:
-        return _execute_oracle_selector(ORACLE_SELECTORS[strategy], request)
+    entry = STRATEGY_REGISTRY.get(strategy)
+    if entry is None:
+        return None
 
-    if strategy == "or_rr":
-        return _execute_or_rr_selector(request)
+    executor, selector = entry
+    if selector is None:
+        return executor(request)
 
-    if strategy in OR_SELECTORS:
-        return _execute_or_selector(OR_SELECTORS[strategy], request)
-
-    if strategy in EST_SELECTORS:
-        return _execute_est_selector(EST_SELECTORS[strategy], request)
-
-    return None
+    return executor(selector, request)
