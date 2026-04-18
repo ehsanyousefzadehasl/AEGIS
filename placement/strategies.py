@@ -78,20 +78,24 @@ def _execute_est_selector(selector, request):
         number_of_gpus_requested=request.number_of_gpus_requested,
     )
 
+def _execute_or_rr_selector(request):
+    if request.round_robin_generator is None or request.gpu_ids is None:
+        return None
+
+    return select_or_rr(
+        round_robin_generator=request.round_robin_generator,
+        available_gpu_ids=request.available_gpu_ids,
+        number_of_gpus_requested=request.number_of_gpus_requested,
+        gpu_ids=request.gpu_ids,
+    )
+
 
 def execute_placement_strategy(strategy: str, request):
     if strategy in ORACLE_SELECTORS:
         return _execute_oracle_selector(ORACLE_SELECTORS[strategy], request)
 
     if strategy == "or_rr":
-        if request.round_robin_generator is None or request.gpu_ids is None:
-            return None
-        return select_or_rr(
-            round_robin_generator=request.round_robin_generator,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-            gpu_ids=request.gpu_ids,
-        )
+        return _execute_or_rr_selector(request)
 
     if strategy in OR_SELECTORS:
         return _execute_or_selector(OR_SELECTORS[strategy], request)
