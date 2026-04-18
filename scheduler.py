@@ -15,8 +15,8 @@ from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_r
 from placement.dispatcher import (
     build_placement_request,
     dispatch_placement,
-    is_dispatcher_policy,
 )
+from placement.profiles import policy_uses_dispatcher
 from placement.inputs import (
     resolve_placement_estimate,
     get_missing_policy_input_message,
@@ -150,7 +150,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                 print(gpus_state)
                 continue
 
-            if is_dispatcher_policy(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
+            if policy_uses_dispatcher(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
                 missing_input_message = get_missing_policy_input_message(
                     policy=policy,
                     task=task,
