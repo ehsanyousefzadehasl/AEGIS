@@ -61,11 +61,11 @@ def _execute_est_selector(selector, request):
         number_of_gpus_requested=request.number_of_gpus_requested,
     )
 
-def _execute_or_rr_selector(request):
+def _execute_or_rr_selector(selector, request):
     if request.round_robin_generator is None or request.gpu_ids is None:
         return None
 
-    return select_or_rr(
+    return selector(
         round_robin_generator=request.round_robin_generator,
         available_gpu_ids=request.available_gpu_ids,
         number_of_gpus_requested=request.number_of_gpus_requested,
@@ -78,7 +78,7 @@ STRATEGY_REGISTRY = {
     "oracle_bf": (_execute_oracle_selector, select_oracle_bf),
     "oracle_magm": (_execute_oracle_selector, select_oracle_magm),
     "oracle_lug": (_execute_oracle_selector, select_oracle_lug),
-    "or_rr": (_execute_or_rr_selector, None),
+    "or_rr": (_execute_or_rr_selector, select_or_rr),
     "or_magm": (_execute_or_selector, select_or_magm),
     "or_lug": (_execute_or_selector, select_or_lug),
     "est_magm": (_execute_est_selector, select_est_magm),
@@ -92,7 +92,4 @@ def execute_placement_strategy(strategy: str, request):
         return None
 
     executor, selector = entry
-    if selector is None:
-        return executor(request)
-
     return executor(selector, request)
