@@ -17,23 +17,6 @@ from placement.policies import (
     select_est_lug,
 )
 
-ORACLE_SELECTORS = {
-    "oracle_ff": select_oracle_ff,
-    "oracle_bf": select_oracle_bf,
-    "oracle_magm": select_oracle_magm,
-    "oracle_lug": select_oracle_lug,
-}
-
-EST_SELECTORS = {
-    "est_magm": select_est_magm,
-    "est_lug": select_est_lug,
-}
-
-OR_SELECTORS = {
-    "or_magm": select_or_magm,
-    "or_lug": select_or_lug,
-}
-
 def _resolve_gpu_memory_requirement(request):
     return resolve_peak_memory_requirement_from_estimate(
         placement_estimate=request.placement_estimate,
