@@ -45,18 +45,43 @@ def _resolve_gpu_memory_estimation(request):
         placement_estimate=request.placement_estimate,
     )
 
+def _execute_oracle_selector(selector, request):
+    gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
+    if gpu_memory_requirement is None:
+        return None
+
+    return selector(
+        gpus_with_metrics=request.gpus_with_metrics,
+        gpu_memory_requirement=gpu_memory_requirement,
+        available_gpu_ids=request.available_gpu_ids,
+        number_of_gpus_requested=request.number_of_gpus_requested,
+    )
+
+
+def _execute_or_selector(selector, request):
+    return selector(
+        gpus_with_metrics=request.gpus_with_metrics,
+        available_gpu_ids=request.available_gpu_ids,
+        number_of_gpus_requested=request.number_of_gpus_requested,
+    )
+
+
+def _execute_est_selector(selector, request):
+    gpu_memory_estimation = _resolve_gpu_memory_estimation(request)
+    if gpu_memory_estimation is None:
+        return None
+
+    return selector(
+        gpus_with_metrics=request.gpus_with_metrics,
+        gpu_memory_estimation=gpu_memory_estimation,
+        available_gpu_ids=request.available_gpu_ids,
+        number_of_gpus_requested=request.number_of_gpus_requested,
+    )
+
+
 def execute_placement_strategy(strategy: str, request):
     if strategy in ORACLE_SELECTORS:
-        gpu_memory_requirement = _resolve_gpu_memory_requirement(request)
-        if gpu_memory_requirement is None:
-            return None
-
-        return ORACLE_SELECTORS[strategy](
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_requirement=gpu_memory_requirement,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
+        return _execute_oracle_selector(ORACLE_SELECTORS[strategy], request)
 
     if strategy == "or_rr":
         if request.round_robin_generator is None or request.gpu_ids is None:
@@ -69,22 +94,9 @@ def execute_placement_strategy(strategy: str, request):
         )
 
     if strategy in OR_SELECTORS:
-        return OR_SELECTORS[strategy](
-            gpus_with_metrics=request.gpus_with_metrics,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
+        return _execute_or_selector(OR_SELECTORS[strategy], request)
 
     if strategy in EST_SELECTORS:
-        gpu_memory_estimation = _resolve_gpu_memory_estimation(request)
-        if gpu_memory_estimation is None:
-            return None
-
-        return EST_SELECTORS[strategy](
-            gpus_with_metrics=request.gpus_with_metrics,
-            gpu_memory_estimation=gpu_memory_estimation,
-            available_gpu_ids=request.available_gpu_ids,
-            number_of_gpus_requested=request.number_of_gpus_requested,
-        )
+        return _execute_est_selector(EST_SELECTORS[strategy], request)
 
     return None
