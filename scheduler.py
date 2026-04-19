@@ -17,6 +17,7 @@ from placement.dispatcher import (
     dispatch_placement,
 )
 from placement.profiles import policy_uses_dispatcher
+from placement.profiles import policy_placement_strategy
 from placement.inputs import (
     resolve_placement_estimate,
     get_missing_policy_input_message,
@@ -163,7 +164,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     continue
 
                 gpus_with_metrics = None
-                if policy != "OR-RR":
+                if policy_placement_strategy(policy) != "or_rr":
                     gpus_with_metrics = monitor.analyze_Gmetrics()
                     print(gpus_with_metrics)
 
@@ -185,8 +186,12 @@ def run_scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpus)
 
-                assigned_gpu_ids = assigned_gpus if policy == "OR-RR" else assigned_gpus.index
-
+                assigned_gpu_ids = (
+                    assigned_gpus
+                    if policy_placement_strategy(policy) == "or_rr"
+                    else assigned_gpus.index
+                )
+                
                 dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
