@@ -2,8 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from placement.strategies import execute_placement_strategy
-
+from placement.strategies import _STRATEGY_REGISTRY, execute_placement_strategy
 
 class TestPlacementStrategies(unittest.TestCase):
     def test_unknown_strategy_returns_none(self):
@@ -52,6 +51,36 @@ class TestPlacementStrategies(unittest.TestCase):
 
         result = execute_placement_strategy("est_magm", request)
         self.assertIsNone(result)
+    
+        @patch("placement.strategies._resolve_gpu_memory_estimation")
+        def test_est_bf_strategy_dispatches_through_registry(self, mock_estimation):
+            mock_estimation.return_value = 456
+
+            request = SimpleNamespace(
+                policy="EST-BF",
+                gpus_with_metrics="metrics",
+                available_gpu_ids=["0", "1"],
+                number_of_gpus_requested=1,
+                placement_estimate=object(),
+            )
+
+            def fake_selector(**kwargs):
+                return kwargs["gpu_memory_estimation"]
+
+            with patch.dict(
+                _STRATEGY_REGISTRY,
+                {"est_bf": (lambda selector, req: selector(
+                    gpus_with_metrics=req.gpus_with_metrics,
+                    gpu_memory_estimation=mock_estimation(req),
+                    available_gpu_ids=req.available_gpu_ids,
+                    number_of_gpus_requested=req.number_of_gpus_requested,
+                ), fake_selector)},
+                clear=False,
+            ):
+                result = execute_placement_strategy("est_bf", request)
+
+            self.assertEqual(result, 456)
+
 
     def test_round_robin_strategy_returns_selector_result(self):
         request = SimpleNamespace(
