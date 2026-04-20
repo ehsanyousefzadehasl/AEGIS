@@ -91,6 +91,13 @@ POLICY_PROFILES = {
         uses_dispatcher=True,
         placement_strategy="est_lug",
     ),
+    "ONLINE-EST-BF": PolicyProfile(
+        name="ONLINE-EST-BF",
+        estimate_source="online_estimate",
+        exclusive_first=True,
+        uses_dispatcher=True,
+        placement_strategy="est_bf",
+    ),
     "ONLINE-EST-MAGM": PolicyProfile(
         name="ONLINE-EST-MAGM",
         estimate_source="online_estimate",
