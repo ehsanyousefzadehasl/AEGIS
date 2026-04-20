@@ -86,7 +86,7 @@ _STRATEGY_REGISTRY = {
 }
 
 
-def _execute_placement_strategy(strategy: str, request):
+def execute_placement_strategy(strategy: str, request):
     entry = _STRATEGY_REGISTRY.get(strategy)
     if entry is None:
         return None
