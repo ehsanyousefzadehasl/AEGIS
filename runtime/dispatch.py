@@ -75,6 +75,22 @@ def dispatch_selected_job(
     for gpu_uuid in gpu_ids_list:
         launch_task(gpu_uuid, pid)
 
+    append_jsonl_event(
+        event_path=f"{dir}/events.jsonl",
+        record={
+            "event": "launched",
+            "timestamp": now,
+            "task_id": task_obj.task_id,
+            "task": task_obj.task,
+            "task_file": task,
+            "user": user,
+            "pid": pid,
+            "assigned_gpu_ids": gpu_ids_list,
+            "cuda_visible_devices": gpus_identifiers,
+            "workdir": dir,
+        },
+    )
+
     Thread(
         target=async_resolve_and_update,
         args=(pid, gpu_ids_list),
