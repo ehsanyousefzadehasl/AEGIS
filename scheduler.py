@@ -12,12 +12,12 @@ from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
 from runtime.launcher import launch_and_get_pid, build_launch_command, command_executor
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
-from placement.dispatcher import dispatch_policy_placement
-from placement.profiles import policy_requires_gpu_metrics, policy_uses_dispatcher
-from placement.inputs import (
-    resolve_placement_estimate,
-    get_missing_policy_input_message,
+from placement.dispatcher import (
+    dispatch_policy_placement,
+    validate_policy_placement,
 )
+from placement.profiles import policy_requires_gpu_metrics, policy_uses_dispatcher
+from placement.inputs import resolve_placement_estimate
 from placement.admission import should_dispatch_exclusive_first
 from recovery.manager import recovery
 
@@ -148,7 +148,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                 continue
 
             if policy_uses_dispatcher(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
-                missing_input_message = get_missing_policy_input_message(
+                missing_input_message = validate_policy_placement(
                     policy=policy,
                     task=task,
                     estimator_name=estimator,

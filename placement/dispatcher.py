@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from placement.strategies import execute_placement_strategy
 from placement.profiles import policy_placement_strategy
-from placement.inputs import PlacementEstimate
+from placement.inputs import PlacementEstimate, get_missing_policy_input_message
 from dataclasses import dataclass
 
 
@@ -73,3 +73,17 @@ def dispatch_policy_placement(
         gpu_ids=gpu_ids,
     )
     return dispatch_placement(request)
+
+def validate_policy_placement(
+    *,
+    policy: str,
+    task: str,
+    estimator_name: str,
+    placement_estimate: PlacementEstimate | None,
+) -> str | None:
+    return get_missing_policy_input_message(
+        policy=policy,
+        task=task,
+        estimator_name=estimator_name,
+        placement_estimate=placement_estimate,
+    )
