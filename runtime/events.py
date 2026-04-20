@@ -14,5 +14,5 @@ def append_jsonl_event(
     path.parent.mkdir(parents=True, exist_ok=True)
 
     with path.open("a", encoding="utf-8") as f:
-        json.dump(record, f, ensure_ascii=False, sort_keys=True)
+        json.dump(record, f, ensure_ascii=False, sort_keys=True, default=str)
         f.write("\n")
