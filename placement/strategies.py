@@ -73,7 +73,7 @@ def _execute_or_rr_selector(selector, request):
     )
 
 
-STRATEGY_REGISTRY = {
+_STRATEGY_REGISTRY = {
     "oracle_ff": (_execute_oracle_selector, select_oracle_ff),
     "oracle_bf": (_execute_oracle_selector, select_oracle_bf),
     "oracle_magm": (_execute_oracle_selector, select_oracle_magm),
@@ -87,7 +87,7 @@ STRATEGY_REGISTRY = {
 
 
 def _execute_placement_strategy(strategy: str, request):
-    entry = STRATEGY_REGISTRY.get(strategy)
+    entry = _STRATEGY_REGISTRY.get(strategy)
     if entry is None:
         return None
 
