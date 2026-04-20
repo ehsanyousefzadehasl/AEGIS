@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from placement.strategies import execute_placement_strategy
+from placement.strategies import _execute_placement_strategy
 from placement.profiles import policy_placement_strategy
 from placement.inputs import PlacementEstimate
 from dataclasses import dataclass
@@ -50,7 +50,7 @@ def _normalize_assigned_gpu_ids(policy: str, assigned_gpus):
 
 def dispatch_placement(request: _PlacementRequest):
     strategy = policy_placement_strategy(request.policy)
-    assigned_gpus = execute_placement_strategy(strategy, request)
+    assigned_gpus = _execute_placement_strategy(strategy, request)
     return _normalize_assigned_gpu_ids(request.policy, assigned_gpus)
 
 def dispatch_policy_placement(
