@@ -70,6 +70,13 @@ POLICY_PROFILES = {
         uses_dispatcher=True,
         placement_strategy="or_lug",
     ),
+    "EST-BF": PolicyProfile(
+        name="EST-BF",
+        estimate_source="task_file_estimate",
+        exclusive_first=True,
+        uses_dispatcher=True,
+        placement_strategy="est_bf",
+    ),
     "EST-MAGM": PolicyProfile(
         name="EST-MAGM",
         estimate_source="task_file_estimate",
