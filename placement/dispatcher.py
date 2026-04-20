@@ -39,11 +39,11 @@ def _build_placement_request(
     )
 
 
-def _normalize_assigned_gpu_ids(policy: str, assigned_gpus):
+def _normalize_assigned_gpu_ids(strategy: str, assigned_gpus):
     if assigned_gpus is None:
         return None
 
-    if policy_placement_strategy(policy) == "or_rr":
+    if strategy == "or_rr":
         return assigned_gpus
 
     return assigned_gpus.index
@@ -51,7 +51,7 @@ def _normalize_assigned_gpu_ids(policy: str, assigned_gpus):
 def dispatch_placement(request: _PlacementRequest):
     strategy = policy_placement_strategy(request.policy)
     assigned_gpus = _execute_placement_strategy(strategy, request)
-    return _normalize_assigned_gpu_ids(request.policy, assigned_gpus)
+    return _normalize_assigned_gpu_ids(strategy, assigned_gpus)
 
 def dispatch_policy_placement(
     *,
