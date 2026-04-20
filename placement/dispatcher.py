@@ -17,7 +17,7 @@ class PlacementRequest:
     gpu_ids: object | None = None
 
 
-def build_placement_request(
+def _build_placement_request(
     *,
     policy: str,
     gpus_with_metrics,
@@ -63,7 +63,7 @@ def dispatch_policy_placement(
     round_robin_generator=None,
     gpu_ids=None,
 ):
-    request = build_placement_request(
+    request = _build_placement_request(
         policy=policy,
         gpus_with_metrics=gpus_with_metrics,
         available_gpu_ids=available_gpu_ids,
