@@ -169,7 +169,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     gpus_with_metrics = monitor.analyze_Gmetrics()
                     print(gpus_with_metrics)
 
-                assigned_gpus = dispatch_placement(
+                assigned_gpu_ids = dispatch_placement(
                     build_placement_request(
                         policy=policy,
                         gpus_with_metrics=gpus_with_metrics,
@@ -181,17 +181,11 @@ def run_scheduler(policy=policy, estimator=estimator):
                     )
                 )
 
-                if assigned_gpus is None:
+                if assigned_gpu_ids is None:
                     print("Not enough GPUs to submit the task to!")
                     continue
 
-                print("assigned GPUs: ", assigned_gpus)
-
-                assigned_gpu_ids = (
-                    assigned_gpus
-                    if placement_strategy == "or_rr"
-                    else assigned_gpus.index
-                )
+                print("assigned GPUs: ", assigned_gpu_ids)
 
                 dispatch_selected_job(
                     selected=selected,
