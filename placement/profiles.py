@@ -123,6 +123,9 @@ def get_policy_profile(policy: str) -> PolicyProfile:
 def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
     return get_policy_profile(policy).required_profile_metrics
 
+def policy_requires_gpu_metrics(policy: str) -> bool:
+    return policy_placement_strategy(policy) != "or_rr"
+
 def policy_requires_estimator(policy: str) -> bool:
     return get_policy_profile(policy).estimate_source in {
         "task_file_estimate",
