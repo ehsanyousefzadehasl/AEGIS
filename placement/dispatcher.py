@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class PlacementRequest:
+class _PlacementRequest:
     policy: str
     gpus_with_metrics: object
     available_gpu_ids: object
@@ -28,7 +28,7 @@ def _build_placement_request(
     gpu_ids=None,
 ):
 
-    return PlacementRequest(
+    return _PlacementRequest(
         policy=policy,
         gpus_with_metrics=gpus_with_metrics,
         available_gpu_ids=available_gpu_ids,
@@ -48,7 +48,7 @@ def normalize_assigned_gpu_ids(policy: str, assigned_gpus):
 
     return assigned_gpus.index
 
-def dispatch_placement(request: PlacementRequest):
+def dispatch_placement(request: _PlacementRequest):
     strategy = policy_placement_strategy(request.policy)
     assigned_gpus = execute_placement_strategy(strategy, request)
     return normalize_assigned_gpu_ids(request.policy, assigned_gpus)
