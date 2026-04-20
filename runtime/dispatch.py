@@ -69,6 +69,21 @@ def dispatch_selected_job(
     pid = launch_and_get_pid(command)
 
     if pid is None:
+        append_jsonl_event(
+            event_path=f"{dir}/events.jsonl",
+            record={
+                "event": "launch_failed",
+                "timestamp": now,
+                "task_id": task_obj.task_id,
+                "task": task_obj.task,
+                "task_file": task,
+                "user": user,
+                "assigned_gpu_ids": gpu_ids_list,
+                "cuda_visible_devices": gpus_identifiers,
+                "workdir": dir,
+                "reason": "pid_capture_failed",
+            },
+        )
         logger.error(f"Failed to capture PID for {task_obj.task_id}; leaving GPUs available")
         return None
 
