@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-
+from runtime.events import append_jsonl_event
 
 def recovery(
     *,
@@ -65,6 +65,19 @@ def recovery(
 
                 with recovery_lock:
                     recovery_queue.enqueue(recovered_task)
+
+                append_jsonl_event(
+                    event_path=f"{tmp_dir}/events.jsonl",
+                    record={
+                        "event": "recovered",
+                        "task_id": tmp_task_id,
+                        "task_file": tmp_file,
+                        "user": tmp_user,
+                        "workdir": tmp_dir,
+                        "error_log": iterator,
+                        "recovery_queue_length": recovery_queue.length(),
+                    },
+                )
 
                 print(
                     "OOM FOUND: recovery queue is filled with the task that has problem: ",
