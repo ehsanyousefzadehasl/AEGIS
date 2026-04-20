@@ -112,6 +112,14 @@ POLICY_PROFILES = {
         uses_dispatcher=True,
         placement_strategy="est_lug"
     ),
+    "PROFILED-BF": PolicyProfile(
+        name="PROFILED-BF",
+        estimate_source="profiled_metadata",
+        exclusive_first=True,
+        uses_dispatcher=True,
+        placement_strategy="est_bf",
+        required_profile_metrics=("peak_memory_mib",),
+    ),
     "PROFILED-MAGM": PolicyProfile(
         name="PROFILED-MAGM",
         estimate_source="profiled_metadata",
