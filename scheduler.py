@@ -14,10 +14,10 @@ from runtime.launcher import launch_and_get_pid, build_launch_command, command_e
 from runtime.bootstrap import configure_scheduler_logger, initialize_scheduler_runtime
 from placement.dispatcher import (
     dispatch_policy_placement,
+    resolve_policy_placement_estimate,
     validate_policy_placement,
 )
 from placement.profiles import policy_requires_gpu_metrics, policy_uses_dispatcher
-from placement.inputs import resolve_placement_estimate
 from placement.admission import should_dispatch_exclusive_first
 from recovery.manager import recovery
 
@@ -108,7 +108,7 @@ def run_scheduler(policy=policy, estimator=estimator):
 
             now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
-            placement_estimate = resolve_placement_estimate(
+            placement_estimate = resolve_policy_placement_estimate(
                 policy=policy,
                 spec=spec,
                 workdir=dir,
