@@ -52,3 +52,24 @@ def dispatch_placement(request: PlacementRequest):
     strategy = policy_placement_strategy(request.policy)
     assigned_gpus = execute_placement_strategy(strategy, request)
     return normalize_assigned_gpu_ids(request.policy, assigned_gpus)
+
+def dispatch_policy_placement(
+    *,
+    policy: str,
+    gpus_with_metrics,
+    available_gpu_ids,
+    number_of_gpus_requested: int,
+    placement_estimate: PlacementEstimate | None,
+    round_robin_generator=None,
+    gpu_ids=None,
+):
+    request = build_placement_request(
+        policy=policy,
+        gpus_with_metrics=gpus_with_metrics,
+        available_gpu_ids=available_gpu_ids,
+        number_of_gpus_requested=number_of_gpus_requested,
+        placement_estimate=placement_estimate,
+        round_robin_generator=round_robin_generator,
+        gpu_ids=gpu_ids,
+    )
+    return dispatch_placement(request)
