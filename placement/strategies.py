@@ -13,6 +13,7 @@ from placement.policies import (
     select_or_rr,
     select_or_magm,
     select_or_lug,
+    select_est_bf,
     select_est_magm,
     select_est_lug,
 )
@@ -81,6 +82,7 @@ _STRATEGY_REGISTRY = {
     "or_rr": (_execute_or_rr_selector, select_or_rr),
     "or_magm": (_execute_or_selector, select_or_magm),
     "or_lug": (_execute_or_selector, select_or_lug),
+    "est_bf": (_execute_est_selector, select_est_bf),
     "est_magm": (_execute_est_selector, select_est_magm),
     "est_lug": (_execute_est_selector, select_est_lug),
 }
