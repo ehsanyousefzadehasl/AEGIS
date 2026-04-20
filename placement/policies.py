@@ -153,6 +153,30 @@ def select_est_magm(
     )
     return sorted_.head(number_of_gpus_requested)
 
+def select_est_bf(
+    *,
+    gpus_with_metrics: pd.DataFrame,
+    gpu_memory_estimation: int,
+    available_gpu_ids,
+    number_of_gpus_requested: int,
+):
+    candidate_gpus = build_candidate_gpus(
+        gpus_with_metrics=gpus_with_metrics,
+        min_free_mib=gpu_memory_estimation + 2048,
+        available_gpu_ids=available_gpu_ids,
+        use_utilization_gate=True,
+    )
+
+    if candidate_gpus.empty or len(candidate_gpus) < number_of_gpus_requested:
+        return None
+
+    sorted_ = candidate_gpus.sort_values(
+        by="GPU_mem_available",
+        ascending=True,
+        kind="mergesort",
+    )
+    return sorted_.head(number_of_gpus_requested)
+
 
 def select_est_lug(
     *,
