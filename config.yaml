@@ -12,7 +12,11 @@ mapper:
   # oracle-FF, oracle-MAGM, oracle-BF, oracle-least_GPU_utiltized
   # most-GMem-available-RR, least_GPU_utilized-RR, 
   # estimate-most-GMem-available (estimators needs to be set for the experiment first)
-  policy: exclusive
+
+  # PROFILED-* uses metrics from each workload YAML profile: block
+  # estimator is ignored unless the selected policy needs it
+  
+  policy: EST-BF
   #policy: exclusive
   #policy: oracle-FF
   #policy: oracle-BF
@@ -21,10 +25,17 @@ mapper:
   #policy: OR-RR
   #policy: OR-MAGM
   #policy: OR-LUG
+  #policy: EST-BF
   #policy: EST-MAGM
   #policy: EST-LUG
+  #policy: ONLINE-EST-BF
+  #policy: ONLINE-EST-MAGM
+  #policy: ONLINE-EST-LUG
+  #policy: PROFILED-BF
+  #policy: PROFILED-MAGM
+  #policy: PROFILED-LUG
   # knobs for each policy (ignored when not applicable)
-  estimator: None
+  estimator: horus
   # estimator: None
   # estimator: horus
   # estimator: faketensor
