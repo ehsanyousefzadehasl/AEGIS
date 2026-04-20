@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 from queueing.selection import dequeue_selected_job
 from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
-
+from runtime.events import append_jsonl_event
 
 def dispatch_selected_job(
     *,
@@ -50,6 +50,20 @@ def dispatch_selected_job(
     )
 
     logger.info(f"dispatched {task_obj.task_id} - {task_obj.task} - {gpus_identifiers}")
+    append_jsonl_event(
+        event_path=f"{dir}/events.jsonl",
+        record={
+            "event": "dispatched",
+            "timestamp": now,
+            "task_id": task_obj.task_id,
+            "task": task_obj.task,
+            "task_file": task,
+            "user": user,
+            "assigned_gpu_ids": gpu_ids_list,
+            "cuda_visible_devices": gpus_identifiers,
+            "workdir": dir,
+        },
+    )
 
     Thread(target=command_executor, args=(to_write,)).start()
     pid = launch_and_get_pid(command)
