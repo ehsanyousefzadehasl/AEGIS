@@ -15,9 +15,10 @@ def build_recovery_header(
     user: str,
     task_id: str,
     user_submit_time: str,
+    recovery_count: int,
     now: str,
 ) -> str:
     return (
-        f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+{user_submit_time}" '
+        f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+{user_submit_time}+{recovery_count}" '
         f'> {dir}/err-{now}-{task_id}.log'
     )

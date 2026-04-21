@@ -47,6 +47,7 @@ def dispatch_selected_job(
         user,
         task_obj.task_id,
         task_obj.user_submit_time,
+        task_obj.recovery_count,
         now,
     )
 
