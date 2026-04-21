@@ -88,8 +88,13 @@ def dispatch_selected_job(
         return None
 
     for gpu_uuid in gpu_ids_list:
-        launch_task(gpu_uuid, pid)
-
+        launch_task(
+            gpu_uuid,
+            pid,
+            task_id=str(task_obj.task_id),
+            event_path=f"{dir}/events.jsonl",
+        )
+    
     append_jsonl_event(
         event_path=f"{dir}/events.jsonl",
         record={
