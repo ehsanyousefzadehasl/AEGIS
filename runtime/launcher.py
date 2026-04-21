@@ -31,6 +31,30 @@ def build_event_cli_command(event_path: str, record: dict) -> str:
     )
 
 def build_launch_command(dir, gpus_identifiers, command_to_execute, now, task_obj):
+    event_path = f"{dir}/events.jsonl"
+
+    completed_event_cmd = build_event_cli_command(
+        event_path,
+        {
+            "event": "completed",
+            "task_id": str(task_obj.task_id),
+            "task": task_obj.task,
+            "workdir": dir,
+            "cuda_visible_devices": gpus_identifiers,
+        },
+    )
+
+    failed_event_cmd = build_event_cli_command(
+        event_path,
+        {
+            "event": "failed",
+            "task_id": str(task_obj.task_id),
+            "task": task_obj.task,
+            "workdir": dir,
+            "cuda_visible_devices": gpus_identifiers,
+        },
+    )
+
     command = f"""cd {dir} ; \
                 export CUDA_VISIBLE_DEVICES={gpus_identifiers} ; \
                 exec 3>&1 ; \
@@ -38,11 +62,13 @@ def build_launch_command(dir, gpus_identifiers, command_to_execute, now, task_ob
                     {{ \
                         conda run --no-capture-output -p /opt/miniconda3/envs/tf {command_to_execute} & pid=$! ; \
                         echo $pid >&3 ; \
-                        wait $pid ; \
-                        if [ $? -eq 0 ]; then \
+                        wait $pid ; rc=$? ; \
+                        if [ $rc -eq 0 ]; then \
                             echo 'Successful' >> {dir}/err-{now}-{task_obj.task_id}.log ; \
+                            {completed_event_cmd} ; \
                         else \
                             echo 'unsuccessful' >> {dir}/err-{now}-{task_obj.task_id}.log ; \
+                            {failed_event_cmd} ; \
                         fi ; \
                     }} 1> {dir}/out-{now}-{task_obj.task_id}.log 2>> {dir}/err-{now}-{task_obj.task_id}.log \
                 ) ; }} 2> {dir}/time-{now}-{task_obj.task_id}.et ; \
