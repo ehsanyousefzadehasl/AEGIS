@@ -46,6 +46,7 @@ def dispatch_selected_job(
         task,
         user,
         task_obj.task_id,
+        task_obj.user_submit_time,
         now,
     )
 

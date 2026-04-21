@@ -7,5 +7,17 @@ def format_gpu_identifiers(gpu_ids: Iterable) -> str:
     return ",".join(str(gpu) for gpu in gpu_ids)
 
 
-def build_recovery_header(dir: str, environment: str, command_to_execute: str, task: str, user: str, task_id: str, now: str) -> str:
-    return f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}" > {dir}/err-{now}-{task_id}.log'
+def build_recovery_header(
+    dir: str,
+    environment: str,
+    command_to_execute: str,
+    task: str,
+    user: str,
+    task_id: str,
+    user_submit_time: str,
+    now: str,
+) -> str:
+    return (
+        f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+{user_submit_time}" '
+        f'> {dir}/err-{now}-{task_id}.log'
+    )
