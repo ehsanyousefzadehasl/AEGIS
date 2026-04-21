@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+import json
+import shlex
 import subprocess
-
+import sys
 
 def launch_and_get_pid(cmd: str) -> int | None:
     p = subprocess.Popen(
@@ -21,6 +23,12 @@ def launch_and_get_pid(cmd: str) -> int | None:
     except ValueError:
         return None
 
+def build_event_cli_command(event_path: str, record: dict) -> str:
+    return (
+        f"{shlex.quote(sys.executable)} -m runtime.event_cli "
+        f"--event-path {shlex.quote(event_path)} "
+        f"--record-json {shlex.quote(json.dumps(record, sort_keys=True, default=str))}"
+    )
 
 def build_launch_command(dir, gpus_identifiers, command_to_execute, now, task_obj):
     command = f"""cd {dir} ; \
