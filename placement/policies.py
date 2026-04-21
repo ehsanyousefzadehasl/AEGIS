@@ -86,10 +86,15 @@ def select_or_magm(
     gpus_with_metrics: pd.DataFrame,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    recovery_min_free_mib_override: int | None = None,
 ):
+    min_free_mib = 5120
+    if recovery_min_free_mib_override is not None:
+        min_free_mib = max(min_free_mib, recovery_min_free_mib_override)
+
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=5120,
+        min_free_mib=min_free_mib,
         available_gpu_ids=available_gpu_ids,
         use_utilization_gate=True,
     )
@@ -110,10 +115,15 @@ def select_or_lug(
     gpus_with_metrics: pd.DataFrame,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    recovery_min_free_mib_override: int | None = None,
 ):
+    min_free_mib = 5120
+    if recovery_min_free_mib_override is not None:
+        min_free_mib = max(min_free_mib, recovery_min_free_mib_override)
+
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=5120,
+        min_free_mib=min_free_mib,
         available_gpu_ids=available_gpu_ids,
         use_utilization_gate=True,
     )

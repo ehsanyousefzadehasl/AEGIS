@@ -47,6 +47,7 @@ def _execute_or_selector(selector, request):
         gpus_with_metrics=request.gpus_with_metrics,
         available_gpu_ids=request.available_gpu_ids,
         number_of_gpus_requested=request.number_of_gpus_requested,
+        recovery_min_free_mib_override=request.recovery_min_free_mib_override,
     )
 
 
