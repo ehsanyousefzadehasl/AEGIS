@@ -54,6 +54,9 @@ def recovery(
 
                 recovery_data = lines[0].split("+")
 
+                tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
+                tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
+
                 tmp_dir = recovery_data[0]
                 tmp_file = recovery_data[3]
                 tmp_user = recovery_data[4]
@@ -61,7 +64,14 @@ def recovery(
 
                 recovered_task = task_cls(tmp_user, tmp_dir, tmp_file)
                 recovered_task.set_id(tmp_task_id)
+
+                if tmp_user_submit_time is not None:
+                    recovered_task.set_user_submit_time(tmp_user_submit_time)
+
+                recovered_task.set_recovery_count(tmp_recovery_count)
+                recovered_task.increment_recovery_count()
                 recovered_task.set_if_recovered()
+                recovered_task.set_last_failure_reason("oom")
 
                 with recovery_lock:
                     recovery_queue.enqueue(recovered_task)
