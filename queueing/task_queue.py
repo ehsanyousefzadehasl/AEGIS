@@ -14,6 +14,9 @@ class Task:
         self.status = "queued"
         self.finish_status = None
         self.recovered = False
+        self.recovery_count = 0
+        self.recovery_min_free_mib_override = None
+        self.last_failure_reason = None
 
     def _to_string(self):
         return f"task id: {self.task_id} \nsubmitted by user: {self.user}, \ndirectory: {self.dir} \ntask: {self.task} \nrecovered?: {self.recovered}"
@@ -35,6 +38,21 @@ class Task:
 
     def set_finish_status(self, fs):
         self.finish_status = fs
+
+    def set_user_submit_time(self, ust):
+        self.user_submit_time = ust
+
+    def set_recovery_count(self, count):
+        self.recovery_count = int(count)
+
+    def increment_recovery_count(self):
+        self.recovery_count += 1
+
+    def set_recovery_min_free_mib_override(self, value):
+        self.recovery_min_free_mib_override = None if value is None else int(value)
+
+    def set_last_failure_reason(self, reason):
+        self.last_failure_reason = reason
 
 # The queue for keeping submitted tasks
 class Tasks():
