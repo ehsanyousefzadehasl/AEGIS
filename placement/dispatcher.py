@@ -16,6 +16,7 @@ class _PlacementRequest:
     gpus_with_metrics: object
     available_gpu_ids: object
     number_of_gpus_requested: int
+    recovery_min_free_mib_override: int | None = None
     placement_estimate: PlacementEstimate | None = None
     round_robin_generator: object | None = None
     gpu_ids: object | None = None
@@ -27,6 +28,7 @@ def _build_placement_request(
     gpus_with_metrics,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    recovery_min_free_mib_override: int | None = None,
     placement_estimate: PlacementEstimate | None,
     round_robin_generator=None,
     gpu_ids=None,
@@ -37,6 +39,7 @@ def _build_placement_request(
         gpus_with_metrics=gpus_with_metrics,
         available_gpu_ids=available_gpu_ids,
         number_of_gpus_requested=number_of_gpus_requested,
+        recovery_min_free_mib_override=recovery_min_free_mib_override,
         placement_estimate=placement_estimate,
         round_robin_generator=round_robin_generator,
         gpu_ids=gpu_ids,

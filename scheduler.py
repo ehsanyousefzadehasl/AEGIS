@@ -169,6 +169,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     gpus_with_metrics=gpus_with_metrics,
                     available_gpu_ids=all_available_GPUs(),
                     number_of_gpus_requested=number_of_GPUs_requested,
+                    recovery_min_free_mib_override=a.recovery_min_free_mib_override,
                     placement_estimate=placement_estimate,
                     round_robin_generator=round_robin_generator,
                     gpu_ids=GPU_IDs,
