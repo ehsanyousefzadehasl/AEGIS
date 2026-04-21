@@ -117,7 +117,12 @@ def run_scheduler(policy=policy, estimator=estimator):
                 estimator_name=estimator,
             )
 
-            if should_dispatch_exclusive_first(
+            force_full_gpu_recovery = bool(a.recovery_force_full_gpu)
+            
+            if (
+                force_full_gpu_recovery
+                and len(idle_and_available) >= number_of_GPUs_requested
+            ) or should_dispatch_exclusive_first(
                 policy=policy,
                 idle_and_available=idle_and_available,
                 number_of_gpus_requested=number_of_GPUs_requested,
