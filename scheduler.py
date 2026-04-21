@@ -69,6 +69,8 @@ def run_scheduler(policy=policy, estimator=estimator):
             recovery_queue=recovery_queue,
             recovery_lock=recover_lock,
             logger=logger,
+            policy=policy,
+            estimator_name=estimator,
         )
         
         update()

@@ -29,6 +29,8 @@ def recovery(
     recovery_queue,
     recovery_lock,
     logger,
+    policy: str,
+    estimator_name: str,
 ):
     """
     Scan error logs and enqueue failed jobs for recovery.
