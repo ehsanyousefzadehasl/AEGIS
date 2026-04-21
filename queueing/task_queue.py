@@ -17,6 +17,7 @@ class Task:
         self.recovery_count = 0
         self.recovery_min_free_mib_override = None
         self.last_failure_reason = None
+        self.recovery_force_full_gpu = False
 
     def _to_string(self):
         return f"task id: {self.task_id} \nsubmitted by user: {self.user}, \ndirectory: {self.dir} \ntask: {self.task} \nrecovered?: {self.recovered}"
@@ -53,6 +54,10 @@ class Task:
 
     def set_last_failure_reason(self, reason):
         self.last_failure_reason = reason
+
+    def set_recovery_force_full_gpu(self, value: bool):
+        self.recovery_force_full_gpu = bool(value)
+
 
 # The queue for keeping submitted tasks
 class Tasks():
