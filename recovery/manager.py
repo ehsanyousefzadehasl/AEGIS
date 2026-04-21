@@ -147,6 +147,8 @@ def recovery(
                 estimate_source = policy_estimate_source(policy)
 
                 recovery_override = None
+                force_full_gpu = False
+
                 if estimate_source in {"task_file_estimate", "online_estimate", "profiled_metadata"}:
                     base_effective_min_free_mib = _base_effective_min_free_mib_for_estimate_policy(
                         policy=policy,
@@ -159,12 +161,15 @@ def recovery(
                             base_effective_min_free_mib=base_effective_min_free_mib,
                             recovery_count=recovered_task.recovery_count,
                         )
+                        force_full_gpu = recovery_override is None
                 else:
                     recovery_override = _recovery_min_free_mib_override(
                         recovered_task.recovery_count
                     )
+                    force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 3
 
                 recovered_task.set_recovery_min_free_mib_override(recovery_override)
+                recovered_task.set_recovery_force_full_gpu(force_full_gpu)
 
                 with recovery_lock:
                     recovery_queue.enqueue(recovered_task)
