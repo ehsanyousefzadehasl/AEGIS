@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from placement.policies import select_est_bf
+from placement.policies import select_est_bf, select_or_magm
 
 
 class TestPlacementPolicies(unittest.TestCase):
@@ -46,6 +46,25 @@ class TestPlacementPolicies(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    def test_select_or_magm_honors_recovery_min_free_override(self):
+        gpus_with_metrics = pd.DataFrame(
+            {
+                "GPU_mem_available": [6000, 12000, 22000],
+                "smact": [0.10, 0.10, 0.10],
+                "smocc": [0.10, 0.10, 0.10],
+                "drama": [0.10, 0.10, 0.10],
+            },
+            index=["0", "1", "2"],
+        )
+
+        result = select_or_magm(
+            gpus_with_metrics=gpus_with_metrics,
+            available_gpu_ids=["0", "1", "2"],
+            number_of_gpus_requested=2,
+            recovery_min_free_mib_override=10240,
+        )
+
+        self.assertEqual(list(result.index), ["2", "1"])
 
 if __name__ == "__main__":
     unittest.main()
