@@ -12,6 +12,15 @@ def _recovery_min_free_mib_override(recovery_count: int) -> int | None:
         return 20 * 1024
     return None
 
+def _next_estimator_recovery_min_free_mib(
+    failed_effective_min_free_mib: int,
+) -> int | None:
+    for bucket_mib in (10 * 1024, 20 * 1024, 40 * 1024):
+        if failed_effective_min_free_mib < bucket_mib:
+            return bucket_mib
+    return None
+
+
 def recovery(
     *,
     dirs,
@@ -85,7 +94,7 @@ def recovery(
                 recovered_task.set_recovery_min_free_mib_override(
                     _recovery_min_free_mib_override(recovered_task.recovery_count)
                 )
-                
+
                 with recovery_lock:
                     recovery_queue.enqueue(recovered_task)
 
