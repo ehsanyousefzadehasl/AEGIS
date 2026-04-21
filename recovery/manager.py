@@ -3,6 +3,14 @@ from __future__ import annotations
 import os
 from runtime.events import append_jsonl_event
 
+from placement.inputs import (
+    resolve_peak_memory_estimation_from_estimate,
+    resolve_placement_estimate,
+)
+from placement.profiles import policy_estimate_source
+from workload.job_spec import load_job_spec
+
+
 def _recovery_min_free_mib_override(recovery_count: int) -> int | None:
     if recovery_count <= 0:
         return None
@@ -34,6 +42,35 @@ def _estimator_recovery_min_free_mib_override(
         failed_threshold = override
 
     return override
+
+def _base_effective_min_free_mib_for_estimate_policy(
+    *,
+    policy: str,
+    task_path: str,
+    workdir: str,
+    estimator_name: str,
+) -> int | None:
+    estimate_source = policy_estimate_source(policy)
+    if estimate_source not in {"task_file_estimate", "online_estimate", "profiled_metadata"}:
+        return None
+
+    spec = load_job_spec(task_path, estimator_name)
+    placement_estimate = resolve_placement_estimate(
+        spec=spec,
+        policy=policy,
+        workdir=workdir,
+        estimator_name=estimator_name,
+    )
+
+    gpu_memory_estimation = resolve_peak_memory_estimation_from_estimate(
+        policy=policy,
+        placement_estimate=placement_estimate,
+    )
+    if gpu_memory_estimation is None:
+        return None
+
+    return int(gpu_memory_estimation) + 2048
+
 
 def recovery(
     *,
