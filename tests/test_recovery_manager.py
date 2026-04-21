@@ -40,6 +40,12 @@ class TestRecoveryManager(unittest.TestCase):
         self.assertIsNone(
             _estimator_recovery_min_free_mib_override(15 * 1024, 3),
         )
+    def test_ladder_exhaustion_requires_full_gpu_fallback(self):
+        oblivious_override = _recovery_min_free_mib_override(3)
+        estimator_override = _estimator_recovery_min_free_mib_override(15 * 1024, 3)
+
+        self.assertIsNone(oblivious_override)
+        self.assertIsNone(estimator_override)
 
 
 if __name__ == "__main__":
