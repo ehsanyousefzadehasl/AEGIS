@@ -20,6 +20,20 @@ def _next_estimator_recovery_min_free_mib(
             return bucket_mib
     return None
 
+def _estimator_recovery_min_free_mib_override(
+    base_effective_min_free_mib: int,
+    recovery_count: int,
+) -> int | None:
+    failed_threshold = base_effective_min_free_mib
+    override = None
+
+    for _ in range(recovery_count):
+        override = _next_estimator_recovery_min_free_mib(failed_threshold)
+        if override is None:
+            return None
+        failed_threshold = override
+
+    return override
 
 def recovery(
     *,
