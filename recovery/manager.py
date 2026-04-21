@@ -144,9 +144,27 @@ def recovery(
                 recovered_task.set_if_recovered()
                 recovered_task.set_last_failure_reason("oom")
 
-                recovered_task.set_recovery_min_free_mib_override(
-                    _recovery_min_free_mib_override(recovered_task.recovery_count)
-                )
+                estimate_source = policy_estimate_source(policy)
+
+                recovery_override = None
+                if estimate_source in {"task_file_estimate", "online_estimate", "profiled_metadata"}:
+                    base_effective_min_free_mib = _base_effective_min_free_mib_for_estimate_policy(
+                        policy=policy,
+                        task_path=tmp_file,
+                        workdir=tmp_dir,
+                        estimator_name=estimator_name,
+                    )
+                    if base_effective_min_free_mib is not None:
+                        recovery_override = _estimator_recovery_min_free_mib_override(
+                            base_effective_min_free_mib=base_effective_min_free_mib,
+                            recovery_count=recovered_task.recovery_count,
+                        )
+                else:
+                    recovery_override = _recovery_min_free_mib_override(
+                        recovered_task.recovery_count
+                    )
+
+                recovered_task.set_recovery_min_free_mib_override(recovery_override)
 
                 with recovery_lock:
                     recovery_queue.enqueue(recovered_task)
