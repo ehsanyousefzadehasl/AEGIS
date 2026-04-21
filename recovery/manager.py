@@ -3,6 +3,15 @@ from __future__ import annotations
 import os
 from runtime.events import append_jsonl_event
 
+def _recovery_min_free_mib_override(recovery_count: int) -> int | None:
+    if recovery_count <= 0:
+        return None
+    if recovery_count == 1:
+        return 10 * 1024
+    if recovery_count == 2:
+        return 20 * 1024
+    return None
+
 def recovery(
     *,
     dirs,
@@ -73,6 +82,10 @@ def recovery(
                 recovered_task.set_if_recovered()
                 recovered_task.set_last_failure_reason("oom")
 
+                recovered_task.set_recovery_min_free_mib_override(
+                    _recovery_min_free_mib_override(recovered_task.recovery_count)
+                )
+                
                 with recovery_lock:
                     recovery_queue.enqueue(recovered_task)
 
