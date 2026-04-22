@@ -28,6 +28,8 @@ def dispatch_selected_job(
     launch_task,
     async_resolve_and_update,
     logger,
+    event_path: str,
+    run_id: str,
 ) -> int | None:
     gpu_ids_list = list(assigned_gpu_ids)
 
@@ -54,7 +56,7 @@ def dispatch_selected_job(
 
     logger.info(f"dispatched {task_obj.task_id} - {task_obj.task} - {gpus_identifiers}")
     append_jsonl_event(
-        event_path=f"{dir}/events.jsonl",
+        event_path=event_path,
         record={
             "event": "dispatched",
             "timestamp": now,
@@ -70,6 +72,7 @@ def dispatch_selected_job(
             "recovery_min_free_mib_override": task_obj.recovery_min_free_mib_override,
             "recovery_force_full_gpu": task_obj.recovery_force_full_gpu,
             "failure_reason": task_obj.last_failure_reason,
+            "run_id": run_id,
         },
     )
 
@@ -84,7 +87,7 @@ def dispatch_selected_job(
                 main_queue.put_it_back(task_obj)
 
         append_jsonl_event(
-            event_path=f"{dir}/events.jsonl",
+            event_path=event_path,
             record={
                 "event": "launch_failed",
                 "timestamp": now,
@@ -101,6 +104,7 @@ def dispatch_selected_job(
                 "recovery_min_free_mib_override": task_obj.recovery_min_free_mib_override,
                 "recovery_force_full_gpu": task_obj.recovery_force_full_gpu,
                 "failure_reason": task_obj.last_failure_reason,
+                "run_id": run_id,
             },
         )
         logger.error(f"Failed to capture PID for {task_obj.task_id}; task requeued")
@@ -111,11 +115,11 @@ def dispatch_selected_job(
             gpu_uuid,
             pid,
             task_id=str(task_obj.task_id),
-            event_path=f"{dir}/events.jsonl",
+            event_path=event_path,
         )
     
     append_jsonl_event(
-        event_path=f"{dir}/events.jsonl",
+        event_path=event_path,
         record={
             "event": "launched",
             "timestamp": now,
@@ -127,6 +131,7 @@ def dispatch_selected_job(
             "assigned_gpu_ids": gpu_ids_list,
             "cuda_visible_devices": gpus_identifiers,
             "workdir": dir,
+            "run_id": run_id,
         },
     )
 

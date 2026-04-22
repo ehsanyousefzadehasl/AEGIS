@@ -35,6 +35,9 @@ logger = configure_scheduler_logger()
 
 runtime_state = initialize_scheduler_runtime()
 
+event_path = runtime_state.event_path
+run_id = runtime_state.run_id
+
 settings = runtime_state.settings
 
 policy = settings.policy
@@ -149,6 +152,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                     launch_task=launch_task,
                     async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
+                    event_path=event_path,
+                    run_id=run_id,
                 )
 
                 print(gpus_state)
@@ -212,6 +217,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                     launch_task=launch_task,
                     async_resolve_and_update=resolve_and_update_gpu_pid,
                     logger=logger,
+                    event_path=event_path,
+                    run_id=run_id,
                 )
 
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
