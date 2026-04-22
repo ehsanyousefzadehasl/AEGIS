@@ -278,10 +278,9 @@ def recovery(
 
                 total_mem_mib = _recovery_total_mem_mib()
                 if total_mem_mib is not None:
-                    recovery_override = _estimator_recovery_min_free_mib_override(
-                        base_effective_min_free_mib=failed_effective_min_free_mib,
-                        recovery_count=recovered_task.recovery_count,
-                        total_mem_mib=total_mem_mib,
+                    recovery_override = _next_estimator_recovery_min_free_mib(
+                        failed_effective_min_free_mib,
+                        total_mem_mib,
                     )
                 else:
                     recovery_override = None
@@ -299,14 +298,10 @@ def recovery(
                         tmp_failed_host_free_mib_at_dispatch,
                     )
 
-                recovery_override = failed_effective_min_free_mib
-                for _ in range(recovered_task.recovery_count):
-                    recovery_override = _next_capacity_bucket_above(
-                        recovery_override,
-                        total_mem_mib,
-                    )
-                    if recovery_override is None:
-                        break
+                recovery_override = _next_capacity_bucket_above(
+                    failed_effective_min_free_mib,
+                    total_mem_mib,
+                )
             else:
                 recovery_override = None
 
