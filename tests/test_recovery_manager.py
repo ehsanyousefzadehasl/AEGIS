@@ -324,6 +324,47 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertEqual(recovered_task.recovery_count, 4)
             self.assertIsNone(recovered_task.recovery_min_free_mib_override)
             self.assertTrue(recovered_task.recovery_force_full_gpu)
+
+    @patch("recovery.manager._base_effective_min_free_mib_for_estimate_policy", return_value=15 * 1024)
+    @patch("recovery.manager._recovery_total_mem_mib", return_value=40 * 1024)
+    def test_estimate_oom_recovery_marks_full_gpu_after_ladder_exhaustion(
+        self,
+        _mock_total_mem,
+        _mock_base_threshold,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            err_path = tmp_path / "err-2026-04-21_12:00:00-estfullgpu.log"
+
+            err_path.write_text(
+                f"{tmp}+env+python train.py+{tmp}/good.rad+u+estfullgpu+2026-04-21_12:00:00+2+0\n"
+                "ResourceExhaustedError: OOM when allocating tensor with shape\n",
+                encoding="utf-8",
+            )
+
+            handled_crashes = []
+            recovery_queue = Tasks()
+            recovery_lock = Lock()
+            logger = Mock()
+
+            recovery(
+                dirs=[tmp],
+                handled_crashes=handled_crashes,
+                task_cls=Task,
+                recovery_queue=recovery_queue,
+                recovery_lock=recovery_lock,
+                logger=logger,
+                policy="EST-BF",
+                estimator_name="horus",
+            )
+
+            self.assertEqual(recovery_queue.length(), 1)
+
+            recovered_task = recovery_queue.whole_list()[0]
+            self.assertEqual(recovered_task.task_id, "estfullgpu")
+            self.assertEqual(recovered_task.recovery_count, 3)
+            self.assertIsNone(recovered_task.recovery_min_free_mib_override)
+            self.assertTrue(recovered_task.recovery_force_full_gpu)
             
 if __name__ == "__main__":
     unittest.main()
