@@ -17,9 +17,13 @@ def build_recovery_header(
     user_submit_time: str,
     recovery_count: int,
     recovery_force_full_gpu: bool,
+    failed_host_free_mib_at_dispatch: int | None,
     now: str,
 ) -> str:
+    failed_host_free_mib_at_dispatch = (
+        "" if failed_host_free_mib_at_dispatch is None else int(failed_host_free_mib_at_dispatch)
+    )
     return (
-        f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+{user_submit_time}+{recovery_count}+{int(recovery_force_full_gpu)}" '
+        f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+{user_submit_time}+{recovery_count}+{int(recovery_force_full_gpu)}+{failed_host_free_mib_at_dispatch}" '
         f'> {dir}/err-{now}-{task_id}.log'
     )

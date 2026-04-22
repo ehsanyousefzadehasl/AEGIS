@@ -156,6 +156,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     logger=logger,
                     event_path=event_path,
                     run_id=run_id,
+                    failed_host_free_mib_at_dispatch=None,
                 )
 
                 print(gpus_state)
@@ -199,6 +200,12 @@ def run_scheduler(policy=policy, estimator=estimator):
 
                 print("assigned GPUs: ", assigned_gpu_ids)
 
+                failed_host_free_mib_at_dispatch = None
+                if gpus_with_metrics is not None:
+                    failed_host_free_mib_at_dispatch = int(
+                        gpus_with_metrics.loc[list(assigned_gpu_ids), "GPU_mem_available"].min()
+                    )
+
                 dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
@@ -221,6 +228,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     logger=logger,
                     event_path=event_path,
                     run_id=run_id,
+                    failed_host_free_mib_at_dispatch=failed_host_free_mib_at_dispatch,
                 )
 
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")

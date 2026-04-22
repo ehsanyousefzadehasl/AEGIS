@@ -30,6 +30,7 @@ def dispatch_selected_job(
     logger,
     event_path: str,
     run_id: str,
+    failed_host_free_mib_at_dispatch: int | None,
 ) -> int | None:
     gpu_ids_list = list(assigned_gpu_ids)
 
@@ -59,6 +60,7 @@ def dispatch_selected_job(
         task_obj.user_submit_time,
         task_obj.recovery_count,
         task_obj.recovery_force_full_gpu,
+        failed_host_free_mib_at_dispatch,
         now,
     )
 
@@ -81,6 +83,7 @@ def dispatch_selected_job(
             "recovery_force_full_gpu": task_obj.recovery_force_full_gpu,
             "failure_reason": task_obj.last_failure_reason,
             "run_id": run_id,
+            "failed_host_free_mib_at_dispatch": failed_host_free_mib_at_dispatch,
         },
     )
 
