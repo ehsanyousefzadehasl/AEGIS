@@ -166,7 +166,7 @@ def recovery(
         crashes += 1
         handled_crashes.append(iterator)
 
-        recovery_data = lines[0].split("+")
+        recovery_data = lines[0].strip().split("+")
 
         tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
         tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
@@ -175,7 +175,7 @@ def recovery(
         tmp_dir = recovery_data[0]
         tmp_file = recovery_data[3]
         tmp_user = recovery_data[4]
-        tmp_task_id = recovery_data[5][:-1]
+        tmp_task_id = recovery_data[5]
 
         if failure_reason != "oom":
             append_jsonl_event(
@@ -193,10 +193,9 @@ def recovery(
             logger.warning(
                 f"Recovery skipped for task {tmp_task_id}: non-OOM failure ({failure_reason})"
             )
-            break
+            continue
         
         if tmp_recovery_force_full_gpu:
-            handled_crashes.append(iterator)
             append_jsonl_event(
                 event_path=f"{tmp_dir}/events.jsonl",
                 record={
@@ -212,7 +211,7 @@ def recovery(
             logger.warning(
                 f"Recovery stopped for task {tmp_task_id}: task already failed after full-GPU fallback"
             )
-            break
+            continue
 
         recovered_task = task_cls(tmp_user, tmp_dir, tmp_file)
         recovered_task.set_id(tmp_task_id)
@@ -250,16 +249,18 @@ def recovery(
 
                 force_full_gpu = recovery_override is None
             else:
-                total_mem_mib = _recovery_total_mem_mib()
-                if total_mem_mib is not None:
-                    recovery_override = _recovery_min_free_mib_override(
-                        recovered_task.recovery_count,
-                        total_mem_mib,
-                    )
-                else:
-                    recovery_override = None
+                force_full_gpu = True
+        else:
+            total_mem_mib = _recovery_total_mem_mib()
+            if total_mem_mib is not None:
+                recovery_override = _recovery_min_free_mib_override(
+                    recovered_task.recovery_count,
+                    total_mem_mib,
+                )
+            else:
+                recovery_override = None
 
-                force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 4
+            force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 4
 
         recovered_task.set_recovery_min_free_mib_override(recovery_override)
         recovered_task.set_recovery_force_full_gpu(force_full_gpu)
@@ -291,6 +292,5 @@ def recovery(
         )
         print("length of the queue:", recovery_queue.length())
         logger.info(f"Recovered: {recovered_task}")
-        break
 
     return crashes, all_executions
