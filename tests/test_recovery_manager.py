@@ -174,6 +174,36 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertEqual(recovery_queue.length(), 0)
             self.assertIn(str(err_path), handled_crashes)
             logger.warning.assert_called()
-            
+
+    def test_classifier_detects_framework_oom_messages(self):
+        self.assertEqual(
+            _classify_recovery_failure(
+                ["header\n", "RuntimeError: CUDA out of memory\n"]
+            ),
+            "oom",
+        )
+        self.assertEqual(
+            _classify_recovery_failure(
+                ["header\n", "ResourceExhaustedError: OOM when allocating tensor with shape\n"]
+            ),
+            "oom",
+        )
+
+    def test_classifier_detects_conda_and_generic_failures_as_non_oom(self):
+        self.assertEqual(
+            _classify_recovery_failure(
+                [
+                    "header\n",
+                    "ERROR conda.cli.main_run:execute(125): `conda run ...` failed.\n",
+                    "non-ok-status\n",
+                ]
+            ),
+            "non_ok_status",
+        )
+        self.assertEqual(
+            _classify_recovery_failure(["header\n", "unsuccessful\n"]),
+            "nonzero_exit",
+        )
+        
 if __name__ == "__main__":
     unittest.main()
