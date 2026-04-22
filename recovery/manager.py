@@ -136,6 +136,18 @@ def recovery(
 
                 if tmp_recovery_force_full_gpu:
                     handled_crashes.append(iterator)
+                    append_jsonl_event(
+                        event_path=f"{tmp_dir}/events.jsonl",
+                        record={
+                            "event": "recovery_stopped",
+                            "task_id": tmp_task_id,
+                            "task_file": tmp_file,
+                            "user": tmp_user,
+                            "workdir": tmp_dir,
+                            "error_log": iterator,
+                            "reason": "failed_after_full_gpu_fallback",
+                        },
+                    )
                     logger.warning(
                         f"Recovery stopped for task {tmp_task_id}: task already failed after full-GPU fallback"
                     )
