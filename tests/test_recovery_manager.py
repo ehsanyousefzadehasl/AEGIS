@@ -46,7 +46,9 @@ class TestRecoveryManager(unittest.TestCase):
 
         self.assertIsNone(oblivious_override)
         self.assertIsNone(estimator_override)
-
+    def test_recovery_ladder_exhaustion_represents_terminal_fallback(self):
+        self.assertIsNone(_recovery_min_free_mib_override(3))
+        self.assertIsNone(_estimator_recovery_min_free_mib_override(15 * 1024, 3))
 
 if __name__ == "__main__":
     unittest.main()
