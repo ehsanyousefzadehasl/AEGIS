@@ -1,6 +1,7 @@
 import unittest
 
 from recovery.manager import (
+    _capacity_recovery_buckets_mib,
     _estimator_recovery_min_free_mib_override,
     _next_estimator_recovery_min_free_mib,
     _recovery_min_free_mib_override,
@@ -46,6 +47,15 @@ class TestRecoveryManager(unittest.TestCase):
         self.assertIsNone(_recovery_min_free_mib_override(4, 40 * 1024))
         self.assertIsNone(_estimator_recovery_min_free_mib_override(15 * 1024, 3, 40 * 1024))
     
-
+    def test_capacity_recovery_buckets_scale_with_gpu_memory(self):
+        self.assertEqual(
+            _capacity_recovery_buckets_mib(40 * 1024),
+            (10 * 1024, 20 * 1024, 30 * 1024),
+        )
+        self.assertEqual(
+            _capacity_recovery_buckets_mib(80 * 1024),
+            (20 * 1024, 40 * 1024, 60 * 1024),
+        )
+        
 if __name__ == "__main__":
     unittest.main()
