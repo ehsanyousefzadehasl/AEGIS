@@ -46,8 +46,9 @@ def _recovery_min_free_mib_override(
 
 def _next_estimator_recovery_min_free_mib(
     failed_effective_min_free_mib: int,
+    total_mem_mib: int,
 ) -> int | None:
-    for bucket_mib in (10 * 1024, 20 * 1024, 40 * 1024):
+    for bucket_mib in _capacity_recovery_buckets_mib(total_mem_mib):
         if failed_effective_min_free_mib < bucket_mib:
             return bucket_mib
     return None
@@ -55,12 +56,16 @@ def _next_estimator_recovery_min_free_mib(
 def _estimator_recovery_min_free_mib_override(
     base_effective_min_free_mib: int,
     recovery_count: int,
+    total_mem_mib: int,
 ) -> int | None:
     failed_threshold = base_effective_min_free_mib
     override = None
 
     for _ in range(recovery_count):
-        override = _next_estimator_recovery_min_free_mib(failed_threshold)
+        override = _next_estimator_recovery_min_free_mib(
+            failed_threshold,
+            total_mem_mib,
+        )
         if override is None:
             return None
         failed_threshold = override
@@ -201,10 +206,16 @@ def recovery(
                         estimator_name=estimator_name,
                     )
                     if base_effective_min_free_mib is not None:
-                        recovery_override = _estimator_recovery_min_free_mib_override(
-                            base_effective_min_free_mib=base_effective_min_free_mib,
-                            recovery_count=recovered_task.recovery_count,
-                        )
+                        total_mem_mib = _recovery_total_mem_mib()
+                        if total_mem_mib is not None:
+                            recovery_override = _estimator_recovery_min_free_mib_override(
+                                base_effective_min_free_mib=base_effective_min_free_mib,
+                                recovery_count=recovered_task.recovery_count,
+                                total_mem_mib=total_mem_mib,
+                            )
+                        else:
+                            recovery_override = None
+
                         force_full_gpu = recovery_override is None
                     else:
                         total_mem_mib = _recovery_total_mem_mib()
