@@ -6,6 +6,7 @@ from threading import Lock
 
 from recovery.manager import (
     _capacity_recovery_buckets_mib,
+    _classify_recovery_failure,
     _estimator_recovery_min_free_mib_override,
     _next_estimator_recovery_min_free_mib,
     _recovery_min_free_mib_override,
@@ -134,6 +135,14 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertIn(str(oom_err), handled_crashes)
             logger.warning.assert_called()
             logger.info.assert_called()
+
+    def test_classifier_ignores_oom_substring_in_recovery_header(self):
+        lines = [
+            "/tmp+env+python bad.py+/tmp/bad.rad+u+nonoom+2026-04-21_12:00:00+0+0\n",
+            "unsuccessful\n",
+        ]
+
+        self.assertEqual(_classify_recovery_failure(lines), "nonzero_exit")
 
 if __name__ == "__main__":
     unittest.main()
