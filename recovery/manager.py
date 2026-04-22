@@ -204,6 +204,10 @@ def recovery(
                         "workdir": tmp_dir,
                         "error_log": iterator,
                         "recovery_queue_length": recovery_queue.length(),
+                        "recovery_count": recovered_task.recovery_count,
+                        "recovery_min_free_mib_override": recovered_task.recovery_min_free_mib_override,
+                        "recovery_force_full_gpu": recovered_task.recovery_force_full_gpu,
+                        "failure_reason": recovered_task.last_failure_reason,
                     },
                 )
 
