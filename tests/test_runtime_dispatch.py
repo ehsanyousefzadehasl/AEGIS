@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 from queueing.task_queue import Task, Tasks
 from runtime.dispatch import dispatch_selected_job
+from runtime.launcher import command_executor
 
 
 class TestRuntimeDispatch(unittest.TestCase):
@@ -39,6 +40,9 @@ class TestRuntimeDispatch(unittest.TestCase):
                 launch_task=Mock(),
                 async_resolve_and_update=Mock(),
                 logger=logger,
+                event_path=str(Path(tmp) / "events-test.jsonl"),
+                run_id="test-run",
+                failed_host_free_mib_at_dispatch=None,
             )
 
             self.assertIsNone(result)
@@ -48,9 +52,53 @@ class TestRuntimeDispatch(unittest.TestCase):
             logger.error.assert_called()
             mock_dequeue.assert_called_once()
 
-            events_path = Path(tmp) / "events.jsonl"
+            events_path = Path(tmp) / "events-test.jsonl"
             self.assertTrue(events_path.exists())
             self.assertIn('"event": "launch_failed"', events_path.read_text(encoding="utf-8"))
+
+    @patch("runtime.dispatch.dequeue_selected_job")
+    def test_dispatch_persists_failed_host_free_memory_in_recovery_header(self, mock_dequeue):
+        with tempfile.TemporaryDirectory() as tmp:
+            task_path = f"{tmp}/a.rad"
+            task_obj = Task("u", tmp, task_path)
+
+            main_queue = Tasks()
+            recovery_queue = Tasks()
+            logger = Mock()
+            now = "2026-04-21_12:00:00"
+
+            result = dispatch_selected_job(
+                selected=object(),
+                task_obj=task_obj,
+                user="u",
+                dir=tmp,
+                task=task_path,
+                environment="env",
+                command_to_execute="python train.py",
+                assigned_gpu_ids=["GPU-0"],
+                now=now,
+                main_queue=main_queue,
+                recovery_queue=recovery_queue,
+                main_lock=Lock(),
+                recovery_lock=Lock(),
+                command_generator=Mock(return_value="echo launch"),
+                command_executor=command_executor,
+                launch_and_get_pid=Mock(return_value=None),
+                launch_task=Mock(),
+                async_resolve_and_update=Mock(),
+                logger=logger,
+                event_path=str(Path(tmp) / "events-test.jsonl"),
+                run_id="test-run",
+                failed_host_free_mib_at_dispatch=13312,
+            )
+
+            self.assertIsNone(result)
+
+            err_path = Path(tmp) / f"err-{now}-{task_obj.task_id}.log"
+            self.assertTrue(err_path.exists())
+
+            header = err_path.read_text(encoding="utf-8").splitlines()[0]
+            self.assertTrue(header.endswith("+13312"))
 
 
 if __name__ == "__main__":
