@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import math
+
 from runtime.events import append_jsonl_event
 
 from placement.inputs import (
@@ -10,6 +12,12 @@ from placement.inputs import (
 from placement.profiles import policy_estimate_source
 from workload.job_spec import load_job_spec
 
+def _capacity_recovery_buckets_mib(total_mem_mib: int) -> tuple[int, int, int]:
+    return (
+        math.ceil(total_mem_mib * 0.25),
+        math.ceil(total_mem_mib * 0.50),
+        math.ceil(total_mem_mib * 0.75),
+    )
 
 def _recovery_min_free_mib_override(recovery_count: int) -> int | None:
     if recovery_count <= 0:
