@@ -154,7 +154,11 @@ def run_scheduler(policy=policy, estimator=estimator):
                 print(gpus_state)
                 continue
 
-            if policy_uses_dispatcher(policy) and (main_queue.length() != 0 and recovery_queue.length() == 0):
+            if (
+                not force_full_gpu_recovery
+                and policy_uses_dispatcher(policy)
+                and (main_queue.length() != 0 and recovery_queue.length() == 0)
+            ):
                 missing_input_message = validate_policy_placement(
                     policy=policy,
                     task=task,
