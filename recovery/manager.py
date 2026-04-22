@@ -27,24 +27,6 @@ def _recovery_total_mem_mib() -> int | None:
         return None
     return max(int(v) for v in totals.values())
 
-
-def _recovery_min_free_mib_override(
-    recovery_count: int,
-    total_mem_mib: int,
-) -> int | None:
-    if recovery_count <= 0:
-        return None
-
-    buckets = _capacity_recovery_buckets_mib(total_mem_mib)
-
-    if recovery_count == 1:
-        return buckets[0]
-    if recovery_count == 2:
-        return buckets[1]
-    if recovery_count == 3:
-        return buckets[2]
-    return None
-
 def _next_estimator_recovery_min_free_mib(
     failed_effective_min_free_mib: int,
     total_mem_mib: int,
@@ -53,26 +35,6 @@ def _next_estimator_recovery_min_free_mib(
         if failed_effective_min_free_mib < bucket_mib:
             return bucket_mib
     return None
-
-def _estimator_recovery_min_free_mib_override(
-    base_effective_min_free_mib: int,
-    recovery_count: int,
-    total_mem_mib: int,
-) -> int | None:
-    failed_threshold = base_effective_min_free_mib
-    override = None
-
-    for _ in range(recovery_count):
-        override = _next_estimator_recovery_min_free_mib(
-            failed_threshold,
-            total_mem_mib,
-        )
-        if override is None:
-            return None
-        failed_threshold = override
-
-    return override
-
 
 def _next_capacity_bucket_above(
     failed_effective_min_free_mib: int,
