@@ -77,6 +77,12 @@ def dispatch_selected_job(
     pid = launch_and_get_pid(command)
 
     if pid is None:
+        with recovery_lock if task_obj.recovered else main_lock:
+            if task_obj.recovered:
+                recovery_queue.put_it_back(task_obj)
+            else:
+                main_queue.put_it_back(task_obj)
+
         append_jsonl_event(
             event_path=f"{dir}/events.jsonl",
             record={
@@ -90,9 +96,14 @@ def dispatch_selected_job(
                 "cuda_visible_devices": gpus_identifiers,
                 "workdir": dir,
                 "reason": "pid_capture_failed",
+                "recovered": task_obj.recovered,
+                "recovery_count": task_obj.recovery_count,
+                "recovery_min_free_mib_override": task_obj.recovery_min_free_mib_override,
+                "recovery_force_full_gpu": task_obj.recovery_force_full_gpu,
+                "failure_reason": task_obj.last_failure_reason,
             },
         )
-        logger.error(f"Failed to capture PID for {task_obj.task_id}; leaving GPUs available")
+        logger.error(f"Failed to capture PID for {task_obj.task_id}; task requeued")
         return None
 
     for gpu_uuid in gpu_ids_list:
