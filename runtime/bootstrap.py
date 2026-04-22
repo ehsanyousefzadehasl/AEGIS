@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
+from pathlib import Path
+import uuid
+
 from dataclasses import dataclass
 from itertools import cycle
 
@@ -17,7 +21,8 @@ class SchedulerRuntime:
     round_robin_generator: object
     gpus_state: object
     handled_crashes: list[str]
-
+    run_id: str
+    event_path: str
 
 def configure_scheduler_logger():
     logging.basicConfig(
@@ -34,6 +39,11 @@ def configure_scheduler_logger():
 def initialize_scheduler_runtime() -> SchedulerRuntime:
     settings = load_scheduler_settings()
 
+    run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+    recovery_dir = Path(settings.recovery_dir)
+    recovery_dir.mkdir(parents=True, exist_ok=True)
+    event_path = str(recovery_dir / f"events-{run_id}.jsonl")
+
     gpu_uuids = monitor.gpu_uuids()
     gpu_ids = list(gpu_uuids)
     round_robin_generator = cycle(gpu_ids)
@@ -48,4 +58,6 @@ def initialize_scheduler_runtime() -> SchedulerRuntime:
         round_robin_generator=round_robin_generator,
         gpus_state=gpus_state,
         handled_crashes=handled_crashes,
+        run_id=run_id,
+        event_path=event_path,
     )
