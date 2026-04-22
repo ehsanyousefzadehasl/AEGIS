@@ -48,6 +48,7 @@ def dispatch_selected_job(
         task_obj.task_id,
         task_obj.user_submit_time,
         task_obj.recovery_count,
+        task_obj.recovery_force_full_gpu,
         now,
     )
 
