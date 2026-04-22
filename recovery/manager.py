@@ -102,22 +102,28 @@ def _base_effective_min_free_mib_for_estimate_policy(
     return int(gpu_memory_estimation) + 2048
 
 def _classify_recovery_failure(lines: list[str]) -> str | None:
-    # Ignore the first line because it is the recovery header and may contain
-    # task ids / paths that accidentally include substrings like "oom".
+    # Ignore the recovery header line. It may contain task ids / paths with
+    # accidental substrings such as "oom".
     text = "\n".join(lines[1:])
     text_lower = text.lower()
 
+    # OOM-like failures from frameworks
     if (
-        "resource_exhausted" in text_lower
+        "resourceexhaustederror" in text_lower
+        or "resource_exhausted" in text_lower
+        or "cuda out of memory" in text_lower
         or "out of memory" in text_lower
         or "outofmemoryerror" in text_lower
-        or "cuda out of memory" in text_lower
         or re.search(r"\boom\b", text_lower) is not None
     ):
         return "oom"
 
+    # Generic failures: do not trigger memory-escalation recovery
     if "non-ok-status" in text_lower:
         return "non_ok_status"
+
+    if "error conda.cli.main_run:execute" in text_lower:
+        return "conda_run_failed"
 
     if "unsuccessful" in text_lower:
         return "nonzero_exit"
