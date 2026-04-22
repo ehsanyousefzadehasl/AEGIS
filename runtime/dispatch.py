@@ -65,6 +65,11 @@ def dispatch_selected_job(
             "assigned_gpu_ids": gpu_ids_list,
             "cuda_visible_devices": gpus_identifiers,
             "workdir": dir,
+            "recovered": task_obj.recovered,
+            "recovery_count": task_obj.recovery_count,
+            "recovery_min_free_mib_override": task_obj.recovery_min_free_mib_override,
+            "recovery_force_full_gpu": task_obj.recovery_force_full_gpu,
+            "failure_reason": task_obj.last_failure_reason,
         },
     )
 
