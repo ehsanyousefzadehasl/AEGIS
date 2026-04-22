@@ -8,10 +8,12 @@ from threading import Lock
 import subprocess
 import io
 import csv
+import math
 
 analyze_configuration = "risk" # can be Normal | risk
 
 MEMORY_GUARD_MIB = 512
+MEMORY_GUARD_FRACTION = 0.01
 
 # ===== Helper functions for risk concept =======
 
@@ -391,7 +393,12 @@ def analyze_Gmetrics(data=None):
             continue
 
         g = grouped.get_group(uuid)
-        free_mem = max(0, int(g["free_gpu_memory"].iloc[-1]) - MEMORY_GUARD_MIB)
+        total_mem = gpu_totals.get(uuid, np.nan)
+        guard_mib = MEMORY_GUARD_MIB
+        if not pd.isna(total_mem):
+            guard_mib = max(MEMORY_GUARD_MIB, math.ceil(float(total_mem) * MEMORY_GUARD_FRACTION))
+
+        free_mem = max(0, int(g["free_gpu_memory"].iloc[-1]) - guard_mib)
 
         # This is for setting the alpha value according to the size of the monitoring window
 
