@@ -73,7 +73,7 @@ def dispatch_selected_job(
         },
     )
 
-    Thread(target=command_executor, args=(to_write,)).start()
+    command_executor(to_write)
     pid = launch_and_get_pid(command)
 
     if pid is None:
