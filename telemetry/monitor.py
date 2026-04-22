@@ -11,6 +11,8 @@ import csv
 
 analyze_configuration = "risk" # can be Normal | risk
 
+MEMORY_GUARD_MIB = 512
+
 # ===== Helper functions for risk concept =======
 
 def _ema_last(s, alpha):  # pd.Series -> float
@@ -389,7 +391,7 @@ def analyze_Gmetrics(data=None):
             continue
 
         g = grouped.get_group(uuid)
-        free_mem = max(0, int(g["free_gpu_memory"].iloc[-1]) - 512)
+        free_mem = max(0, int(g["free_gpu_memory"].iloc[-1]) - MEMORY_GUARD_MIB)
 
         # This is for setting the alpha value according to the size of the monitoring window
 
