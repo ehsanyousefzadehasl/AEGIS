@@ -19,13 +19,21 @@ def _capacity_recovery_buckets_mib(total_mem_mib: int) -> tuple[int, int, int]:
         math.ceil(total_mem_mib * 0.75),
     )
 
-def _recovery_min_free_mib_override(recovery_count: int) -> int | None:
+def _recovery_min_free_mib_override(
+    recovery_count: int,
+    total_mem_mib: int,
+) -> int | None:
     if recovery_count <= 0:
         return None
+
+    buckets = _capacity_recovery_buckets_mib(total_mem_mib)
+
     if recovery_count == 1:
-        return 10 * 1024
+        return buckets[0]
     if recovery_count == 2:
-        return 20 * 1024
+        return buckets[1]
+    if recovery_count == 3:
+        return buckets[2]
     return None
 
 def _next_estimator_recovery_min_free_mib(
