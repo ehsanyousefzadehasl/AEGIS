@@ -94,6 +94,46 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertIn(str(err_path), handled_crashes)
             logger.warning.assert_called()
 
+    def test_non_oom_failure_does_not_block_later_oom_recovery(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            non_oom_err = tmp_path / "err-2026-04-21_12:00:00-nonoom.log"
+            non_oom_err.write_text(
+                f"{tmp}+env+python bad.py+{tmp}/bad.rad+u+nonoom+2026-04-21_12:00:00+0+0\n"
+                "unsuccessful\n",
+                encoding="utf-8",
+            )
+
+            oom_err = tmp_path / "err-2026-04-21_12:00:01-oom.log"
+            oom_err.write_text(
+                f"{tmp}+env+python train.py+{tmp}/good.rad+u+oomtask+2026-04-21_12:00:01+0+0\n"
+                "RESOURCE_EXHAUSTED\n",
+                encoding="utf-8",
+            )
+
+            handled_crashes = []
+            recovery_queue = Tasks()
+            recovery_lock = Lock()
+            logger = Mock()
+
+            recovery(
+                dirs=[tmp],
+                handled_crashes=handled_crashes,
+                task_cls=Task,
+                recovery_queue=recovery_queue,
+                recovery_lock=recovery_lock,
+                logger=logger,
+                policy="OR-MAGM",
+                estimator_name="horus",
+            )
+
+            self.assertEqual(recovery_queue.length(), 1)
+            self.assertEqual(recovery_queue.whole_list()[0].task_id, "oomtask")
+            self.assertIn(str(non_oom_err), handled_crashes)
+            self.assertIn(str(oom_err), handled_crashes)
+            logger.warning.assert_called()
+            logger.info.assert_called()
 
 if __name__ == "__main__":
     unittest.main()
