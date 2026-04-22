@@ -11,6 +11,7 @@ from placement.inputs import (
 )
 from placement.profiles import policy_estimate_source
 from workload.job_spec import load_job_spec
+from telemetry.monitor import gpu_mem_total
 
 def _capacity_recovery_buckets_mib(total_mem_mib: int) -> tuple[int, int, int]:
     return (
@@ -18,6 +19,13 @@ def _capacity_recovery_buckets_mib(total_mem_mib: int) -> tuple[int, int, int]:
         math.ceil(total_mem_mib * 0.50),
         math.ceil(total_mem_mib * 0.75),
     )
+
+def _recovery_total_mem_mib() -> int | None:
+    totals = gpu_mem_total()
+    if not totals:
+        return None
+    return max(int(v) for v in totals.values())
+
 
 def _recovery_min_free_mib_override(
     recovery_count: int,
@@ -198,11 +206,17 @@ def recovery(
                             recovery_count=recovered_task.recovery_count,
                         )
                         force_full_gpu = recovery_override is None
-                else:
-                    recovery_override = _recovery_min_free_mib_override(
-                        recovered_task.recovery_count
-                    )
-                    force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 3
+                    else:
+                        total_mem_mib = _recovery_total_mem_mib()
+                        if total_mem_mib is not None:
+                            recovery_override = _recovery_min_free_mib_override(
+                                recovered_task.recovery_count,
+                                total_mem_mib,
+                            )
+                        else:
+                            recovery_override = None
+
+                        force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 4
 
                 recovered_task.set_recovery_min_free_mib_override(recovery_override)
                 recovered_task.set_recovery_force_full_gpu(force_full_gpu)
