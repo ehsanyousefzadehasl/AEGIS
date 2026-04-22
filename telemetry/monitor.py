@@ -215,7 +215,15 @@ def gpu_mem_usage():
     return result
 
 
-
+def gpu_mem_total():
+    # uuid -> total memory (MiB)
+    o = execute_command(
+        "nvidia-smi --query-gpu=uuid,memory.total --format=csv,noheader,nounits"
+    )
+    result = {}
+    for uuid, total in csv.reader(io.StringIO(o)):
+        result[uuid.strip()] = int(total)
+    return result
 
 # This function gets the metrics from dcgmi tool
 def dcgmi_monitor():
