@@ -372,12 +372,20 @@ def analyze_Gmetrics(data=None):
     gpu_ids = gpu_uuids()              # dict: uuid -> id
     gpus_activity = gpus_activeness()  # dict: uuid -> bool/int
 
+    gpu_totals = gpu_mem_total()       # dict: uuid -> total memory in MiB
+
     grouped = df.groupby("gpu_uuid", sort=False)
     analyzed = {}
 
     for uuid in gpu_ids:
         if uuid not in grouped.groups:
-            analyzed[uuid] = [gpus_activity.get(uuid, 0), np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+            analyzed[uuid] = [
+                np.nan,
+                gpu_totals.get(uuid, np.nan),
+                np.nan,
+                np.nan,
+                np.nan,
+            ]
             continue
 
         g = grouped.get_group(uuid)
@@ -430,6 +438,7 @@ def analyze_Gmetrics(data=None):
 
         analyzed[uuid] = [
             free_mem,
+            gpu_totals.get(uuid, np.nan),
             smact,
             smocc,
             drama,
@@ -440,7 +449,10 @@ def analyze_Gmetrics(data=None):
         orient="index",
         columns=[
             "GPU_mem_available",
-            "smact","smocc","drama"
+            "GPU_mem_total",
+            "smact",
+            "smocc",
+            "drama",
         ],
     )
 
