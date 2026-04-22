@@ -37,7 +37,15 @@ def dispatch_selected_job(
     task_obj.set_status("dispatched")
 
     gpus_identifiers = format_gpu_identifiers(gpu_ids_list)
-    command = command_generator(dir, gpus_identifiers, command_to_execute, now, task_obj)
+    command = command_generator(
+        dir,
+        gpus_identifiers,
+        command_to_execute,
+        now,
+        task_obj,
+        event_path,
+        run_id,
+    )
 
     dequeue_selected_job(selected, main_queue, recovery_queue, main_lock, recovery_lock)
 

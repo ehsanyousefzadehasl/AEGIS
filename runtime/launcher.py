@@ -30,8 +30,15 @@ def build_event_cli_command(event_path: str, record: dict) -> str:
         f"--record-json {shlex.quote(json.dumps(record, sort_keys=True, default=str))}"
     )
 
-def build_launch_command(dir, gpus_identifiers, command_to_execute, now, task_obj):
-    event_path = f"{dir}/events.jsonl"
+def build_launch_command(
+    dir,
+    gpus_identifiers,
+    command_to_execute,
+    now,
+    task_obj,
+    event_path,
+    run_id,
+):
 
     completed_event_cmd = build_event_cli_command(
         event_path,
@@ -41,6 +48,7 @@ def build_launch_command(dir, gpus_identifiers, command_to_execute, now, task_ob
             "task": task_obj.task,
             "workdir": dir,
             "cuda_visible_devices": gpus_identifiers,
+            "run_id": run_id,
         },
     )
 
@@ -52,6 +60,7 @@ def build_launch_command(dir, gpus_identifiers, command_to_execute, now, task_ob
             "task": task_obj.task,
             "workdir": dir,
             "cuda_visible_devices": gpus_identifiers,
+            "run_id": run_id,
         },
     )
 
