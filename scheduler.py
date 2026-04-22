@@ -74,6 +74,8 @@ def run_scheduler(policy=policy, estimator=estimator):
             logger=logger,
             policy=policy,
             estimator_name=estimator,
+            event_path=event_path,
+            run_id=run_id,
         )
         
         update()

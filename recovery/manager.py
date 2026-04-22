@@ -140,6 +140,8 @@ def recovery(
     logger,
     policy: str,
     estimator_name: str,
+    event_path: str,
+    run_id: str,
 ):
     """
     Scan error logs and enqueue failed jobs for recovery.
@@ -188,7 +190,7 @@ def recovery(
 
         if failure_reason != "oom":
             append_jsonl_event(
-                event_path=f"{tmp_dir}/events.jsonl",
+                event_path=event_path,
                 record={
                     "event": "recovery_stopped",
                     "task_id": tmp_task_id,
@@ -200,6 +202,7 @@ def recovery(
                     "recovery_count": tmp_recovery_count,
                     "recovery_force_full_gpu": tmp_recovery_force_full_gpu,
                     "failure_reason": failure_reason,
+                    "run_id": run_id,
                 },
             )
             logger.warning(
@@ -209,7 +212,7 @@ def recovery(
         
         if tmp_recovery_force_full_gpu:
             append_jsonl_event(
-                event_path=f"{tmp_dir}/events.jsonl",
+                event_path=event_path,
                 record={
                     "event": "recovery_stopped",
                     "task_id": tmp_task_id,
@@ -221,6 +224,7 @@ def recovery(
                     "recovery_count": tmp_recovery_count,
                     "recovery_force_full_gpu": tmp_recovery_force_full_gpu,
                     "failure_reason": "oom",
+                    "run_id": run_id,
                 },
             )
             logger.warning(
@@ -284,7 +288,7 @@ def recovery(
             recovery_queue.enqueue(recovered_task)
 
         append_jsonl_event(
-            event_path=f"{tmp_dir}/events.jsonl",
+            event_path=event_path,
             record={
                 "event": "recovered",
                 "task_id": tmp_task_id,
@@ -297,6 +301,7 @@ def recovery(
                 "recovery_min_free_mib_override": recovered_task.recovery_min_free_mib_override,
                 "recovery_force_full_gpu": recovered_task.recovery_force_full_gpu,
                 "failure_reason": recovered_task.last_failure_reason,
+                "run_id": run_id,
             },
         )
 
