@@ -191,6 +191,9 @@ def recovery(
                     "workdir": tmp_dir,
                     "error_log": iterator,
                     "reason": failure_reason,
+                    "recovery_count": tmp_recovery_count,
+                    "recovery_force_full_gpu": tmp_recovery_force_full_gpu,
+                    "failure_reason": failure_reason,
                 },
             )
             logger.warning(
@@ -209,6 +212,9 @@ def recovery(
                     "workdir": tmp_dir,
                     "error_log": iterator,
                     "reason": "failed_after_full_gpu_fallback",
+                    "recovery_count": tmp_recovery_count,
+                    "recovery_force_full_gpu": tmp_recovery_force_full_gpu,
+                    "failure_reason": "oom",
                 },
             )
             logger.warning(
