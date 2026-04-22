@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import math
+import re
 
 from runtime.events import append_jsonl_event
 
@@ -101,7 +102,9 @@ def _base_effective_min_free_mib_for_estimate_policy(
     return int(gpu_memory_estimation) + 2048
 
 def _classify_recovery_failure(lines: list[str]) -> str | None:
-    text = "\n".join(lines)
+    # Ignore the first line because it is the recovery header and may contain
+    # task ids / paths that accidentally include substrings like "oom".
+    text = "\n".join(lines[1:])
     text_lower = text.lower()
 
     if (
@@ -109,7 +112,7 @@ def _classify_recovery_failure(lines: list[str]) -> str | None:
         or "out of memory" in text_lower
         or "outofmemoryerror" in text_lower
         or "cuda out of memory" in text_lower
-        or "oom" in text_lower
+        or re.search(r"\boom\b", text_lower) is not None
     ):
         return "oom"
 
