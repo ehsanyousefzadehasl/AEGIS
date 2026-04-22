@@ -12,6 +12,8 @@ def run_submission_server(
     main_lock,
     host: str,
     port: int = 5001,
+    event_path: str,
+    run_id: str,
 ):
     server_socket = socket.socket()
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -42,7 +44,7 @@ def run_submission_server(
                 logging.info(f"queued {task_obj.task_id} - {task_obj.task}")
                 
                 append_jsonl_event(
-                    event_path=f"{dir}/events.jsonl",
+                    event_path=event_path,
                     record={
                         "event": "submitted",
                         "task_id": str(task_obj.task_id),
@@ -51,6 +53,7 @@ def run_submission_server(
                         "user": user,
                         "workdir": dir,
                         "source": "submission_server",
+                        "run_id": run_id,
                     },
                 )
 

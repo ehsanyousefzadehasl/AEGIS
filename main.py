@@ -1,7 +1,7 @@
 from threading import Thread
 
 from telemetry import monitor
-from scheduler import run_scheduler
+from scheduler import run_scheduler, runtime_state
 from runtime.state import main_queue, lock
 from runtime.submission_server import run_submission_server
 import socket
@@ -16,6 +16,8 @@ if __name__ == "__main__":
             "main_lock": lock,
             "host": host,
             "port": 5001,
+            "event_path": runtime_state.event_path,
+            "run_id": runtime_state.run_id,
         },
     ).start()
 
