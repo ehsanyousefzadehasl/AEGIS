@@ -100,6 +100,26 @@ def _base_effective_min_free_mib_for_estimate_policy(
 
     return int(gpu_memory_estimation) + 2048
 
+def _classify_recovery_failure(lines: list[str]) -> str | None:
+    text = "\n".join(lines)
+    text_lower = text.lower()
+
+    if (
+        "resource_exhausted" in text_lower
+        or "out of memory" in text_lower
+        or "outofmemoryerror" in text_lower
+        or "cuda out of memory" in text_lower
+        or "oom" in text_lower
+    ):
+        return "oom"
+
+    if "non-ok-status" in text_lower:
+        return "non_ok_status"
+
+    if "unsuccessful" in text_lower:
+        return "nonzero_exit"
+
+    return None
 
 def recovery(
     *,
@@ -139,126 +159,138 @@ def recovery(
         with open(iterator, "r") as file:
             lines = file.readlines()
 
-        for line in lines:
-            if (
-                "unsuccessful" in line
-                or "OOM" in line
-                or "Non-OK-status" in line
-                or "RESOURCE_EXHAUSTED" in line
-            ):
-                crashes += 1
-                handled_crashes.append(iterator)
+        failure_reason = _classify_recovery_failure(lines)
+        if failure_reason is None:
+            continue
 
-                with open(iterator, "r") as opener:
-                    lines = opener.readlines()
+        crashes += 1
+        handled_crashes.append(iterator)
 
-                recovery_data = lines[0].split("+")
+        recovery_data = lines[0].split("+")
 
-                tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
-                tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
-                tmp_recovery_force_full_gpu = bool(int(recovery_data[8])) if len(recovery_data) > 8 else False
+        tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
+        tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
+        tmp_recovery_force_full_gpu = bool(int(recovery_data[8])) if len(recovery_data) > 8 else False
 
-                tmp_dir = recovery_data[0]
-                tmp_file = recovery_data[3]
-                tmp_user = recovery_data[4]
-                tmp_task_id = recovery_data[5][:-1]
+        tmp_dir = recovery_data[0]
+        tmp_file = recovery_data[3]
+        tmp_user = recovery_data[4]
+        tmp_task_id = recovery_data[5][:-1]
 
-                if tmp_recovery_force_full_gpu:
-                    handled_crashes.append(iterator)
-                    append_jsonl_event(
-                        event_path=f"{tmp_dir}/events.jsonl",
-                        record={
-                            "event": "recovery_stopped",
-                            "task_id": tmp_task_id,
-                            "task_file": tmp_file,
-                            "user": tmp_user,
-                            "workdir": tmp_dir,
-                            "error_log": iterator,
-                            "reason": "failed_after_full_gpu_fallback",
-                        },
+        if failure_reason != "oom":
+            append_jsonl_event(
+                event_path=f"{tmp_dir}/events.jsonl",
+                record={
+                    "event": "recovery_stopped",
+                    "task_id": tmp_task_id,
+                    "task_file": tmp_file,
+                    "user": tmp_user,
+                    "workdir": tmp_dir,
+                    "error_log": iterator,
+                    "reason": failure_reason,
+                },
+            )
+            logger.warning(
+                f"Recovery skipped for task {tmp_task_id}: non-OOM failure ({failure_reason})"
+            )
+            break
+        
+        if tmp_recovery_force_full_gpu:
+            handled_crashes.append(iterator)
+            append_jsonl_event(
+                event_path=f"{tmp_dir}/events.jsonl",
+                record={
+                    "event": "recovery_stopped",
+                    "task_id": tmp_task_id,
+                    "task_file": tmp_file,
+                    "user": tmp_user,
+                    "workdir": tmp_dir,
+                    "error_log": iterator,
+                    "reason": "failed_after_full_gpu_fallback",
+                },
+            )
+            logger.warning(
+                f"Recovery stopped for task {tmp_task_id}: task already failed after full-GPU fallback"
+            )
+            break
+
+        recovered_task = task_cls(tmp_user, tmp_dir, tmp_file)
+        recovered_task.set_id(tmp_task_id)
+
+        if tmp_user_submit_time is not None:
+            recovered_task.set_user_submit_time(tmp_user_submit_time)
+
+        recovered_task.set_recovery_count(tmp_recovery_count)
+        recovered_task.increment_recovery_count()
+        recovered_task.set_if_recovered()
+        recovered_task.set_last_failure_reason(failure_reason)
+
+        estimate_source = policy_estimate_source(policy)
+
+        recovery_override = None
+        force_full_gpu = False
+
+        if estimate_source in {"task_file_estimate", "online_estimate", "profiled_metadata"}:
+            base_effective_min_free_mib = _base_effective_min_free_mib_for_estimate_policy(
+                policy=policy,
+                task_path=tmp_file,
+                workdir=tmp_dir,
+                estimator_name=estimator_name,
+            )
+            if base_effective_min_free_mib is not None:
+                total_mem_mib = _recovery_total_mem_mib()
+                if total_mem_mib is not None:
+                    recovery_override = _estimator_recovery_min_free_mib_override(
+                        base_effective_min_free_mib=base_effective_min_free_mib,
+                        recovery_count=recovered_task.recovery_count,
+                        total_mem_mib=total_mem_mib,
                     )
-                    logger.warning(
-                        f"Recovery stopped for task {tmp_task_id}: task already failed after full-GPU fallback"
+                else:
+                    recovery_override = None
+
+                force_full_gpu = recovery_override is None
+            else:
+                total_mem_mib = _recovery_total_mem_mib()
+                if total_mem_mib is not None:
+                    recovery_override = _recovery_min_free_mib_override(
+                        recovered_task.recovery_count,
+                        total_mem_mib,
                     )
-                    break
+                else:
+                    recovery_override = None
 
-                recovered_task = task_cls(tmp_user, tmp_dir, tmp_file)
-                recovered_task.set_id(tmp_task_id)
+                force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 4
 
-                if tmp_user_submit_time is not None:
-                    recovered_task.set_user_submit_time(tmp_user_submit_time)
+        recovered_task.set_recovery_min_free_mib_override(recovery_override)
+        recovered_task.set_recovery_force_full_gpu(force_full_gpu)
 
-                recovered_task.set_recovery_count(tmp_recovery_count)
-                recovered_task.increment_recovery_count()
-                recovered_task.set_if_recovered()
-                recovered_task.set_last_failure_reason("oom")
+        with recovery_lock:
+            recovery_queue.enqueue(recovered_task)
 
-                estimate_source = policy_estimate_source(policy)
+        append_jsonl_event(
+            event_path=f"{tmp_dir}/events.jsonl",
+            record={
+                "event": "recovered",
+                "task_id": tmp_task_id,
+                "task_file": tmp_file,
+                "user": tmp_user,
+                "workdir": tmp_dir,
+                "error_log": iterator,
+                "recovery_queue_length": recovery_queue.length(),
+                "recovery_count": recovered_task.recovery_count,
+                "recovery_min_free_mib_override": recovered_task.recovery_min_free_mib_override,
+                "recovery_force_full_gpu": recovered_task.recovery_force_full_gpu,
+                "failure_reason": recovered_task.last_failure_reason,
+            },
+        )
 
-                recovery_override = None
-                force_full_gpu = False
-
-                if estimate_source in {"task_file_estimate", "online_estimate", "profiled_metadata"}:
-                    base_effective_min_free_mib = _base_effective_min_free_mib_for_estimate_policy(
-                        policy=policy,
-                        task_path=tmp_file,
-                        workdir=tmp_dir,
-                        estimator_name=estimator_name,
-                    )
-                    if base_effective_min_free_mib is not None:
-                        total_mem_mib = _recovery_total_mem_mib()
-                        if total_mem_mib is not None:
-                            recovery_override = _estimator_recovery_min_free_mib_override(
-                                base_effective_min_free_mib=base_effective_min_free_mib,
-                                recovery_count=recovered_task.recovery_count,
-                                total_mem_mib=total_mem_mib,
-                            )
-                        else:
-                            recovery_override = None
-
-                        force_full_gpu = recovery_override is None
-                    else:
-                        total_mem_mib = _recovery_total_mem_mib()
-                        if total_mem_mib is not None:
-                            recovery_override = _recovery_min_free_mib_override(
-                                recovered_task.recovery_count,
-                                total_mem_mib,
-                            )
-                        else:
-                            recovery_override = None
-
-                        force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 4
-
-                recovered_task.set_recovery_min_free_mib_override(recovery_override)
-                recovered_task.set_recovery_force_full_gpu(force_full_gpu)
-
-                with recovery_lock:
-                    recovery_queue.enqueue(recovered_task)
-
-                append_jsonl_event(
-                    event_path=f"{tmp_dir}/events.jsonl",
-                    record={
-                        "event": "recovered",
-                        "task_id": tmp_task_id,
-                        "task_file": tmp_file,
-                        "user": tmp_user,
-                        "workdir": tmp_dir,
-                        "error_log": iterator,
-                        "recovery_queue_length": recovery_queue.length(),
-                        "recovery_count": recovered_task.recovery_count,
-                        "recovery_min_free_mib_override": recovered_task.recovery_min_free_mib_override,
-                        "recovery_force_full_gpu": recovered_task.recovery_force_full_gpu,
-                        "failure_reason": recovered_task.last_failure_reason,
-                    },
-                )
-
-                print(
-                    "OOM FOUND: recovery queue is filled with the task that has problem: ",
-                    recovered_task,
-                    recovered_task._to_string(),
-                )
-                print("length of the queue:", recovery_queue.length())
-                logger.info(f"Recovered: {recovered_task}")
-                break
+        print(
+            "OOM FOUND: recovery queue is filled with the task that has problem: ",
+            recovered_task,
+            recovered_task._to_string(),
+        )
+        print("length of the queue:", recovery_queue.length())
+        logger.info(f"Recovered: {recovered_task}")
+        break
 
     return crashes, all_executions
