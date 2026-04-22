@@ -73,6 +73,16 @@ def _estimator_recovery_min_free_mib_override(
 
     return override
 
+
+def _next_capacity_bucket_above(
+    failed_effective_min_free_mib: int,
+    total_mem_mib: int,
+) -> int | None:
+    for bucket_mib in _capacity_recovery_buckets_mib(total_mem_mib):
+        if failed_effective_min_free_mib < bucket_mib:
+            return bucket_mib
+    return None
+
 def _base_effective_min_free_mib_for_estimate_policy(
     *,
     policy: str,
@@ -182,6 +192,9 @@ def recovery(
         tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
         tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
         tmp_recovery_force_full_gpu = bool(int(recovery_data[8])) if len(recovery_data) > 8 else False
+        tmp_failed_host_free_mib_at_dispatch = (
+            int(recovery_data[9]) if len(recovery_data) > 9 and recovery_data[9] != "" else None
+        )
 
         tmp_dir = recovery_data[0]
         tmp_file = recovery_data[3]
@@ -256,10 +269,17 @@ def recovery(
                 estimator_name=estimator_name,
             )
             if base_effective_min_free_mib is not None:
+                failed_effective_min_free_mib = base_effective_min_free_mib
+                if tmp_failed_host_free_mib_at_dispatch is not None:
+                    failed_effective_min_free_mib = max(
+                        failed_effective_min_free_mib,
+                        tmp_failed_host_free_mib_at_dispatch,
+                    )
+
                 total_mem_mib = _recovery_total_mem_mib()
                 if total_mem_mib is not None:
                     recovery_override = _estimator_recovery_min_free_mib_override(
-                        base_effective_min_free_mib=base_effective_min_free_mib,
+                        base_effective_min_free_mib=failed_effective_min_free_mib,
                         recovery_count=recovered_task.recovery_count,
                         total_mem_mib=total_mem_mib,
                     )
@@ -272,14 +292,25 @@ def recovery(
         else:
             total_mem_mib = _recovery_total_mem_mib()
             if total_mem_mib is not None:
-                recovery_override = _recovery_min_free_mib_override(
-                    recovered_task.recovery_count,
-                    total_mem_mib,
-                )
+                failed_effective_min_free_mib = 5 * 1024
+                if tmp_failed_host_free_mib_at_dispatch is not None:
+                    failed_effective_min_free_mib = max(
+                        failed_effective_min_free_mib,
+                        tmp_failed_host_free_mib_at_dispatch,
+                    )
+
+                recovery_override = failed_effective_min_free_mib
+                for _ in range(recovered_task.recovery_count):
+                    recovery_override = _next_capacity_bucket_above(
+                        recovery_override,
+                        total_mem_mib,
+                    )
+                    if recovery_override is None:
+                        break
             else:
                 recovery_override = None
 
-            force_full_gpu = recovery_override is None and recovered_task.recovery_count >= 4
+            force_full_gpu = recovery_override is None
 
         recovered_task.set_recovery_min_free_mib_override(recovery_override)
         recovered_task.set_recovery_force_full_gpu(force_full_gpu)
@@ -302,6 +333,7 @@ def recovery(
                 "recovery_force_full_gpu": recovered_task.recovery_force_full_gpu,
                 "failure_reason": recovered_task.last_failure_reason,
                 "run_id": run_id,
+                "failed_host_free_mib_at_dispatch": tmp_failed_host_free_mib_at_dispatch,
             },
         )
 
