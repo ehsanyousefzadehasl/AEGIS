@@ -127,11 +127,19 @@ def recovery(
 
                 tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
                 tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
+                tmp_recovery_force_full_gpu = bool(int(recovery_data[8])) if len(recovery_data) > 8 else False
 
                 tmp_dir = recovery_data[0]
                 tmp_file = recovery_data[3]
                 tmp_user = recovery_data[4]
                 tmp_task_id = recovery_data[5][:-1]
+
+                if tmp_recovery_force_full_gpu:
+                    handled_crashes.append(iterator)
+                    logger.warning(
+                        f"Recovery stopped for task {tmp_task_id}: task already failed after full-GPU fallback"
+                    )
+                    break
 
                 recovered_task = task_cls(tmp_user, tmp_dir, tmp_file)
                 recovered_task.set_id(tmp_task_id)
