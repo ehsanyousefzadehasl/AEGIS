@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import tempfile
 from pathlib import Path
 from threading import Lock
@@ -204,6 +204,44 @@ class TestRecoveryManager(unittest.TestCase):
             _classify_recovery_failure(["header\n", "unsuccessful\n"]),
             "nonzero_exit",
         )
-        
+
+    @patch("recovery.manager._recovery_total_mem_mib", return_value=40 * 1024)
+    def test_oom_recovery_requeues_task_with_capacity_aware_override(self, _mock_total_mem):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            err_path = tmp_path / "err-2026-04-21_12:00:00-oomtask.log"
+
+            err_path.write_text(
+                f"{tmp}+env+python train.py+{tmp}/good.rad+u+oomtask+2026-04-21_12:00:00+0+0\n"
+                "RuntimeError: CUDA out of memory\n",
+                encoding="utf-8",
+            )
+
+            handled_crashes = []
+            recovery_queue = Tasks()
+            recovery_lock = Lock()
+            logger = Mock()
+
+            recovery(
+                dirs=[tmp],
+                handled_crashes=handled_crashes,
+                task_cls=Task,
+                recovery_queue=recovery_queue,
+                recovery_lock=recovery_lock,
+                logger=logger,
+                policy="OR-MAGM",
+                estimator_name="horus",
+            )
+
+            self.assertEqual(recovery_queue.length(), 1)
+
+            recovered_task = recovery_queue.whole_list()[0]
+            self.assertEqual(recovered_task.task_id, "oomtask")
+            self.assertEqual(recovered_task.user_submit_time, "2026-04-21_12:00:00")
+            self.assertEqual(recovered_task.recovery_count, 1)
+            self.assertEqual(recovered_task.last_failure_reason, "oom")
+            self.assertEqual(recovered_task.recovery_min_free_mib_override, 10 * 1024)
+            self.assertFalse(recovered_task.recovery_force_full_gpu)
+            
 if __name__ == "__main__":
     unittest.main()
