@@ -144,5 +144,36 @@ class TestRecoveryManager(unittest.TestCase):
 
         self.assertEqual(_classify_recovery_failure(lines), "nonzero_exit")
 
+    def test_non_oom_failure_is_not_requeued(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            err_path = tmp_path / "err-2026-04-21_12:00:00-nonoom.log"
+
+            err_path.write_text(
+                f"{tmp}+env+python bad.py+{tmp}/bad.rad+u+nonoom+2026-04-21_12:00:00+0+0\n"
+                "unsuccessful\n",
+                encoding="utf-8",
+            )
+
+            handled_crashes = []
+            recovery_queue = Tasks()
+            recovery_lock = Lock()
+            logger = Mock()
+
+            recovery(
+                dirs=[tmp],
+                handled_crashes=handled_crashes,
+                task_cls=Task,
+                recovery_queue=recovery_queue,
+                recovery_lock=recovery_lock,
+                logger=logger,
+                policy="OR-MAGM",
+                estimator_name="horus",
+            )
+
+            self.assertEqual(recovery_queue.length(), 0)
+            self.assertIn(str(err_path), handled_crashes)
+            logger.warning.assert_called()
+            
 if __name__ == "__main__":
     unittest.main()
