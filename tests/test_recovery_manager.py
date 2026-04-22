@@ -41,7 +41,7 @@ class TestRecoveryManager(unittest.TestCase):
     def test_terminal_fallback_when_no_higher_capacity_bucket_exists(self):
         self.assertIsNone(_next_capacity_bucket_above(35 * 1024, 40 * 1024))
         self.assertIsNone(_next_estimator_recovery_min_free_mib(35 * 1024, 40 * 1024))
-    
+
     def test_capacity_recovery_buckets_scale_with_gpu_memory(self):
         self.assertEqual(
             _capacity_recovery_buckets_mib(40 * 1024),
@@ -51,16 +51,14 @@ class TestRecoveryManager(unittest.TestCase):
             _capacity_recovery_buckets_mib(80 * 1024),
             (20 * 1024, 40 * 1024, 60 * 1024),
         )
-        
+
     def test_recovery_stops_after_failed_full_gpu_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
             err_path = tmp_path / "err-2026-04-21_12:00:00-tid.log"
-
             err_path.write_text(
                 f"{tmp}+env+python x.py+{tmp}/a.rad+u+tid+2026-04-21_12:00:00+3+1\n"
                 "OOM\n",
@@ -92,7 +90,6 @@ class TestRecoveryManager(unittest.TestCase):
     def test_non_oom_failure_does_not_block_later_oom_recovery(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
@@ -140,18 +137,15 @@ class TestRecoveryManager(unittest.TestCase):
             "/tmp+env+python bad.py+/tmp/bad.rad+u+nonoom+2026-04-21_12:00:00+0+0\n",
             "unsuccessful\n",
         ]
-
         self.assertEqual(_classify_recovery_failure(lines), "nonzero_exit")
 
     def test_non_oom_failure_is_not_requeued(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
             err_path = tmp_path / "err-2026-04-21_12:00:00-nonoom.log"
-
             err_path.write_text(
                 f"{tmp}+env+python bad.py+{tmp}/bad.rad+u+nonoom+2026-04-21_12:00:00+0+0\n"
                 "unsuccessful\n",
@@ -214,12 +208,10 @@ class TestRecoveryManager(unittest.TestCase):
     def test_oom_recovery_requeues_task_with_capacity_aware_override(self, _mock_total_mem):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
             err_path = tmp_path / "err-2026-04-21_12:00:00-oomtask.log"
-
             err_path.write_text(
                 f"{tmp}+env+python train.py+{tmp}/good.rad+u+oomtask+2026-04-21_12:00:00+0+0\n"
                 "RuntimeError: CUDA out of memory\n",
@@ -254,6 +246,46 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertEqual(recovered_task.recovery_min_free_mib_override, 10 * 1024)
             self.assertFalse(recovered_task.recovery_force_full_gpu)
 
+    @patch("recovery.manager._recovery_total_mem_mib", return_value=40 * 1024)
+    def test_or_recovery_uses_failed_host_free_memory_lower_bound(self, _mock_total_mem):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            event_path = str(tmp_path / "events-test.jsonl")
+            run_id = "test-run"
+
+            err_path = tmp_path / "err-2026-04-21_12:00:00-orhostfree.log"
+            err_path.write_text(
+                f"{tmp}+env+python train.py+{tmp}/good.rad+u+orhostfree+2026-04-21_12:00:00+0+0+13312\n"
+                "RuntimeError: CUDA out of memory\n",
+                encoding="utf-8",
+            )
+
+            handled_crashes = []
+            recovery_queue = Tasks()
+            recovery_lock = Lock()
+            logger = Mock()
+
+            recovery(
+                dirs=[tmp],
+                handled_crashes=handled_crashes,
+                task_cls=Task,
+                recovery_queue=recovery_queue,
+                recovery_lock=recovery_lock,
+                logger=logger,
+                policy="OR-MAGM",
+                estimator_name="horus",
+                event_path=event_path,
+                run_id=run_id,
+            )
+
+            self.assertEqual(recovery_queue.length(), 1)
+
+            recovered_task = recovery_queue.whole_list()[0]
+            self.assertEqual(recovered_task.task_id, "orhostfree")
+            self.assertEqual(recovered_task.recovery_count, 1)
+            self.assertEqual(recovered_task.recovery_min_free_mib_override, 20 * 1024)
+            self.assertFalse(recovered_task.recovery_force_full_gpu)
+
     @patch("recovery.manager._base_effective_min_free_mib_for_estimate_policy", return_value=15 * 1024)
     @patch("recovery.manager._recovery_total_mem_mib", return_value=40 * 1024)
     def test_estimate_oom_recovery_uses_next_capacity_bucket(
@@ -263,12 +295,10 @@ class TestRecoveryManager(unittest.TestCase):
     ):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
             err_path = tmp_path / "err-2026-04-21_12:00:00-estoom.log"
-
             err_path.write_text(
                 f"{tmp}+env+python train.py+{tmp}/good.rad+u+estoom+2026-04-21_12:00:00+0+0\n"
                 "ResourceExhaustedError: OOM when allocating tensor with shape\n",
@@ -310,12 +340,10 @@ class TestRecoveryManager(unittest.TestCase):
     ):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
             err_path = tmp_path / "err-2026-04-21_12:00:00-fullgpu.log"
-
             err_path.write_text(
                 f"{tmp}+env+python train.py+{tmp}/good.rad+u+fullgpu+2026-04-21_12:00:00+3+0+35840\n"
                 "RuntimeError: CUDA out of memory\n",
@@ -357,12 +385,10 @@ class TestRecoveryManager(unittest.TestCase):
     ):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-
             event_path = str(tmp_path / "events-test.jsonl")
             run_id = "test-run"
 
             err_path = tmp_path / "err-2026-04-21_12:00:00-estfullgpu.log"
-
             err_path.write_text(
                 f"{tmp}+env+python train.py+{tmp}/good.rad+u+estfullgpu+2026-04-21_12:00:00+2+0+35840\n"
                 "ResourceExhaustedError: OOM when allocating tensor with shape\n",
@@ -394,48 +420,6 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertEqual(recovered_task.recovery_count, 3)
             self.assertIsNone(recovered_task.recovery_min_free_mib_override)
             self.assertTrue(recovered_task.recovery_force_full_gpu)
-
-    @patch("recovery.manager._recovery_total_mem_mib", return_value=40 * 1024)
-    def test_or_recovery_uses_failed_host_free_memory_lower_bound(self, _mock_total_mem):
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-
-            event_path = str(tmp_path / "events-test.jsonl")
-            run_id = "test-run"
-
-            err_path = tmp_path / "err-2026-04-21_12:00:00-orhostfree.log"
-
-            err_path.write_text(
-                f"{tmp}+env+python train.py+{tmp}/good.rad+u+orhostfree+2026-04-21_12:00:00+0+0+13312\n"
-                "RuntimeError: CUDA out of memory\n",
-                encoding="utf-8",
-            )
-
-            handled_crashes = []
-            recovery_queue = Tasks()
-            recovery_lock = Lock()
-            logger = Mock()
-
-            recovery(
-                dirs=[tmp],
-                handled_crashes=handled_crashes,
-                task_cls=Task,
-                recovery_queue=recovery_queue,
-                recovery_lock=recovery_lock,
-                logger=logger,
-                policy="OR-MAGM",
-                estimator_name="horus",
-                event_path=event_path,
-                run_id=run_id,
-            )
-
-            self.assertEqual(recovery_queue.length(), 1)
-
-            recovered_task = recovery_queue.whole_list()[0]
-            self.assertEqual(recovered_task.task_id, "orhostfree")
-            self.assertEqual(recovered_task.recovery_count, 1)
-            self.assertEqual(recovered_task.recovery_min_free_mib_override, 20 * 1024)
-            self.assertFalse(recovered_task.recovery_force_full_gpu)
 
 
 if __name__ == "__main__":
