@@ -14,42 +14,156 @@ from recovery.manager import (
 from queueing.task_queue import Task, Tasks
 
 
+TEST_BUCKET_MODE = "percentage_buckets_with_max_step"
+TEST_PERCENTAGE_BUCKETS = (0.25, 0.50, 0.75)
+TEST_FIXED_BINS_MIB = (5120, 8192, 12288, 16384, 20480, 24576, 30720, 35840)
+TEST_MAX_STEP_MIB = 8192
+
+
 class TestRecoveryManager(unittest.TestCase):
     def test_estimator_bucket_step(self):
-        self.assertEqual(_next_estimator_recovery_min_free_mib(8 * 1024, 40 * 1024), 10 * 1024)
-        self.assertEqual(_next_estimator_recovery_min_free_mib(15 * 1024, 40 * 1024), 20 * 1024)
-        self.assertEqual(_next_estimator_recovery_min_free_mib(25 * 1024, 40 * 1024), 30 * 1024)
-        self.assertIsNone(_next_estimator_recovery_min_free_mib(35 * 1024, 40 * 1024))
-
-    def test_estimator_recovery_uses_next_bucket_above_failed_threshold(self):
         self.assertEqual(
-            _next_estimator_recovery_min_free_mib(5665, 40 * 1024),
+            _next_estimator_recovery_min_free_mib(
+                8 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
             10 * 1024,
         )
         self.assertEqual(
-            _next_estimator_recovery_min_free_mib(15 * 1024, 40 * 1024),
-            20 * 1024,
+            _next_estimator_recovery_min_free_mib(
+                15 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            18432,
         )
         self.assertEqual(
-            _next_estimator_recovery_min_free_mib(22 * 1024, 40 * 1024),
-            30 * 1024,
+            _next_estimator_recovery_min_free_mib(
+                25 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            28672,
         )
         self.assertIsNone(
-            _next_estimator_recovery_min_free_mib(35 * 1024, 40 * 1024),
+            _next_estimator_recovery_min_free_mib(
+                35 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            )
         )
 
+    def test_estimator_recovery_uses_next_bucket_above_failed_threshold(self):
+        self.assertEqual(
+            _next_estimator_recovery_min_free_mib(
+                5665,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            10 * 1024,
+        )
+        self.assertEqual(
+            _next_estimator_recovery_min_free_mib(
+                15 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            18432,
+        )
+        self.assertEqual(
+            _next_estimator_recovery_min_free_mib(
+                22 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            28672,
+        )
+        self.assertIsNone(
+            _next_estimator_recovery_min_free_mib(
+                35 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            )
+        )
+
+
     def test_terminal_fallback_when_no_higher_capacity_bucket_exists(self):
-        self.assertIsNone(_next_capacity_bucket_above(35 * 1024, 40 * 1024))
-        self.assertIsNone(_next_estimator_recovery_min_free_mib(35 * 1024, 40 * 1024))
+        self.assertIsNone(
+            _next_capacity_bucket_above(
+                35 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            )
+        )
+        self.assertIsNone(
+            _next_estimator_recovery_min_free_mib(
+                35 * 1024,
+                40 * 1024,
+                TEST_BUCKET_MODE,
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            )
+        )
 
     def test_capacity_recovery_buckets_scale_with_gpu_memory(self):
         self.assertEqual(
-            _capacity_recovery_buckets_mib(40 * 1024),
+            _capacity_recovery_buckets_mib(
+                40 * 1024,
+                "percentage_buckets",
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
             (10 * 1024, 20 * 1024, 30 * 1024),
         )
         self.assertEqual(
-            _capacity_recovery_buckets_mib(80 * 1024),
-            (20 * 1024, 40 * 1024, 60 * 1024),
+            _capacity_recovery_buckets_mib(
+                40 * 1024,
+                "percentage_buckets_with_max_step",
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            (10240, 18432, 20480, 28672, 30720),
+        )
+        self.assertEqual(
+            _capacity_recovery_buckets_mib(
+                80 * 1024,
+                "percentage_buckets_with_max_step",
+                TEST_PERCENTAGE_BUCKETS,
+                TEST_FIXED_BINS_MIB,
+                TEST_MAX_STEP_MIB,
+            ),
+            (20480, 28672, 36864, 40960, 49152, 57344, 61440),
         )
 
     def test_recovery_stops_after_failed_full_gpu_fallback(self):
@@ -81,6 +195,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 0)
@@ -123,6 +241,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 1)
@@ -168,6 +290,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 0)
@@ -234,6 +360,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 1)
@@ -276,6 +406,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 1)
@@ -283,7 +417,7 @@ class TestRecoveryManager(unittest.TestCase):
             recovered_task = recovery_queue.whole_list()[0]
             self.assertEqual(recovered_task.task_id, "orhostfree")
             self.assertEqual(recovered_task.recovery_count, 1)
-            self.assertEqual(recovered_task.recovery_min_free_mib_override, 20 * 1024)
+            self.assertEqual(recovered_task.recovery_min_free_mib_override, 18432)
             self.assertFalse(recovered_task.recovery_force_full_gpu)
 
     @patch("recovery.manager._base_effective_min_free_mib_for_estimate_policy", return_value=15 * 1024)
@@ -321,6 +455,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 1)
@@ -330,7 +468,7 @@ class TestRecoveryManager(unittest.TestCase):
             self.assertEqual(recovered_task.user_submit_time, "2026-04-21_12:00:00")
             self.assertEqual(recovered_task.recovery_count, 1)
             self.assertEqual(recovered_task.last_failure_reason, "oom")
-            self.assertEqual(recovered_task.recovery_min_free_mib_override, 20 * 1024)
+            self.assertEqual(recovered_task.recovery_min_free_mib_override, 18432)
             self.assertFalse(recovered_task.recovery_force_full_gpu)
 
     @patch("recovery.manager._recovery_total_mem_mib", return_value=40 * 1024)
@@ -366,6 +504,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 1)
@@ -411,6 +553,10 @@ class TestRecoveryManager(unittest.TestCase):
                 estimator_name="horus",
                 event_path=event_path,
                 run_id=run_id,
+                recovery_bucket_mode=TEST_BUCKET_MODE,
+                recovery_percentage_buckets=TEST_PERCENTAGE_BUCKETS,
+                recovery_fixed_bins_mib=TEST_FIXED_BINS_MIB,
+                recovery_max_step_mib=TEST_MAX_STEP_MIB,
             )
 
             self.assertEqual(recovery_queue.length(), 1)
