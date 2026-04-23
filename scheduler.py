@@ -76,6 +76,10 @@ def run_scheduler(policy=policy, estimator=estimator):
             estimator_name=estimator,
             event_path=event_path,
             run_id=run_id,
+            recovery_bucket_mode=settings.recovery_bucket_mode,
+            recovery_percentage_buckets=settings.recovery_percentage_buckets,
+            recovery_fixed_bins_mib=settings.recovery_fixed_bins_mib,
+            recovery_max_step_mib=settings.recovery_max_step_mib,
         )
         
         update()

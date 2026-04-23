@@ -114,6 +114,10 @@ def recovery(
     estimator_name: str,
     event_path: str,
     run_id: str,
+    recovery_bucket_mode: str,
+    recovery_percentage_buckets: tuple[float, ...],
+    recovery_fixed_bins_mib: tuple[int, ...],
+    recovery_max_step_mib: int,
 ):
     """
     Scan error logs and enqueue failed jobs for recovery.
