@@ -14,12 +14,49 @@ from placement.profiles import policy_estimate_source
 from workload.job_spec import load_job_spec
 from telemetry.monitor import gpu_mem_total
 
-def _capacity_recovery_buckets_mib(total_mem_mib: int) -> tuple[int, int, int]:
-    return (
-        math.ceil(total_mem_mib * 0.25),
-        math.ceil(total_mem_mib * 0.50),
-        math.ceil(total_mem_mib * 0.75),
+def _normalize_bucket_list_mib(buckets: list[int], total_mem_mib: int) -> tuple[int, ...]:
+    cleaned = sorted({int(x) for x in buckets if int(x) > 0 and int(x) < total_mem_mib})
+    return tuple(cleaned)
+
+
+def _expand_bins_with_max_step(buckets: tuple[int, ...], max_step_mib: int) -> tuple[int, ...]:
+    if not buckets:
+        return ()
+
+    expanded: list[int] = [buckets[0]]
+    for target in buckets[1:]:
+        current = expanded[-1]
+        while target - current > max_step_mib:
+            current += max_step_mib
+            expanded.append(current)
+        if expanded[-1] != target:
+            expanded.append(target)
+
+    return tuple(expanded)
+
+
+def _capacity_recovery_buckets_mib(
+    total_mem_mib: int,
+    bucket_mode: str,
+    percentage_buckets: tuple[float, ...],
+    fixed_bins_mib: tuple[int, ...],
+    max_step_mib: int,
+) -> tuple[int, ...]:
+    if bucket_mode == "fixed_bins":
+        return _normalize_bucket_list_mib(list(fixed_bins_mib), total_mem_mib)
+
+    percentage_based = _normalize_bucket_list_mib(
+        [math.ceil(total_mem_mib * frac) for frac in percentage_buckets],
+        total_mem_mib,
     )
+
+    if bucket_mode == "percentage_buckets":
+        return percentage_based
+
+    if bucket_mode == "percentage_buckets_with_max_step":
+        return _expand_bins_with_max_step(percentage_based, max_step_mib)
+
+    raise ValueError(f"Unsupported recovery bucket mode: {bucket_mode}")
 
 def _recovery_total_mem_mib() -> int | None:
     totals = gpu_mem_total()
@@ -30,8 +67,18 @@ def _recovery_total_mem_mib() -> int | None:
 def _next_estimator_recovery_min_free_mib(
     failed_effective_min_free_mib: int,
     total_mem_mib: int,
+    bucket_mode: str,
+    percentage_buckets: tuple[float, ...],
+    fixed_bins_mib: tuple[int, ...],
+    max_step_mib: int,
 ) -> int | None:
-    for bucket_mib in _capacity_recovery_buckets_mib(total_mem_mib):
+    for bucket_mib in _capacity_recovery_buckets_mib(
+        total_mem_mib,
+        bucket_mode,
+        percentage_buckets,
+        fixed_bins_mib,
+        max_step_mib,
+    ):
         if failed_effective_min_free_mib < bucket_mib:
             return bucket_mib
     return None
@@ -39,8 +86,18 @@ def _next_estimator_recovery_min_free_mib(
 def _next_capacity_bucket_above(
     failed_effective_min_free_mib: int,
     total_mem_mib: int,
+    bucket_mode: str,
+    percentage_buckets: tuple[float, ...],
+    fixed_bins_mib: tuple[int, ...],
+    max_step_mib: int,
 ) -> int | None:
-    for bucket_mib in _capacity_recovery_buckets_mib(total_mem_mib):
+    for bucket_mib in _capacity_recovery_buckets_mib(
+        total_mem_mib,
+        bucket_mode,
+        percentage_buckets,
+        fixed_bins_mib,
+        max_step_mib,
+    ):
         if failed_effective_min_free_mib < bucket_mib:
             return bucket_mib
     return None
@@ -247,6 +304,10 @@ def recovery(
                     recovery_override = _next_estimator_recovery_min_free_mib(
                         failed_effective_min_free_mib,
                         total_mem_mib,
+                        recovery_bucket_mode,
+                        recovery_percentage_buckets,
+                        recovery_fixed_bins_mib,
+                        recovery_max_step_mib,
                     )
                 else:
                     recovery_override = None
