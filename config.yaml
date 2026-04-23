@@ -16,7 +16,7 @@ mapper:
   # PROFILED-* uses metrics from each workload YAML profile: block
   # estimator is ignored unless the selected policy needs it
   
-  policy: EST-BF
+  policy: EST-MAGM
   #policy: exclusive
   #policy: oracle-FF
   #policy: oracle-BF
@@ -50,3 +50,13 @@ recovery:
   # dir: "/home/ehyo/rad-scheduler/08-OR-MAGM"
   # dir: "/home/ehyo/rad-scheduler/09-OR-LUG"
   # dir: /home/ehyo/rad-scheduler/Exclusive
+
+  bucket_mode: percentage_buckets_with_max_step
+  # bucket_mode: fixed_bins
+
+  percentage_buckets: [0.25, 0.50, 0.75]
+
+  # candidate retry floors, in MiB
+  fixed_bins_mib: [5120, 8192, 12288, 16384, 20480, 24576, 30720, 35840]
+
+  max_step_mib: 8192
