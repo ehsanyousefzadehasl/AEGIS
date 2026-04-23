@@ -328,6 +328,10 @@ def recovery(
                 recovery_override = _next_capacity_bucket_above(
                     failed_effective_min_free_mib,
                     total_mem_mib,
+                    recovery_bucket_mode,
+                    recovery_percentage_buckets,
+                    recovery_fixed_bins_mib,
+                    recovery_max_step_mib,
                 )
             else:
                 recovery_override = None
