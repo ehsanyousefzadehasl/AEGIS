@@ -69,6 +69,7 @@ def dispatch_policy_placement(
     placement_estimate: PlacementEstimate | None,
     round_robin_generator=None,
     gpu_ids=None,
+    recovery_min_free_mib_override=None,
 ):
     request = _build_placement_request(
         policy=policy,
@@ -78,6 +79,7 @@ def dispatch_policy_placement(
         placement_estimate=placement_estimate,
         round_robin_generator=round_robin_generator,
         gpu_ids=gpu_ids,
+        recovery_min_free_mib_override=recovery_min_free_mib_override,
     )
     return dispatch_placement(request)
 
