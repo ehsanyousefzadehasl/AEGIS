@@ -229,6 +229,51 @@ def gpu_mem_total():
         result[uuid.strip()] = int(total)
     return result
 
+PHASE0_RISK_WEIGHTS = {
+    "w_mean": 0.25,
+    "w_median": 0.25,
+    "w_p95": 0.25,
+    "w_ewma": 0.25,
+}
+
+
+def _window_alpha(window_size: int) -> float:
+    if window_size <= 0:
+        return 0.5
+    return 2.0 / (window_size + 1.0)
+
+
+def _metric_window_summary(series, alpha: float) -> dict[str, float]:
+    s = pd.to_numeric(series, errors="coerce").dropna()
+    if s.empty:
+        return {
+            "mean": float("nan"),
+            "median": float("nan"),
+            "p95": float("nan"),
+            "ewma": float("nan"),
+            "risk": float("nan"),
+        }
+
+    mean_v = float(s.mean())
+    median_v = float(s.median())
+    p95_v = float(s.quantile(0.95))
+    ewma_v = float(_ema_last(s, alpha=alpha))
+
+    risk_v = (
+        PHASE0_RISK_WEIGHTS["w_mean"] * mean_v
+        + PHASE0_RISK_WEIGHTS["w_median"] * median_v
+        + PHASE0_RISK_WEIGHTS["w_p95"] * p95_v
+        + PHASE0_RISK_WEIGHTS["w_ewma"] * ewma_v
+    )
+
+    return {
+        "mean": mean_v,
+        "median": median_v,
+        "p95": p95_v,
+        "ewma": ewma_v,
+        "risk": risk_v,
+    }
+
 # This function gets the metrics from dcgmi tool
 def dcgmi_monitor():
     """
@@ -344,19 +389,18 @@ def monitor_logger(window = 30):
 
 
 
-# This function is responsible for giving decision-making data to the collocation logic
 def analyze_Gmetrics(data=None):
     """
-    Summarize rolling-window Gmetrics per gpu_uuid:
-      active, last mem used, total cap, available, mean smact/smocc/drama.
-    Returns a DataFrame indexed by gpu_uuid.
+    Summarize rolling-window Gmetrics per gpu_uuid using the Phase 0 risk rule.
+    Returns explicit summary columns plus backward-compatible aliases:
+      smact/smocc/drama == smact_risk/smocc_risk/drama_risk
     """
     while True:
         with GV_LOCK:
             ready = globals().get("Gmetrics_are_valid", False)
         if ready:
             break
-        time.sleep(0.1)  # waits only until window fills (once at startup)
+        time.sleep(0.1)
 
     if data is None:
         with G_LOCK:
@@ -364,109 +408,113 @@ def analyze_Gmetrics(data=None):
 
     if data is None or data.empty:
         return pd.DataFrame(columns=[
-            "free_gpu_memory",
-            "smact","smocc","drama"
+            "GPU_mem_available",
+            "GPU_mem_total",
+            "window_samples",
+            "ewma_alpha",
+            "smact_mean",
+            "smact_median",
+            "smact_p95",
+            "smact_ewma",
+            "smact_risk",
+            "smocc_mean",
+            "smocc_median",
+            "smocc_p95",
+            "smocc_ewma",
+            "smocc_risk",
+            "drama_mean",
+            "drama_median",
+            "drama_p95",
+            "drama_ewma",
+            "drama_risk",
+            "smact",
+            "smocc",
+            "drama",
         ])
 
     df = data.copy()
-    # ensure numeric dtypes
-    for c in ["free_gpu_memory","smact","smocc","drama"]:
+
+    for c in ["free_gpu_memory", "smact", "smocc", "drama"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    gpu_ids = gpu_uuids()              # dict: uuid -> id
-    gpus_activity = gpus_activeness()  # dict: uuid -> bool/int
-
-    gpu_totals = gpu_mem_total()       # dict: uuid -> total memory in MiB
-
+    gpu_ids = gpu_uuids()
+    gpu_totals = gpu_mem_total()
     grouped = df.groupby("gpu_uuid", sort=False)
     analyzed = {}
 
     for uuid in gpu_ids:
-        if uuid not in grouped.groups:
-            analyzed[uuid] = [
-                np.nan,
-                gpu_totals.get(uuid, np.nan),
-                np.nan,
-                np.nan,
-                np.nan,
-            ]
-            continue
-
-        g = grouped.get_group(uuid)
         total_mem = gpu_totals.get(uuid, np.nan)
         guard_mib = MEMORY_GUARD_MIB
         if not pd.isna(total_mem):
-            guard_mib = max(MEMORY_GUARD_MIB, math.ceil(float(total_mem) * MEMORY_GUARD_FRACTION))
+            guard_mib = max(
+                MEMORY_GUARD_MIB,
+                math.ceil(float(total_mem) * MEMORY_GUARD_FRACTION),
+            )
 
+        if uuid not in grouped.groups:
+            analyzed[uuid] = {
+                "GPU_mem_available": np.nan,
+                "GPU_mem_total": total_mem,
+                "window_samples": 0,
+                "ewma_alpha": np.nan,
+                "smact_mean": np.nan,
+                "smact_median": np.nan,
+                "smact_p95": np.nan,
+                "smact_ewma": np.nan,
+                "smact_risk": np.nan,
+                "smocc_mean": np.nan,
+                "smocc_median": np.nan,
+                "smocc_p95": np.nan,
+                "smocc_ewma": np.nan,
+                "smocc_risk": np.nan,
+                "drama_mean": np.nan,
+                "drama_median": np.nan,
+                "drama_p95": np.nan,
+                "drama_ewma": np.nan,
+                "drama_risk": np.nan,
+            }
+            continue
+
+        g = grouped.get_group(uuid)
         free_mem = max(0, int(g["free_gpu_memory"].iloc[-1]) - guard_mib)
 
-        # This is for setting the alpha value according to the size of the monitoring window
+        window_samples = len(g)
+        alpha = _window_alpha(window_samples)
 
-        W = len(g)
-        alpha = 2.0/(W+1.0) if W > 0 else 0.5  # window-aware EMA
+        smact_summary = _metric_window_summary(g["smact"], alpha)
+        smocc_summary = _metric_window_summary(g["smocc"], alpha)
+        drama_summary = _metric_window_summary(g["drama"], alpha)
 
-        if globals()["analyze_configuration"] == "Normal":
-            smact = g["smact"].mean()
-            smocc = g["smocc"].mean()
-            drama = g["drama"].mean()
-        elif globals()["analyze_configuration"] == "EWMA":
-            alpha = 0.5  # tweakable; ~effective window ≈ 2/(alpha)-1 samples
-            smact = _ema_last(g["smact"], alpha=alpha)
-            smocc = _ema_last(g["smocc"], alpha=alpha)
-            drama = _ema_last(g["drama"], alpha=alpha)
-        else:
-            # --- Linear Risk (mean, median, p95, p50, EMA) ---
-            # alpha already computed above from window size W
+        analyzed[uuid] = {
+            "GPU_mem_available": free_mem,
+            "GPU_mem_total": total_mem,
+            "window_samples": window_samples,
+            "ewma_alpha": alpha,
+            "smact_mean": smact_summary["mean"],
+            "smact_median": smact_summary["median"],
+            "smact_p95": smact_summary["p95"],
+            "smact_ewma": smact_summary["ewma"],
+            "smact_risk": smact_summary["risk"],
+            "smocc_mean": smocc_summary["mean"],
+            "smocc_median": smocc_summary["median"],
+            "smocc_p95": smocc_summary["p95"],
+            "smocc_ewma": smocc_summary["ewma"],
+            "smocc_risk": smocc_summary["risk"],
+            "drama_mean": drama_summary["mean"],
+            "drama_median": drama_summary["median"],
+            "drama_p95": drama_summary["p95"],
+            "drama_ewma": drama_summary["ewma"],
+            "drama_risk": drama_summary["risk"],
+        }
 
-            RISK_V2_W = {
-                "w_mean":   0.20,
-                "w_median": 0.20,
-                "w_p95":    0.30,
-                "w_p50":    0.10,
-                "w_ema":    0.20,
-            }
+    out = pd.DataFrame.from_dict(analyzed, orient="index")
 
-            def _risk(series):
-                s = pd.to_numeric(series, errors="coerce").dropna()
-                if s.empty:
-                    return float("nan")
-                mean_v   = float(s.mean())
-                median_v = float(s.median())
-                p95_v    = float(s.quantile(0.95))
-                p50_v    = float(s.quantile(0.50))
-                ema_v    = float(_ema_last(s, alpha))
-                return (RISK_V2_W["w_mean"]   * mean_v   +
-                        RISK_V2_W["w_median"] * median_v +
-                        RISK_V2_W["w_p95"]    * p95_v    +
-                        RISK_V2_W["w_p50"]    * p50_v    +
-                        RISK_V2_W["w_ema"]    * ema_v)
-
-            smact = _risk(g["smact"])
-            smocc = _risk(g["smocc"])
-            drama = _risk(g["drama"])
-
-        analyzed[uuid] = [
-            free_mem,
-            gpu_totals.get(uuid, np.nan),
-            smact,
-            smocc,
-            drama,
-        ]
-
-    out = pd.DataFrame.from_dict(
-        analyzed,
-        orient="index",
-        columns=[
-            "GPU_mem_available",
-            "GPU_mem_total",
-            "smact",
-            "smocc",
-            "drama",
-        ],
-    )
+    # Backward-compatible aliases for current placement code.
+    out["smact"] = out["smact_risk"]
+    out["smocc"] = out["smocc_risk"]
+    out["drama"] = out["drama_risk"]
 
     print(out)
-    
     return out
 
 
