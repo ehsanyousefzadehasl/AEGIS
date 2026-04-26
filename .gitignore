@@ -10,11 +10,6 @@ __pycache__/
 # Model and artifact files
 *.model
 
-# Workload / generated files
-*.rad
-mobilenet*
-xlnet*
-
 # Optional local environment / editor files
 .venv/
 venv/
