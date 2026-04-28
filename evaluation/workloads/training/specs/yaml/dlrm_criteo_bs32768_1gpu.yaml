@@ -1,0 +1,35 @@
+version: 1
+
+job:
+  conda_env: tf
+  command: >
+    python evaluation/workloads/training/scripts/clean/run_dlrm_criteo.py
+    --raw_data_file /raid/datasets/criteo/data/day
+    --epochs 1
+    --num_batches 10000
+    --mini_batch_size 32768
+    --learning_rate 0.05
+    --num_workers 16
+
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 1468
+
+estimates:
+  horus_mib: 40000
+  faketensor_mib: 40000
+  gpumemnet_mib: 40000
+
+profile:
+  peak_memory_mib: null
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: null
+  source: null
+  extra_metrics: {}
+
+online_estimation:
+  summary_path: dlrm.model
+  parser_arg_1: /raid/datasets/criteo/data/day
+  parser_arg_2: 32768
