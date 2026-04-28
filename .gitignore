@@ -10,8 +10,25 @@ __pycache__/
 # Model and artifact files
 *.model
 
+
+# local helper script
+clear.sh
+
+
 # Optional local environment / editor files
 .venv/
 venv/
 .env
 .DS_Storeclear.sh
+
+
+# local third-party clones used through wrappers
+evaluation/workloads/training/third_party/
+
+
+# local external run folder
+run_kaggle_pt/
+
+
+# downloaded local datasets
+evaluation/data/
