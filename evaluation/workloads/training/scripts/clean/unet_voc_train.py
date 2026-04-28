@@ -242,55 +242,58 @@ def evaluate(
 
 def main() -> None:
     args = parse_args()
-    device = resolve_device()
 
-    print(f"Using device: {device}")
-    print(f"AMP enabled: {args.amp and device.type == 'cuda'}")
+    with timed_run() as total_timer:
+        device = resolve_device()
 
-    train_loader, val_loader = build_dataloaders(args, device)
-    model = build_model(device)
+        print(f"Using device: {device}")
+        print(f"AMP enabled: {args.amp and device.type == 'cuda'}")
 
-    if args.print_model_summary or args.summary_output is not None:
-        summary_input = torch.rand(args.batch_size, 3, args.size, args.size, device=device)
-        generate_model_summary(
-            model,
-            input_data=summary_input,
-            print_summary=args.print_model_summary,
-            output_path=args.summary_output,
-            verbose=0,
-        )
+        train_loader, val_loader = build_dataloaders(args, device)
+        model = build_model(device)
 
-    if args.print_faketensor_estimate:
-        faketensor_bytes = estimate_model_memory_bytes(model, args.batch_size, args.size)
-        print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
-
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
-    loss_fn = smp.losses.DiceLoss(mode="multiclass")
-    scaler = torch.amp.GradScaler(device.type, enabled=args.amp and device.type == "cuda")
-
-    with timed_run() as timer:
-        for epoch in range(1, args.epochs + 1):
-            train_loss = train_one_epoch(
-                epoch=epoch,
-                model=model,
-                loader=train_loader,
-                loss_fn=loss_fn,
-                optimizer=optimizer,
-                scaler=scaler,
-                device=device,
-                use_amp=args.amp,
-                report_every=args.report_every,
+        if args.print_model_summary or args.summary_output is not None:
+            summary_input = torch.rand(args.batch_size, 3, args.size, args.size, device=device)
+            generate_model_summary(
+                model,
+                input_data=summary_input,
+                print_summary=args.print_model_summary,
+                output_path=args.summary_output,
+                verbose=0,
             )
-            val_loss = evaluate(
-                epoch=epoch,
-                model=model,
-                loader=val_loader,
-                loss_fn=loss_fn,
-                device=device,
-            )
-            print(f"epoch {epoch}: train_dice_loss={train_loss:.4f} val_dice_loss={val_loss:.4f}")
 
-    print(f"\nExecution time: {timer.elapsed_seconds:.2f} seconds")
+        if args.print_faketensor_estimate:
+            faketensor_bytes = estimate_model_memory_bytes(model, args.batch_size, args.size)
+            print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
+
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+        loss_fn = smp.losses.DiceLoss(mode="multiclass")
+        scaler = torch.amp.GradScaler(device.type, enabled=args.amp and device.type == "cuda")
+
+        with timed_run() as train_timer:
+            for epoch in range(1, args.epochs + 1):
+                train_loss = train_one_epoch(
+                    epoch=epoch,
+                    model=model,
+                    loader=train_loader,
+                    loss_fn=loss_fn,
+                    optimizer=optimizer,
+                    scaler=scaler,
+                    device=device,
+                    use_amp=args.amp,
+                    report_every=args.report_every,
+                )
+                val_loss = evaluate(
+                    epoch=epoch,
+                    model=model,
+                    loader=val_loader,
+                    loss_fn=loss_fn,
+                    device=device,
+                )
+                print(f"epoch {epoch}: train_dice_loss={train_loss:.4f} val_dice_loss={val_loss:.4f}")
+
+    print(f"training_loop_time_s: {train_timer.elapsed_seconds:.2f}")
+    print(f"end_to_end_time_s: {total_timer.elapsed_seconds:.2f}")
 
 
 if __name__ == "__main__":

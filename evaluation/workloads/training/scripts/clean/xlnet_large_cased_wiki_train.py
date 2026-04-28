@@ -145,36 +145,39 @@ def main() -> None:
     os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 
     args = parse_args()
-    device = resolve_device()
 
-    tokenizer = build_tokenizer(args)
-    tokenized_datasets = build_datasets(args, tokenizer)
-    model = build_model(args, device)
+    with timed_run() as total_timer:
+        device = resolve_device()
 
-    maybe_generate_summary(args, model, device)
+        tokenizer = build_tokenizer(args)
+        tokenized_datasets = build_datasets(args, tokenizer)
+        model = build_model(args, device)
 
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
-    training_args = build_training_arguments(args)
+        maybe_generate_summary(args, model, device)
 
-    eval_dataset = tokenized_datasets.get("validation") if args.run_evaluate else None
+        data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+        training_args = build_training_arguments(args)
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=tokenized_datasets["train"],
-        eval_dataset=eval_dataset,
-        processing_class=tokenizer,
-        data_collator=data_collator,
-    )
+        eval_dataset = tokenized_datasets.get("validation") if args.run_evaluate else None
 
-    with timed_run() as timer:
-        trainer.train()
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=tokenized_datasets["train"],
+            eval_dataset=eval_dataset,
+            processing_class=tokenizer,
+            data_collator=data_collator,
+        )
 
-        if args.run_evaluate and eval_dataset is not None:
-            results = trainer.evaluate()
-            print(f"Evaluation results: {results}")
+        with timed_run() as train_timer:
+            trainer.train()
 
-    print(f"\nExecution time: {timer.elapsed_seconds:.2f} seconds")
+            if args.run_evaluate and eval_dataset is not None:
+                results = trainer.evaluate()
+                print(f"Evaluation results: {results}")
+
+    print(f"training_loop_time_s: {train_timer.elapsed_seconds:.2f}")
+    print(f"end_to_end_time_s: {total_timer.elapsed_seconds:.2f}")
 
 
 if __name__ == "__main__":

@@ -211,65 +211,68 @@ def train_one_epoch(
 
 def main() -> None:
     args = parse_args()
-    device = resolve_device()
 
-    tokenizer = build_tokenizer(args)
-    train_dataloader = build_dataloader(args, tokenizer)
-    model = build_model(tokenizer, device)
+    with timed_run() as total_timer:
+        device = resolve_device()
 
-    if args.print_model_summary or args.summary_output is not None:
-        try:
-            summary_inputs = {
-                "input_ids": torch.randint(
-                    0,
-                    tokenizer.vocab_size,
-                    (args.batch_size, args.max_length),
-                    dtype=torch.long,
+        tokenizer = build_tokenizer(args)
+        train_dataloader = build_dataloader(args, tokenizer)
+        model = build_model(tokenizer, device)
+
+        if args.print_model_summary or args.summary_output is not None:
+            try:
+                summary_inputs = {
+                    "input_ids": torch.randint(
+                        0,
+                        tokenizer.vocab_size,
+                        (args.batch_size, args.max_length),
+                        dtype=torch.long,
+                        device=device,
+                    ),
+                    "attention_mask": torch.ones(
+                        args.batch_size,
+                        args.max_length,
+                        dtype=torch.long,
+                        device=device,
+                    ),
+                }
+                generate_model_summary(
+                    model,
+                    input_data=summary_inputs,
+                    print_summary=args.print_model_summary,
+                    output_path=args.summary_output,
+                    verbose=0,
+                )
+            except Exception as exc:
+                print(f"Model summary failed: {exc}")
+
+        if args.print_faketensor_estimate:
+            try:
+                faketensor_bytes = estimate_model_memory_bytes(
+                    model,
+                    batch_size=args.batch_size,
+                    max_length=args.max_length,
+                    vocab_size=tokenizer.vocab_size,
+                )
+                print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
+            except Exception as exc:
+                print(f"FakeTensor estimation failed for this GPT-2 XL workload: {exc}")
+
+        optimizer = AdamW(model.parameters(), lr=args.lr)
+
+        with timed_run() as train_timer:
+            for epoch in range(1, args.epochs + 1):
+                train_one_epoch(
+                    epoch=epoch,
+                    model=model,
+                    train_dataloader=train_dataloader,
+                    optimizer=optimizer,
                     device=device,
-                ),
-                "attention_mask": torch.ones(
-                    args.batch_size,
-                    args.max_length,
-                    dtype=torch.long,
-                    device=device,
-                ),
-            }
-            generate_model_summary(
-                model,
-                input_data=summary_inputs,
-                print_summary=args.print_model_summary,
-                output_path=args.summary_output,
-                verbose=0,
-            )
-        except Exception as exc:
-            print(f"Model summary failed: {exc}")
+                    report_every=args.report_every,
+                )
 
-    if args.print_faketensor_estimate:
-        try:
-            faketensor_bytes = estimate_model_memory_bytes(
-                model,
-                batch_size=args.batch_size,
-                max_length=args.max_length,
-                vocab_size=tokenizer.vocab_size,
-            )
-            print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
-        except Exception as exc:
-            print(f"FakeTensor estimation failed for this GPT-2 XL workload: {exc}")
-
-    optimizer = AdamW(model.parameters(), lr=args.lr)
-
-    with timed_run() as timer:
-        for epoch in range(1, args.epochs + 1):
-            train_one_epoch(
-                epoch=epoch,
-                model=model,
-                train_dataloader=train_dataloader,
-                optimizer=optimizer,
-                device=device,
-                report_every=args.report_every,
-            )
-
-    print(f"\nExecution time: {timer.elapsed_seconds:.2f} seconds")
+    print(f"training_loop_time_s: {train_timer.elapsed_seconds:.2f}")
+    print(f"end_to_end_time_s: {total_timer.elapsed_seconds:.2f}")
 
 
 if __name__ == "__main__":

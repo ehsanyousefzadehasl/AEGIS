@@ -179,49 +179,52 @@ def evaluate(
 
 def main() -> None:
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_loader, test_loader = build_dataloaders(args)
-    model = build_model(device)
+    with timed_run() as total_timer:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if args.print_model_summary or args.summary_output is not None:
-        summary_input = torch.rand(args.batch_size, 3, 32, 32, device=device)
-        generate_model_summary(
-            model,
-            input_data=summary_input,
-            print_summary=args.print_model_summary,
-            output_path=args.summary_output,
-            verbose=0,
-        )
+        train_loader, test_loader = build_dataloaders(args)
+        model = build_model(device)
 
-    if args.print_faketensor_estimate:
-        faketensor_bytes = estimate_model_memory_bytes(model, args.batch_size)
-        print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
-
-    with timed_run() as timer:
-        for epoch in range(1, args.epochs + 1):
-            train_one_epoch(
-                epoch=epoch,
-                model=model,
-                train_loader=train_loader,
-                criterion=criterion,
-                optimizer=optimizer,
-                device=device,
-                report_every=args.report_every,
+        if args.print_model_summary or args.summary_output is not None:
+            summary_input = torch.rand(args.batch_size, 3, 32, 32, device=device)
+            generate_model_summary(
+                model,
+                input_data=summary_input,
+                print_summary=args.print_model_summary,
+                output_path=args.summary_output,
+                verbose=0,
             )
-            evaluate(
-                model=model,
-                test_loader=test_loader,
-                criterion=criterion,
-                device=device,
-            )
-            scheduler.step()
 
-    print("time: ", timer.elapsed_seconds)
+        if args.print_faketensor_estimate:
+            faketensor_bytes = estimate_model_memory_bytes(model, args.batch_size)
+            print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
+
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
+
+        with timed_run() as train_timer:
+            for epoch in range(1, args.epochs + 1):
+                train_one_epoch(
+                    epoch=epoch,
+                    model=model,
+                    train_loader=train_loader,
+                    criterion=criterion,
+                    optimizer=optimizer,
+                    device=device,
+                    report_every=args.report_every,
+                )
+                evaluate(
+                    model=model,
+                    test_loader=test_loader,
+                    criterion=criterion,
+                    device=device,
+                )
+                scheduler.step()
+
+    print(f"training_loop_time_s: {train_timer.elapsed_seconds:.2f}")
+    print(f"end_to_end_time_s: {total_timer.elapsed_seconds:.2f}")
 
 
 if __name__ == "__main__":
