@@ -1,0 +1,29 @@
+version: 1
+
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/xception_imagenet_train.py
+    --batch_size 64
+
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 11106
+
+estimates:
+  horus_mib: 16176.2725
+  faketensor_mib: 8324.916908
+  gpumemnet_mib: 16000.0
+
+profile:
+  peak_memory_mib: null
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: null
+  source: null
+  extra_metrics: {}
+
+online_estimation:
+  summary_path: Xception_64.model
+  parser_arg_1: /raid/datasets/imagenet
+  parser_arg_2: 64
