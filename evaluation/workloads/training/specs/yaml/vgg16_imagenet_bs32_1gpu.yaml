@@ -1,0 +1,29 @@
+version: 1
+
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/vgg16_imagenet_train.py
+    --batch_size 32
+
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 6684
+
+estimates:
+  horus_mib: 21525.8262
+  faketensor_mib: 3121.344643
+  gpumemnet_mib: 16000.0
+
+profile:
+  peak_memory_mib: null
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: null
+  source: null
+  extra_metrics: {}
+
+online_estimation:
+  summary_path: vgg_32.model
+  parser_arg_1: /raid/datasets/imagenet
+  parser_arg_2: 32
