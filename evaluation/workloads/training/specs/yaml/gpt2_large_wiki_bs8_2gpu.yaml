@@ -1,0 +1,28 @@
+version: 1
+
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/gpt2_large_wiki_train.py
+
+resources:
+  num_gpus: 2
+  gpu_memory_requirement_mib: 28356
+
+estimates:
+  horus_mib: 40000.0
+  faketensor_mib: 40000.0
+  gpumemnet_mib: 40000.0
+
+profile:
+  peak_memory_mib: null
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: null
+  source: null
+  extra_metrics: {}
+
+online_estimation:
+  summary_path: gpt2_large.model
+  parser_arg_1: wiki
+  parser_arg_2: 8
