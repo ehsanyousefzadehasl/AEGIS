@@ -1,0 +1,29 @@
+version: 1
+
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/mobilenet_imagenet_train.py
+    --batch_size 32
+
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 3352
+
+estimates:
+  horus_mib: 3617.0674
+  faketensor_mib: 2425.279457
+  gpumemnet_mib: 8000.0
+
+profile:
+  peak_memory_mib: null
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: null
+  source: null
+  extra_metrics: {}
+
+online_estimation:
+  summary_path: mobilenet_32.model
+  parser_arg_1: /raid/datasets/imagenet
+  parser_arg_2: 32
