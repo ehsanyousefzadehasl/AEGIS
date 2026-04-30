@@ -17,14 +17,7 @@ def write_text_manifest(path: Path, items: list[Path]) -> None:
 
 
 def profile_args_for_spec(spec_path: Path) -> str:
-    stem = spec_path.stem.lower()
-
-    # Workloads that currently support both summary saving and FakeTensor printing
-    if stem.startswith("efficientnet_") or stem.startswith("efficientnet_b0_"):
-        return "--print_model_summary --summary_output {summary_path} --print_faketensor_estimate"
-
-    # Default: no extra profiling args
-    return ""
+    return "--print_model_summary --summary_output {summary_path} --print_faketensor_estimate"
 
 
 def write_profile_args_csv(path: Path, items: list[Path]) -> None:
