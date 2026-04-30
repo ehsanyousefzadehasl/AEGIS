@@ -55,6 +55,13 @@ def safe_int(x: Any) -> int | None:
         return None
     return int(v)
 
+def resolve_target_uuids(meta: dict[str, Any], uuid_map: dict[int, str]) -> list[str]:
+    explicit = meta.get("assigned_gpu_uuids", [])
+    if isinstance(explicit, list) and explicit:
+        return [str(x).strip() for x in explicit if str(x).strip()]
+
+    visible_devices = parse_visible_devices(meta)
+    return [uuid_map[idx] for idx in visible_devices if idx in uuid_map]
 
 def first_mode_or_none(series: pd.Series) -> float | None:
     s = pd.to_numeric(series, errors="coerce").dropna()
@@ -465,7 +472,7 @@ def build_common_row(
     exitcode_text = read_text(run_dir / "exitcode.txt").strip()
 
     visible_devices = parse_visible_devices(meta)
-    target_uuids = [uuid_map[idx] for idx in visible_devices if idx in uuid_map]
+    target_uuids = resolve_target_uuids(meta, uuid_map)
 
     times = extract_times_from_stdout(stdout_text)
     faketensor_est = extract_faketensor_value(run_dir, stdout_text)
@@ -514,7 +521,7 @@ def extract_rows(runs_root: Path, window_sec: float) -> tuple[list[dict[str, Any
     for run_dir in discover_run_dirs(runs_root):
         meta = read_json(run_dir / "meta.json")
         visible_devices = parse_visible_devices(meta)
-        target_uuids = [uuid_map[idx] for idx in visible_devices if idx in uuid_map]
+        target_uuids = resolve_target_uuids(meta, uuid_map)
 
         stdout_text = read_text(run_dir / "stdout.log")
         time_json = read_json(run_dir / "time.json")
