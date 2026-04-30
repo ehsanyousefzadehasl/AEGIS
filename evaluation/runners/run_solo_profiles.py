@@ -154,6 +154,32 @@ def format_extra_args(template: str, placeholders: dict[str, str]) -> list[str]:
     rendered = template.format(**placeholders)
     return shlex.split(rendered)
 
+def current_uuid_map_by_index() -> dict[int, str]:
+    try:
+        out = subprocess.check_output(
+            [
+                "nvidia-smi",
+                "--query-gpu=index,uuid",
+                "--format=csv,noheader,nounits",
+            ],
+            text=True,
+            stderr=subprocess.STDOUT,
+        )
+    except Exception:
+        return {}
+
+    mapping: dict[int, str] = {}
+    for line in out.splitlines():
+        parts = [x.strip() for x in line.split(",")]
+        if len(parts) != 2:
+            continue
+        try:
+            idx = int(parts[0])
+        except ValueError:
+            continue
+        mapping[idx] = parts[1]
+    return mapping
+
 
 def build_run_context(
     spec_path: Path,
@@ -437,12 +463,27 @@ def run_one_spec(
 
     write_text(run_dir / "command.txt", cmd_text + "\n")
 
+    visible_gpu_indices = []
+    for tok in str(args.cuda_visible_devices).split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            visible_gpu_indices.append(int(tok))
+        except ValueError:
+            pass
+
+    uuid_map = current_uuid_map_by_index()
+    assigned_gpu_uuids = [uuid_map[i] for i in visible_gpu_indices if i in uuid_map]
+
     meta = {
         "spec_path": ctx["spec_path"],
         "version": ctx["version"],
         "workload_id": ctx["workload_id"],
         "run_id": ctx["run_id"],
         "repo_root": str(Path(args.repo_root).resolve()),
+        "assigned_gpu_indices": visible_gpu_indices,
+        "assigned_gpu_uuids": assigned_gpu_uuids,
         "cuda_visible_devices": args.cuda_visible_devices,
         "resolved_env": ctx["resolved_env"],
         "raw_command": ctx["raw_command"],
