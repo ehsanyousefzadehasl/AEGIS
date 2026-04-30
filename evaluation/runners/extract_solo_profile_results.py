@@ -250,6 +250,19 @@ def summarize_nvidia_memory(
     df_full = df[df["timestamp"] >= start_ts].copy()
     df_200 = df_full[df_full["timestamp"] < start_ts + pd.Timedelta(seconds=window_sec)].copy()
 
+    if len(target_uuids_in_order) == 1:
+        uuid = target_uuids_in_order[0]
+        one_full = df_full[df_full["uuid"] == uuid]
+        one_200 = df_200[df_200["uuid"] == uuid]
+
+        out["gpu_memory_peak_full_mib"] = (
+            safe_float(one_full["memory_used"].max()) if not one_full.empty else None
+        )
+        out["gpu_memory_peak_200s_mib"] = (
+            safe_float(one_200["memory_used"].max()) if not one_200.empty else None
+        )
+        return out
+
     peaks_full: list[float | None] = []
     peaks_200: list[float | None] = []
 
@@ -267,16 +280,12 @@ def summarize_nvidia_memory(
         peaks_full.append(full_peak)
         peaks_200.append(win_peak)
 
-    if len(target_uuids_in_order) == 1:
-        out["gpu_memory_peak_full_mib"] = peaks_full[0]
-        out["gpu_memory_peak_200s_mib"] = peaks_200[0]
-    else:
-        out["gpu_memory_peak_full_mib_sum"] = (
-            sum(v for v in peaks_full if v is not None) if any(v is not None for v in peaks_full) else None
-        )
-        out["gpu_memory_peak_200s_mib_sum"] = (
-            sum(v for v in peaks_200 if v is not None) if any(v is not None for v in peaks_200) else None
-        )
+    out["gpu_memory_peak_full_mib_sum"] = (
+        sum(v for v in peaks_full if v is not None) if any(v is not None for v in peaks_full) else None
+    )
+    out["gpu_memory_peak_200s_mib_sum"] = (
+        sum(v for v in peaks_200 if v is not None) if any(v is not None for v in peaks_200) else None
+    )
 
     return out
 
@@ -390,6 +399,7 @@ def summarize_dcgm(
         return out
 
     df_full = df[df["timestamp"] >= start_ts].copy()
+    df_200 = df_full[df_full["timestamp"] < start_ts + pd.Timedelta(seconds=window_sec)].copy()
 
     metric_cols = [
         c
@@ -397,9 +407,33 @@ def summarize_dcgm(
         if c not in {"timestamp", "gpu_index"} and pd.api.types.is_numeric_dtype(df[c])
     ]
 
+    if len(target_gpu_indices_in_order) == 1:
+        gpu_idx = target_gpu_indices_in_order[0]
+        one_full = df_full[df_full["gpu_index"] == gpu_idx]
+        one_200 = df_200[df_200["gpu_index"] == gpu_idx]
+
+        for metric in metric_cols:
+            metric_l = metric.lower()
+
+            if metric_l == "totec":
+                full_mj, full_j = energy_delta(one_full[metric]) if metric in one_full.columns else (None, None)
+                out[f"{metric_l}_delta_mj"] = full_mj
+                out[f"{metric_l}_delta_j"] = full_j
+                continue
+
+            stats_full = summarize_one_metric(one_full[metric]) if metric in one_full.columns else {}
+            stats_200 = summarize_one_metric(one_200[metric]) if metric in one_200.columns else {}
+
+            for stat_name in ["mean", "max", "median", "mode"]:
+                out[f"{metric_l}_{stat_name}_full"] = stats_full.get(stat_name)
+                out[f"{metric_l}_{stat_name}_200s"] = stats_200.get(stat_name)
+
+        return out
+
     for pos, gpu_idx in enumerate(target_gpu_indices_in_order):
         suffix = f"_gpu_{chr(ord('a') + pos)}"
         one_full = df_full[df_full["gpu_index"] == gpu_idx]
+        one_200 = df_200[df_200["gpu_index"] == gpu_idx]
 
         for metric in metric_cols:
             metric_l = metric.lower()
@@ -411,15 +445,11 @@ def summarize_dcgm(
                 continue
 
             stats_full = summarize_one_metric(one_full[metric]) if metric in one_full.columns else {}
+            stats_200 = summarize_one_metric(one_200[metric]) if metric in one_200.columns else {}
 
             for stat_name in ["mean", "max", "median", "mode"]:
                 out[f"{metric_l}_{stat_name}_full{suffix}"] = stats_full.get(stat_name)
-
-    if len(target_gpu_indices_in_order) == 1:
-        # duplicate into non-suffixed columns for convenience
-        for key, value in list(out.items()):
-            if key.endswith("_gpu_a"):
-                out[key[:-6]] = value
+                out[f"{metric_l}_{stat_name}_200s{suffix}"] = stats_200.get(stat_name)
 
     return out
 
