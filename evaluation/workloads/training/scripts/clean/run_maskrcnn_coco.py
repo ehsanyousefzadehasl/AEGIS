@@ -54,6 +54,8 @@ def main() -> None:
         args.model,
         "--epochs",
         str(args.epochs),
+        "--lr",
+        str(args.lr),
         "-b",
         str(args.batch_size),
         "--output-dir",
