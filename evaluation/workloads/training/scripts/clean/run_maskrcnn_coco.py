@@ -19,6 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data_path", type=str, default="/raid/datasets/coco")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--lr", type=float, default=0.0025)
     parser.add_argument("--model", type=str, default="maskrcnn_resnet50_fpn")
     parser.add_argument("--output_dir", type=str, default="runs")
     parser.add_argument("--print_model_summary", action="store_true")
