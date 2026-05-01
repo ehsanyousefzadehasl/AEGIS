@@ -65,10 +65,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--save-model", action="store_true", default=False, help="save the trained model")
     parser.add_argument("--data-root", type=str, default="evaluation/data", help="root directory for MNIST")
     parser.add_argument("--num-workers", type=int, default=1, help="number of dataloader workers")
-    parser.add_argument("--print-model-summary", action="store_true", help="print model summary before training")
-    parser.add_argument("--summary-output", type=str, default=None, help="optional path to save model summary")
+    parser.add_argument(
+        "--print-model-summary",
+        "--print_model_summary",
+        dest="print_model_summary",
+        action="store_true",
+        help="print model summary before training",
+    )
+    parser.add_argument(
+        "--summary-output",
+        "--summary_output",
+        dest="summary_output",
+        type=str,
+        default=None,
+        help="optional path to save model summary",
+    )
     parser.add_argument(
         "--print-faketensor-estimate",
+        "--print_faketensor_estimate",
+        dest="print_faketensor_estimate",
         action="store_true",
         help="print FakeTensor memory estimate before training",
     )
