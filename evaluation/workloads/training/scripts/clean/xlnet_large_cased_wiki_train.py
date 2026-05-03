@@ -22,7 +22,10 @@ from transformers import (
 
 from evaluation.workloads.training.common.summaries import generate_model_summary
 from evaluation.workloads.training.common.timing import timed_run
-
+from evaluation.workloads.training.common.faketensor_memory_estimation import (
+    estimate_faketensor_memory,
+    format_memory_gib,
+)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train XLNet-large-cased on WikiText")
@@ -50,6 +53,11 @@ def parse_args() -> argparse.Namespace:
         "--run_evaluate",
         action="store_true",
         help="Run trainer.evaluate() after training when a validation split exists",
+    )
+    parser.add_argument(
+        "--print_faketensor_estimate",
+        action="store_true",
+        help="Try FakeTensor memory estimation before training",
     )
     return parser.parse_args()
 
@@ -99,6 +107,41 @@ def build_model(args: argparse.Namespace, device: torch.device):
     )
     return model.to(device)
 
+def estimate_model_memory_bytes(args: argparse.Namespace, model) -> int:
+    if not torch.cuda.is_available():
+        raise RuntimeError("FakeTensor memory estimation currently expects CUDA to be available")
+
+    def input_builder():
+        return {
+            "input_ids": torch.randint(
+                0,
+                model.config.vocab_size,
+                (args.batch_size, args.max_length),
+                dtype=torch.long,
+                device="cuda",
+            ),
+            "attention_mask": torch.ones(
+                args.batch_size,
+                args.max_length,
+                dtype=torch.long,
+                device="cuda",
+            ),
+            "labels": torch.ones(
+                args.batch_size,
+                dtype=torch.long,
+                device="cuda",
+            ),
+        }
+
+    def forward_call(fake_batch):
+        return model.to("cuda")(**fake_batch).loss
+
+    return estimate_faketensor_memory(
+        model,
+        input_builder=input_builder,
+        forward_call=forward_call,
+        run_backward=True,
+    )
 
 def maybe_generate_summary(args: argparse.Namespace, model, device: torch.device) -> None:
     if not (args.print_model_summary or args.summary_output is not None):
@@ -162,6 +205,12 @@ def main() -> None:
 
         maybe_generate_summary(args, model, device)
 
+        if args.print_faketensor_estimate:
+            try:
+                faketensor_bytes = estimate_model_memory_bytes(args, model)
+                print(f"FakeTensor estimated peak memory: {format_memory_gib(faketensor_bytes):.4f} GiB")
+            except Exception as exc:
+                print(f"FakeTensor estimation failed for this XLNet workload: {exc}")
         data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
         training_args = build_training_arguments(args)
 
