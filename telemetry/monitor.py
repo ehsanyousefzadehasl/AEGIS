@@ -389,19 +389,14 @@ def monitor_logger(window = 30):
 
 
 
-def analyze_Gmetrics(data=None):
+def summarize_Gmetrics_snapshot(data=None):
     """
-    Summarize rolling-window Gmetrics per gpu_uuid using the Phase 0 risk rule.
-    Returns explicit summary columns plus backward-compatible aliases:
-      smact/smocc/drama == smact_risk/smocc_risk/drama_risk
-    """
-    while True:
-        with GV_LOCK:
-            ready = globals().get("Gmetrics_are_valid", False)
-        if ready:
-            break
-        time.sleep(0.1)
+    Summarize an explicit Gmetrics snapshot per gpu_uuid using the Phase 0 risk rule.
 
+    This does not wait for the global rolling window to become valid.
+    It is intended for evaluation code that wants to summarize smaller
+    windows from the currently collected monitor buffer.
+    """
     if data is None:
         with G_LOCK:
             data = globals()["Gmetrics"]
@@ -516,6 +511,21 @@ def analyze_Gmetrics(data=None):
 
     print(out)
     return out
+
+
+def analyze_Gmetrics(data=None):
+    """
+    Summarize rolling-window Gmetrics per gpu_uuid using the Phase 0 risk rule.
+    Preserves existing AEGIS behavior: wait until the monitor window is valid.
+    """
+    while True:
+        with GV_LOCK:
+            ready = globals().get("Gmetrics_are_valid", False)
+        if ready:
+            break
+        time.sleep(0.1)
+
+    return summarize_Gmetrics_snapshot(data)
 
 
 

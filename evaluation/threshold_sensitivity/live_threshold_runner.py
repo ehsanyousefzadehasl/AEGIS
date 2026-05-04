@@ -7,6 +7,7 @@ import os
 import sys
 import time
 import uuid
+import math
 from pathlib import Path
 from threading import Thread
 
@@ -47,6 +48,9 @@ INDEX_COLUMNS = [
     "finished_wall_time",
     "ttfk_wait_seconds",
     "window_seconds",
+    "summary_windows_requested",
+    "summary_windows_collected",
+    "max_summary_window_seconds",
     "time_from_ttfk_to_window_ready_seconds",
     "total_runtime_seconds",
     "time_from_window_ready_to_finish_seconds",
@@ -76,6 +80,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--gpu-id", default=None, help="GPU index/id to use (e.g., 0).")
     p.add_argument("--estimator", default="None", help="Estimator name for load_job_spec().")
     p.add_argument("--window-seconds", type=float, default=30.0, help="Post-TTFK window length.")
+    p.add_argument(
+        "--summary-windows",
+        default=None,
+        help=(
+            "Optional comma-separated post-TTFK summary windows, e.g. 10,20,30,60. "
+            "The decision window from --window-seconds is always included."
+        ),
+    )
     p.add_argument("--ttfk-timeout", type=float, default=300.0, help="Timeout waiting for first GPU sighting.")
     p.add_argument("--window-timeout", type=float, default=600.0, help="Timeout waiting for post-TTFK window completion.")
     p.add_argument("--finish-timeout", type=float, default=0.0, help="Timeout waiting for workload finish. 0 means no timeout.")
@@ -138,25 +150,6 @@ def wait_for_ttfk(gpu_uuid: str, timeout_s: float, poll_s: float) -> tuple[float
     raise TimeoutError(f"Timed out waiting for TTFK on GPU {gpu_uuid}.")
 
 
-def wait_for_window(gpu_uuid: str, timeout_s: float, poll_s: float) -> tuple[float, int]:
-    deadline = time.monotonic() + timeout_s
-
-    while time.monotonic() < deadline:
-        gpu_state.update()
-        row = gpu_state.gpus_state.loc[gpu_uuid]
-
-        pid_val = row["CPU_task_PID"]
-        if pd.isna(pid_val):
-            raise RuntimeError("Tracked PID disappeared before the post-TTFK window completed.")
-
-        if gpu_state.window_ready(gpu_uuid):
-            return time.monotonic(), int(pid_val)
-
-        time.sleep(poll_s)
-
-    raise TimeoutError(f"Timed out waiting for post-TTFK window completion on GPU {gpu_uuid}.")
-
-
 def wait_for_finish(tracked_pid: int, finish_timeout_s: float, poll_s: float) -> float:
     deadline = None if finish_timeout_s <= 0 else (time.monotonic() + finish_timeout_s)
 
@@ -202,6 +195,109 @@ def read_terminal_event(event_path: str | Path, task_id: str, run_id: str, wait_
     return None
 
 
+def parse_summary_windows(value: str | None, decision_window_seconds: float) -> list[float]:
+    windows = {float(decision_window_seconds)}
+
+    if value is not None:
+        for raw in value.split(","):
+            item = raw.strip()
+            if not item:
+                continue
+            window = float(item)
+            if window <= 0:
+                raise ValueError(f"Summary window must be positive: {window}")
+            windows.add(window)
+
+    return sorted(windows)
+
+
+def format_window_suffix(window_seconds: float) -> str:
+    if float(window_seconds).is_integer():
+        return f"w{int(window_seconds)}s"
+    return f"w{str(window_seconds).replace('.', 'p')}s"
+
+
+def recent_metrics_for_window(window_seconds: float) -> pd.DataFrame:
+    samples_per_gpu = max(1, int(math.ceil(window_seconds)))
+
+    with monitor.G_LOCK:
+        data = monitor.Gmetrics
+
+    if data is None or data.empty:
+        return pd.DataFrame()
+
+    data = data.copy(deep=False)
+
+    return (
+        data.groupby("gpu_uuid", group_keys=False, sort=False)
+        .tail(samples_per_gpu)
+        .reset_index(drop=True)
+    )
+
+
+def summarize_recent_window(gpu_uuid: str, window_seconds: float) -> dict:
+    window_data = recent_metrics_for_window(window_seconds)
+    analyzed = monitor.summarize_Gmetrics_snapshot(data=window_data)
+
+    if gpu_uuid not in analyzed.index:
+        raise RuntimeError(f"GPU {gpu_uuid} not found in {window_seconds}s summary output.")
+
+    return analyzed.loc[gpu_uuid].to_dict()
+
+
+def prefix_window_metrics(metrics: dict, window_seconds: float) -> dict:
+    suffix = format_window_suffix(window_seconds)
+    return {f"{key}_{suffix}": value for key, value in metrics.items()}
+
+
+def collect_summary_windows(
+    *,
+    gpu_uuid: str,
+    ttfk_seen_at: float,
+    tracked_pid: int,
+    windows: list[float],
+    timeout_s: float,
+    poll_s: float,
+) -> tuple[dict[float, dict], dict[float, float], int]:
+    max_window = max(windows)
+    deadline = time.monotonic() + timeout_s
+    pending = list(sorted(windows))
+    summaries: dict[float, dict] = {}
+    ready_times: dict[float, float] = {}
+    latest_pid = tracked_pid
+
+    while pending:
+        gpu_state.update()
+
+        row = gpu_state.gpus_state.loc[gpu_uuid]
+        pid_val = row["CPU_task_PID"]
+
+        if pd.isna(pid_val):
+            break
+
+        latest_pid = int(pid_val)
+        if not monitor.pid_on_system(str(latest_pid)):
+            break
+
+        elapsed = time.monotonic() - float(ttfk_seen_at)
+
+        ready_now = [w for w in pending if elapsed >= w]
+        for window_seconds in ready_now:
+            summaries[window_seconds] = summarize_recent_window(gpu_uuid, window_seconds)
+            ready_times[window_seconds] = float(elapsed)
+            pending.remove(window_seconds)
+
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                f"Timed out collecting summary windows up to {max_window}s on GPU {gpu_uuid}."
+            )
+
+        if pending:
+            time.sleep(poll_s)
+
+    return summaries, ready_times, latest_pid
+
+
 def append_csv_row(path: str | Path, row: dict, columns: list[str] | None = None) -> None:
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -235,6 +331,9 @@ def main() -> int:
     run_id = args.run_id or str(uuid.uuid4())
     t_start = time.monotonic()
 
+    summary_windows = parse_summary_windows(args.summary_windows, float(args.window_seconds))
+    monitor_window_seconds = max(summary_windows)
+
     task_obj: Task | None = None
     job_spec = None
     gpu_uuid = None
@@ -258,6 +357,8 @@ def main() -> int:
     measurement_recorded = False
     stage = "initialization"
     monitor_thread = None
+    summary_metrics_by_window = {}
+    summary_ready_times = {}
 
     index_row = {
         "recorded_at": dt.datetime.now().isoformat(),
@@ -279,6 +380,9 @@ def main() -> int:
         "finished_wall_time": None,
         "ttfk_wait_seconds": None,
         "window_seconds": float(args.window_seconds),
+        "summary_windows_requested": ",".join(str(w) for w in summary_windows),
+        "summary_windows_collected": None,
+        "max_summary_window_seconds": float(monitor_window_seconds),
         "time_from_ttfk_to_window_ready_seconds": None,
         "total_runtime_seconds": None,
         "time_from_window_ready_to_finish_seconds": None,
@@ -323,7 +427,7 @@ def main() -> int:
 
         stage = "init_monitoring"
         gpu_state.init_gpu_state(uuid_to_id)
-        monitor_thread = start_monitor_thread(args.window_seconds)
+        monitor_thread = start_monitor_thread(monitor_window_seconds)
 
         now_str = dt.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         event_path = event_path or os.path.join(
@@ -411,27 +515,43 @@ def main() -> int:
             }
         )
 
-        stage = "wait_for_window"
-        t_window_ready, tracked_pid_after_window = wait_for_window(
-            gpu_uuid,
+        stage = "collect_summary_windows"
+        summary_metrics_by_window, summary_ready_times, tracked_pid_after_window = collect_summary_windows(
+            gpu_uuid=gpu_uuid,
+            ttfk_seen_at=ttfk_seen_at,
+            tracked_pid=tracked_pid_after_ttfk,
+            windows=summary_windows,
             timeout_s=float(args.window_timeout),
             poll_s=float(args.poll_seconds),
         )
+
+        decision_window = float(args.window_seconds)
+        if decision_window not in summary_metrics_by_window:
+            raise RuntimeError(
+                f"Tracked workload ended before decision window completed: {decision_window}s."
+            )
+
+        t_window_ready = float(ttfk_seen_at) + float(summary_ready_times[decision_window])
+        metrics_row = summary_metrics_by_window[decision_window]
+        state_row = gpu_state.gpus_state.loc[gpu_uuid].to_dict()
+
+        flattened_summary_metrics = {}
+        for window_seconds, row_metrics in summary_metrics_by_window.items():
+            flattened_summary_metrics.update(prefix_window_metrics(row_metrics, window_seconds))
+
+        flattened_summary_ready_times = {
+            f"summary_ready_seconds_{format_window_suffix(window_seconds)}": ready_s
+            for window_seconds, ready_s in summary_ready_times.items()
+        }
+
         index_row.update(
             {
                 "runner_status": "window_ready",
                 "tracked_pid_after_window": int(tracked_pid_after_window),
-                "time_from_ttfk_to_window_ready_seconds": float(t_window_ready - ttfk_seen_at),
+                "time_from_ttfk_to_window_ready_seconds": float(summary_ready_times[decision_window]),
+                "summary_windows_collected": ",".join(str(w) for w in sorted(summary_metrics_by_window)) or None,
             }
         )
-
-        stage = "analyze_metrics"
-        analyzed = monitor.analyze_Gmetrics()
-        if gpu_uuid not in analyzed.index:
-            raise RuntimeError(f"GPU {gpu_uuid} not found in analyze_Gmetrics() output.")
-
-        metrics_row = analyzed.loc[gpu_uuid].to_dict()
-        state_row = gpu_state.gpus_state.loc[gpu_uuid].to_dict()
 
         stage = "wait_for_finish"
         t_finish = wait_for_finish(
@@ -479,6 +599,9 @@ def main() -> int:
             "launch_wall_time": launch_wall,
             "ttfk_wait_seconds": float(ttfk_seen_at - t_launch),
             "window_seconds": float(args.window_seconds),
+            "summary_windows_requested": ",".join(str(w) for w in summary_windows),
+            "summary_windows_collected": ",".join(str(w) for w in sorted(summary_metrics_by_window)) or None,
+            "max_summary_window_seconds": float(monitor_window_seconds),
             "time_from_ttfk_to_window_ready_seconds": float(t_window_ready - ttfk_seen_at),
             "total_runtime_seconds": float(t_finish - t_launch),
             "time_from_window_ready_to_finish_seconds": float(t_finish - t_window_ready),
@@ -496,6 +619,8 @@ def main() -> int:
             "gpu_memory_estimate_mib": job_spec.gpu_memory_estimate_mib,
             "state_validity_at_measurement": state_row.get("validity"),
             "state_gpu_seen_at": state_row.get("gpu_seen_at"),
+            **flattened_summary_ready_times,
+            **flattened_summary_metrics,
             **metrics_row,
         }
 
@@ -514,6 +639,9 @@ def main() -> int:
                 "gpu_id": gpu_id,
                 "output_csv": str(args.output_csv),
                 "run_id": run_id,
+                "summary_windows_requested": ",".join(str(w) for w in summary_windows),
+                "summary_windows_collected": ",".join(str(w) for w in sorted(summary_metrics_by_window)),
+                "max_summary_window_seconds": float(monitor_window_seconds),
                 "smact_risk": measurement.get("smact_risk", measurement.get("smact")),
                 "smocc_risk": measurement.get("smocc_risk", measurement.get("smocc")),
                 "drama_risk": measurement.get("drama_risk", measurement.get("drama")),
@@ -591,6 +719,8 @@ def main() -> int:
                 "terminal_event": terminal_event_name,
                 "return_code": return_code,
                 "terminal_failure_reason": terminal_failure_reason,
+                "summary_windows_collected": ",".join(str(w) for w in sorted(summary_metrics_by_window)) or None,
+                "max_summary_window_seconds": float(monitor_window_seconds),
             }
         )
 
