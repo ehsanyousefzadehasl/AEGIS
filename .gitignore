@@ -10,6 +10,8 @@ __pycache__/
 !evaluation/profiling/solo/manifests/profile_args_1gpu.csv
 !evaluation/profiling/solo/manifests/profile_args_2gpu.csv
 !evaluation/profiling/solo/manifests/profile_args.csv
+!evaluation/profiling/solo/extracted/solo_profile_results_1gpu.csv
+!evaluation/profiling/solo/extracted/solo_profile_results_2gpu.csv
 
 # Model and artifact files
 *.model
