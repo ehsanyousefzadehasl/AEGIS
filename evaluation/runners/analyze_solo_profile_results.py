@@ -434,6 +434,101 @@ def build_lucid_style_profile_labels(long_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def build_horus_oracle_inputs(long_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build Horus-friendly utilization inputs from extracted solo profiles.
+
+    The main generous value is horus_oracle_util_full = gputl_mean_full,
+    which treats Horus as if it predicted full-run mean GPU utilization perfectly.
+
+    We also keep 200s, median, and max variants for sensitivity checks.
+    """
+    if long_df.empty:
+        return pd.DataFrame()
+
+    wanted = long_df[
+        (
+            (
+                (long_df["metric"] == "gputl")
+                & (long_df["stat"].isin(["mean", "median", "max"]))
+                & (long_df["window"].isin(["200s", "full"]))
+            )
+            |
+            (
+                (long_df["metric"] == "gpu_memory_peak_mib")
+                & (long_df["stat"] == "peak")
+                & (long_df["window"].isin(["200s", "full"]))
+            )
+        )
+        & (long_df["gpu_label"] != "sum")
+    ].copy()
+
+    if wanted.empty:
+        return pd.DataFrame()
+
+    wanted["feature"] = wanted["metric"] + "_" + wanted["stat"] + "_" + wanted["window"]
+
+    id_cols = [
+        c
+        for c in [
+            "workload_id",
+            "run_id",
+            "spec_path",
+            "source_gpu_count",
+            "gpu_label",
+            "training_loop_time_s",
+            "end_to_end_time_s",
+            "exit_code",
+            "gpu_memory_requirement_mib",
+            "faketensor_estimate",
+        ]
+        if c in wanted.columns
+    ]
+
+    out = wanted.pivot_table(
+        index=id_cols,
+        columns="feature",
+        values="value",
+        aggfunc="first",
+    ).reset_index()
+
+    required_features = [
+        "gputl_mean_full",
+        "gputl_mean_200s",
+        "gputl_median_full",
+        "gputl_median_200s",
+        "gputl_max_full",
+        "gputl_max_200s",
+        "gpu_memory_peak_mib_peak_full",
+        "gpu_memory_peak_mib_peak_200s",
+    ]
+
+    for feature in required_features:
+        if feature not in out.columns:
+            out[feature] = pd.NA
+
+    out["horus_oracle_util_full"] = out["gputl_mean_full"]
+    out["horus_profile_util_200s"] = out["gputl_mean_200s"]
+    out["horus_oracle_util_median_full"] = out["gputl_median_full"]
+    out["horus_profile_util_median_200s"] = out["gputl_median_200s"]
+    out["horus_oracle_util_max_full"] = out["gputl_max_full"]
+    out["horus_profile_util_max_200s"] = out["gputl_max_200s"]
+    out["horus_oracle_memory_full_mib"] = out["gpu_memory_peak_mib_peak_full"]
+    out["horus_profile_memory_200s_mib"] = out["gpu_memory_peak_mib_peak_200s"]
+    out["horus_oracle_util_source"] = "gputl_mean_full"
+
+    out["horus_abs_error_200s_vs_full_util"] = (
+        pd.to_numeric(out["horus_profile_util_200s"], errors="coerce")
+        - pd.to_numeric(out["horus_oracle_util_full"], errors="coerce")
+    ).abs()
+
+    denom = pd.to_numeric(out["horus_oracle_util_full"], errors="coerce").abs()
+    out["horus_relative_error_200s_vs_full_util"] = (
+        out["horus_abs_error_200s_vs_full_util"] / denom.where(denom > 1e-9)
+    )
+
+    return out
+
 def read_if_exists(path: Path) -> pd.DataFrame:
     if not path.exists():
         print(f"missing input, skipping: {path}")
@@ -468,25 +563,30 @@ def main() -> int:
         memory_threshold=float(args.memory_threshold),
     )
     lucid_style_labels_df = build_lucid_style_profile_labels(long_df)
+    horus_oracle_inputs_df = build_horus_oracle_inputs(long_df)
 
     long_path = output_dir / "solo_profiles_long.csv"
     comparison_path = output_dir / "profile_200s_vs_full.csv"
     characterization_path = output_dir / "workload_characterization.csv"
     lucid_style_labels_path = output_dir / "lucid_style_profile_labels.csv"
+    horus_oracle_inputs_path = output_dir / "horus_oracle_inputs.csv"
 
     long_df.to_csv(long_path, index=False)
     comparison_df.to_csv(comparison_path, index=False)
     characterization_df.to_csv(characterization_path, index=False)
     lucid_style_labels_df.to_csv(lucid_style_labels_path, index=False)
+    horus_oracle_inputs_df.to_csv(horus_oracle_inputs_path, index=False)
 
     print(f"wrote {long_path}")
     print(f"wrote {comparison_path}")
     print(f"wrote {characterization_path}")
     print(f"wrote {lucid_style_labels_path}")
+    print(f"wrote {horus_oracle_inputs_path}")
     print(f"rows_long={len(long_df)}")
     print(f"rows_comparison={len(comparison_df)}")
     print(f"rows_characterization={len(characterization_df)}")
     print(f"rows_lucid_style_labels={len(lucid_style_labels_df)}")
+    print(f"rows_horus_oracle_inputs={len(horus_oracle_inputs_df)}")
 
     return 0
 

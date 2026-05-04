@@ -87,8 +87,12 @@ def build_summary(
     comparison: pd.DataFrame,
     characterization: pd.DataFrame,
     top_k: int,
+    horus_inputs: pd.DataFrame | None = None,
 ) -> str:
     lines: list[str] = []
+
+    if horus_inputs is None:
+        horus_inputs = pd.DataFrame()
 
     lines.append("# Solo Profile Analysis Summary\n")
     lines.append("This summary is generated from extracted solo profiling results.\n")
@@ -164,6 +168,42 @@ def build_summary(
             )
         )
 
+    lines.append("\n## Horus-like oracle utilization inputs\n")
+    lines.append(
+        "For a generous Horus-like analysis, `horus_oracle_util_full` uses the observed "
+        "full-run mean GPU utilization (`gputl_mean_full`) as if utilization were predicted perfectly. "
+        "`horus_profile_util_200s` keeps the first-200s profiled value for comparison.\n"
+    )
+
+    if not horus_inputs.empty and "horus_oracle_util_full" in horus_inputs.columns:
+        top_horus = horus_inputs.copy()
+        top_horus["horus_oracle_util_full"] = pd.to_numeric(
+            top_horus["horus_oracle_util_full"],
+            errors="coerce",
+        )
+        top_horus = top_horus.sort_values("horus_oracle_util_full", ascending=False)
+
+        lines.append(
+            markdown_table(
+                top_horus,
+                [
+                    "workload_id",
+                    "source_gpu_count",
+                    "gpu_label",
+                    "horus_oracle_util_full",
+                    "horus_profile_util_200s",
+                    "horus_oracle_util_median_full",
+                    "horus_oracle_util_max_full",
+                    "horus_oracle_memory_full_mib",
+                    "horus_abs_error_200s_vs_full_util",
+                    "horus_relative_error_200s_vs_full_util",
+                ],
+                top_k,
+            )
+        )
+    else:
+        lines.append("_Horus-like oracle input data is missing._\n")
+
     lines.append("\n## Notes for paper analysis\n")
     lines.append(
         "- `lucid_style_class_200s` is a Lucid-style profile class, not an exact Lucid reproduction.\n"
@@ -172,6 +212,8 @@ def build_summary(
         "- For memory footprint on 2-GPU workloads, use sum columns when reasoning about total memory demand.\n"
         "- Large 200s-vs-full mismatch indicates that a short profiling window may not represent the full run.\n"
     )
+    if horus_inputs is None:
+        horus_inputs = pd.DataFrame()
 
     return "\n".join(lines)
 
@@ -185,11 +227,13 @@ def main() -> int:
     labels = read_csv_if_exists(analysis_dir / "lucid_style_profile_labels.csv")
     comparison = read_csv_if_exists(analysis_dir / "profile_200s_vs_full.csv")
     characterization = read_csv_if_exists(analysis_dir / "workload_characterization.csv")
+    horus_inputs = read_csv_if_exists(analysis_dir / "horus_oracle_inputs.csv")
 
     summary = build_summary(
         labels=labels,
         comparison=comparison,
         characterization=characterization,
+        horus_inputs=horus_inputs,
         top_k=int(args.top_k),
     )
 

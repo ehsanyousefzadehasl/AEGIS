@@ -6,6 +6,7 @@ from evaluation.runners.analyze_solo_profile_results import (
     add_equal_weight_profile_risk,
     build_200s_vs_full,
     build_lucid_style_profile_labels,
+    build_horus_oracle_inputs,
     build_workload_characterization,
     normalize_profile_dataframe,
     parse_profile_column,
@@ -213,5 +214,37 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         self.assertEqual(scores["medium"], 1)
         self.assertEqual(scores["jumbo"], 2)
 
+    def test_build_horus_oracle_inputs(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "workload_id": "bert",
+                    "run_id": "r1",
+                    "spec_path": "bert.yaml",
+                    "gpu_count": 1,
+                    "gputl_mean_200s": 60.0,
+                    "gputl_mean_full": 70.0,
+                    "gputl_median_200s": 55.0,
+                    "gputl_median_full": 65.0,
+                    "gputl_max_200s": 90.0,
+                    "gputl_max_full": 95.0,
+                    "gpu_memory_peak_200s_mib": 1000.0,
+                    "gpu_memory_peak_full_mib": 1200.0,
+                }
+            ]
+        )
+
+        long_df = normalize_profile_dataframe(df, gpu_count=1)
+        horus = build_horus_oracle_inputs(long_df)
+
+        row = horus.iloc[0]
+
+        self.assertEqual(row["horus_oracle_util_full"], 70.0)
+        self.assertEqual(row["horus_profile_util_200s"], 60.0)
+        self.assertEqual(row["horus_oracle_util_median_full"], 65.0)
+        self.assertEqual(row["horus_oracle_util_max_full"], 95.0)
+        self.assertEqual(row["horus_oracle_memory_full_mib"], 1200.0)
+        self.assertEqual(row["horus_abs_error_200s_vs_full_util"], 10.0)
+        
 if __name__ == "__main__":
     unittest.main()
