@@ -7,7 +7,6 @@ import os
 import sys
 import time
 import uuid
-import math
 from pathlib import Path
 from threading import Thread
 
@@ -217,8 +216,13 @@ def format_window_suffix(window_seconds: float) -> str:
     return f"w{str(window_seconds).replace('.', 'p')}s"
 
 
-def recent_metrics_for_window(window_seconds: float) -> pd.DataFrame:
-    samples_per_gpu = max(1, int(math.ceil(window_seconds)))
+def metrics_for_ttfk_window(
+    *,
+    ttfk_seen_at: float,
+    window_seconds: float,
+) -> pd.DataFrame:
+    start = float(ttfk_seen_at)
+    end = start + float(window_seconds)
 
     with monitor.G_LOCK:
         data = monitor.Gmetrics
@@ -228,21 +232,36 @@ def recent_metrics_for_window(window_seconds: float) -> pd.DataFrame:
 
     data = data.copy(deep=False)
 
-    return (
-        data.groupby("gpu_uuid", group_keys=False, sort=False)
-        .tail(samples_per_gpu)
-        .reset_index(drop=True)
+    if "sample_monotonic_time" not in data.columns:
+        raise RuntimeError(
+            "monitor.Gmetrics is missing sample_monotonic_time; "
+            "update telemetry.monitor.monitor_logger before using summary windows."
+        )
+
+    sample_times = pd.to_numeric(data["sample_monotonic_time"], errors="coerce")
+    return data[(sample_times >= start) & (sample_times <= end)].reset_index(drop=True)
+
+
+def summarize_ttfk_window(
+    *,
+    gpu_uuid: str,
+    ttfk_seen_at: float,
+    window_seconds: float,
+) -> dict:
+    window_data = metrics_for_ttfk_window(
+        ttfk_seen_at=ttfk_seen_at,
+        window_seconds=window_seconds,
     )
-
-
-def summarize_recent_window(gpu_uuid: str, window_seconds: float) -> dict:
-    window_data = recent_metrics_for_window(window_seconds)
     analyzed = monitor.summarize_Gmetrics_snapshot(data=window_data)
 
     if gpu_uuid not in analyzed.index:
         raise RuntimeError(f"GPU {gpu_uuid} not found in {window_seconds}s summary output.")
 
-    return analyzed.loc[gpu_uuid].to_dict()
+    row = analyzed.loc[gpu_uuid].to_dict()
+    row["window_start_monotonic_time"] = float(ttfk_seen_at)
+    row["window_end_monotonic_time"] = float(ttfk_seen_at) + float(window_seconds)
+    row["window_duration_seconds"] = float(window_seconds)
+    return row
 
 
 def prefix_window_metrics(metrics: dict, window_seconds: float) -> dict:
@@ -283,7 +302,11 @@ def collect_summary_windows(
 
         ready_now = [w for w in pending if elapsed >= w]
         for window_seconds in ready_now:
-            summaries[window_seconds] = summarize_recent_window(gpu_uuid, window_seconds)
+            summaries[window_seconds] = summarize_ttfk_window(
+                gpu_uuid=gpu_uuid,
+                ttfk_seen_at=ttfk_seen_at,
+                window_seconds=window_seconds,
+            )
             ready_times[window_seconds] = float(elapsed)
             pending.remove(window_seconds)
 

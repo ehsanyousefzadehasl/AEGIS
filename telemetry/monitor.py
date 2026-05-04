@@ -49,11 +49,29 @@ TREND_UP_ONLY = True
 G_LOCK = Lock()
 GV_LOCK = Lock()
 Gmetrics_are_valid = False
-Gmetrics = pd.DataFrame(columns=["gpu_uuid", "free_gpu_memory", "gpu_utilization", "gract", "smact",
-                                                     "smocc", "fp64", "fp32", "fp16", "tc",
-                                                     "memory_copy", "dram_active", "pcie_tx_bytes",
-                                                     "pcie_rx_bytes", "nvlink_tx_bytes", "nvlink_rx_bytes",
-                                                     "power", "energy", "gpu_id"])
+Gmetrics = pd.DataFrame(columns=[
+    "sample_monotonic_time",
+    "sample_wall_time",
+    "gpu_uuid",
+    "free_gpu_memory",
+    "gpu_utilization",
+    "gract",
+    "smact",
+    "smocc",
+    "fp64",
+    "fp32",
+    "fp16",
+    "tc",
+    "memory_copy",
+    "dram_active",
+    "pcie_tx_bytes",
+    "pcie_rx_bytes",
+    "nvlink_tx_bytes",
+    "nvlink_rx_bytes",
+    "power",
+    "energy",
+    "gpu_id",
+])
 # executes a shell bash command and return the output
 def execute_command(cmd, shell=False, vars={}):
     """
@@ -329,11 +347,29 @@ def monitor_logger(window = 30):
     INTERVAL = 1
     next_tick = time.monotonic()
     
-    cols = ["gpu_uuid", "free_gpu_memory", "gpu_utilization", "gract", "smact",
-        "smocc", "fp64", "fp32", "fp16", "tc",
-        "memory_copy", "drama", "pcie_tx_bytes",
-        "pcie_rx_bytes", "nvlink_tx_bytes", "nvlink_rx_bytes",
-        "power", "energy", "gpu_id"]
+    cols = [
+        "sample_monotonic_time",
+        "sample_wall_time",
+        "gpu_uuid",
+        "free_gpu_memory",
+        "gpu_utilization",
+        "gract",
+        "smact",
+        "smocc",
+        "fp64",
+        "fp32",
+        "fp16",
+        "tc",
+        "memory_copy",
+        "drama",
+        "pcie_tx_bytes",
+        "pcie_rx_bytes",
+        "nvlink_tx_bytes",
+        "nvlink_rx_bytes",
+        "power",
+        "energy",
+        "gpu_id",
+    ]
     
     window_monitored_metrics = pd.DataFrame(columns=cols)
 
@@ -346,11 +382,14 @@ def monitor_logger(window = 30):
         num_gpus = len(gpus)
         max_rows = window * max(1, num_gpus)
 
+        sample_monotonic_time = time.monotonic()
+        sample_wall_time = datetime.datetime.now().isoformat()
+
         temp = pd.DataFrame(columns=cols)
         for gpu_uuid, gpu_id in gpus.items():
-            free_val = int(free_mem.get(gpu_uuid, 0))     # <- value, not dict
-            dcgm_metrics = dcgm[gpu_id]                   # length 16 (203/1001/…/156)
-            row = [gpu_uuid, free_val] + dcgm_metrics + [gpu_id]
+            free_val = int(free_mem.get(gpu_uuid, 0))
+            dcgm_metrics = dcgm[gpu_id]
+            row = [sample_monotonic_time, sample_wall_time, gpu_uuid, free_val] + dcgm_metrics + [gpu_id]
             window_monitored_metrics.loc[len(window_monitored_metrics)] = row
             temp.loc[len(temp)] = row
 
