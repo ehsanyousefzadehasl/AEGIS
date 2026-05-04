@@ -5,6 +5,7 @@ import pandas as pd
 from evaluation.runners.analyze_solo_profile_results import (
     add_equal_weight_profile_risk,
     build_200s_vs_full,
+    build_lucid_style_profile_labels,
     build_workload_characterization,
     normalize_profile_dataframe,
     parse_profile_column,
@@ -133,6 +134,84 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         self.assertEqual(characterization.iloc[0]["coarse_resource_label"], "compute_heavy")
         self.assertIn("smact_profile_risk_full", characterization.columns)
 
+    def test_build_lucid_style_profile_labels(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "workload_id": "tiny",
+                    "run_id": "r1",
+                    "spec_path": "tiny.yaml",
+                    "gpu_count": 1,
+                    "smact_mean_200s": 1.0,
+                    "smact_median_200s": 1.0,
+                    "smact_mode_200s": 1.0,
+                    "smact_max_200s": 1.0,
+                    "smocc_mean_200s": 1.0,
+                    "smocc_median_200s": 1.0,
+                    "smocc_mode_200s": 1.0,
+                    "smocc_max_200s": 1.0,
+                    "drama_mean_200s": 1.0,
+                    "drama_median_200s": 1.0,
+                    "drama_mode_200s": 1.0,
+                    "drama_max_200s": 1.0,
+                    "gpu_memory_peak_200s_mib": 100.0,
+                },
+                {
+                    "workload_id": "medium",
+                    "run_id": "r2",
+                    "spec_path": "medium.yaml",
+                    "gpu_count": 1,
+                    "smact_mean_200s": 20.0,
+                    "smact_median_200s": 20.0,
+                    "smact_mode_200s": 20.0,
+                    "smact_max_200s": 20.0,
+                    "smocc_mean_200s": 20.0,
+                    "smocc_median_200s": 20.0,
+                    "smocc_mode_200s": 20.0,
+                    "smocc_max_200s": 20.0,
+                    "drama_mean_200s": 20.0,
+                    "drama_median_200s": 20.0,
+                    "drama_mode_200s": 20.0,
+                    "drama_max_200s": 20.0,
+                    "gpu_memory_peak_200s_mib": 1000.0,
+                },
+                {
+                    "workload_id": "jumbo",
+                    "run_id": "r3",
+                    "spec_path": "jumbo.yaml",
+                    "gpu_count": 1,
+                    "smact_mean_200s": 90.0,
+                    "smact_median_200s": 90.0,
+                    "smact_mode_200s": 90.0,
+                    "smact_max_200s": 90.0,
+                    "smocc_mean_200s": 90.0,
+                    "smocc_median_200s": 90.0,
+                    "smocc_mode_200s": 90.0,
+                    "smocc_max_200s": 90.0,
+                    "drama_mean_200s": 90.0,
+                    "drama_median_200s": 90.0,
+                    "drama_mode_200s": 90.0,
+                    "drama_max_200s": 90.0,
+                    "gpu_memory_peak_200s_mib": 9000.0,
+                },
+            ]
+        )
+
+        long_df = normalize_profile_dataframe(df, gpu_count=1)
+        long_df = add_equal_weight_profile_risk(long_df)
+        labels = build_lucid_style_profile_labels(long_df)
+
+        classes = dict(zip(labels["workload_id"], labels["lucid_style_class_200s"]))
+
+        self.assertEqual(classes["tiny"], "Tiny")
+        self.assertEqual(classes["medium"], "Medium")
+        self.assertEqual(classes["jumbo"], "Jumbo")
+
+        scores = dict(zip(labels["workload_id"], labels["lucid_style_ss_200s"]))
+
+        self.assertEqual(scores["tiny"], 0)
+        self.assertEqual(scores["medium"], 1)
+        self.assertEqual(scores["jumbo"], 2)
 
 if __name__ == "__main__":
     unittest.main()

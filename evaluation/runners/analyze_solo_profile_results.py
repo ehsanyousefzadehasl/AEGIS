@@ -327,6 +327,113 @@ def build_workload_characterization(
     return out
 
 
+def build_lucid_style_profile_labels(long_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build Lucid-style Tiny/Medium/Jumbo labels from 200s solo profile data.
+
+    This is not an exact reproduction of Lucid's model. It uses the same high-level
+    idea of assigning Tiny/Medium/Jumbo sharing classes from profiling signals.
+
+    We use equal-weight profile_risk rows for smact/smocc/drama and peak memory.
+    The final pressure score is the maximum normalized pressure across dimensions.
+    """
+    if long_df.empty:
+        return pd.DataFrame()
+
+    wanted = long_df[
+        (
+            (long_df["window"] == "200s")
+            & (
+                (
+                    long_df["metric"].isin(["smact", "smocc", "drama"])
+                    & (long_df["stat"] == "profile_risk")
+                )
+                | (
+                    (long_df["metric"] == "gpu_memory_peak_mib")
+                    & (long_df["stat"] == "peak")
+                )
+            )
+            & (long_df["gpu_label"] != "sum")
+        )
+    ].copy()
+
+    if wanted.empty:
+        return pd.DataFrame()
+
+    wanted["feature"] = wanted["metric"] + "_" + wanted["stat"] + "_200s"
+
+    id_cols = [
+        c
+        for c in [
+            "workload_id",
+            "run_id",
+            "spec_path",
+            "source_gpu_count",
+            "gpu_label",
+            "training_loop_time_s",
+            "end_to_end_time_s",
+            "exit_code",
+            "gpu_memory_requirement_mib",
+            "faketensor_estimate",
+        ]
+        if c in wanted.columns
+    ]
+
+    out = wanted.pivot_table(
+        index=id_cols,
+        columns="feature",
+        values="value",
+        aggfunc="first",
+    ).reset_index()
+
+    pressure_features = [
+        c
+        for c in [
+            "smact_profile_risk_200s",
+            "smocc_profile_risk_200s",
+            "drama_profile_risk_200s",
+            "gpu_memory_peak_mib_peak_200s",
+        ]
+        if c in out.columns
+    ]
+
+    if not pressure_features:
+        out["lucid_style_pressure_score_200s"] = pd.NA
+        out["lucid_style_ss_200s"] = pd.NA
+        out["lucid_style_class_200s"] = "unknown"
+        return out
+
+    for feature in pressure_features:
+        values = pd.to_numeric(out[feature], errors="coerce")
+        max_value = values.max(skipna=True)
+
+        if pd.isna(max_value) or max_value <= 0:
+            out[f"{feature}_normalized"] = 0.0
+        else:
+            out[f"{feature}_normalized"] = values / max_value
+
+    normalized_features = [f"{feature}_normalized" for feature in pressure_features]
+    out["lucid_style_pressure_score_200s"] = out[normalized_features].max(axis=1)
+
+    low_cut = out["lucid_style_pressure_score_200s"].quantile(1 / 3)
+    high_cut = out["lucid_style_pressure_score_200s"].quantile(2 / 3)
+
+    def assign_label(score):
+        if pd.isna(score):
+            return pd.NA, "unknown"
+        if score <= low_cut:
+            return 0, "Tiny"
+        if score <= high_cut:
+            return 1, "Medium"
+        return 2, "Jumbo"
+
+    labels = out["lucid_style_pressure_score_200s"].apply(assign_label)
+    out["lucid_style_ss_200s"] = labels.apply(lambda x: x[0])
+    out["lucid_style_class_200s"] = labels.apply(lambda x: x[1])
+
+    return out
+
+
 def read_if_exists(path: Path) -> pd.DataFrame:
     if not path.exists():
         print(f"missing input, skipping: {path}")
@@ -360,21 +467,26 @@ def main() -> int:
         compute_threshold=float(args.compute_threshold),
         memory_threshold=float(args.memory_threshold),
     )
+    lucid_style_labels_df = build_lucid_style_profile_labels(long_df)
 
     long_path = output_dir / "solo_profiles_long.csv"
     comparison_path = output_dir / "profile_200s_vs_full.csv"
     characterization_path = output_dir / "workload_characterization.csv"
+    lucid_style_labels_path = output_dir / "lucid_style_profile_labels.csv"
 
     long_df.to_csv(long_path, index=False)
     comparison_df.to_csv(comparison_path, index=False)
     characterization_df.to_csv(characterization_path, index=False)
+    lucid_style_labels_df.to_csv(lucid_style_labels_path, index=False)
 
     print(f"wrote {long_path}")
     print(f"wrote {comparison_path}")
     print(f"wrote {characterization_path}")
+    print(f"wrote {lucid_style_labels_path}")
     print(f"rows_long={len(long_df)}")
     print(f"rows_comparison={len(comparison_df)}")
     print(f"rows_characterization={len(characterization_df)}")
+    print(f"rows_lucid_style_labels={len(lucid_style_labels_df)}")
 
     return 0
 
