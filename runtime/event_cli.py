@@ -10,9 +10,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--event-path", required=True)
     parser.add_argument("--record-json", required=True)
+    parser.add_argument("--return-code", type=int, default=None)
     args = parser.parse_args()
 
     record = json.loads(args.record_json)
+    if args.return_code is not None:
+        record["return_code"] = args.return_code
+
     append_jsonl_event(
         event_path=args.event_path,
         record=record,

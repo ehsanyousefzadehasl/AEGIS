@@ -53,12 +53,21 @@ def launch_and_get_pid(cmd: str, timeout_s: float = 10.0) -> int | None:
         if p.stdout:
             p.stdout.close()
 
-def build_event_cli_command(event_path: str, record: dict) -> str:
-    return (
+def build_event_cli_command(
+    event_path: str,
+    record: dict,
+    return_code_var: str | None = None,
+) -> str:
+    command = (
         f"{shlex.quote(sys.executable)} -m runtime.event_cli "
         f"--event-path {shlex.quote(event_path)} "
         f"--record-json {shlex.quote(json.dumps(record, sort_keys=True, default=str))}"
     )
+
+    if return_code_var is not None:
+        command += f' --return-code "${return_code_var}"'
+
+    return command
 
 def build_launch_command(
     dir,
@@ -79,6 +88,7 @@ def build_launch_command(
             "cuda_visible_devices": gpus_identifiers,
             "run_id": run_id,
         },
+        return_code_var="rc",
     )
 
     failed_event_cmd = build_event_cli_command(
@@ -91,6 +101,7 @@ def build_launch_command(
             "cuda_visible_devices": gpus_identifiers,
             "run_id": run_id,
         },
+        return_code_var="rc",
     )
 
     clean_command = " ".join(str(command_to_execute).split())
