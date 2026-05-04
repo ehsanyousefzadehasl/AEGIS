@@ -14,6 +14,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNS_ROOT = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "solo_runs"
 LIVE_RUNNER = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "live_threshold_runner.py"
+DEFAULT_SUMMARY_WINDOWS = "5,10,20,30,40,60,120,200"
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,14 +30,23 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--runs-root", type=str, default=str(DEFAULT_RUNS_ROOT))
     p.add_argument("--suite-id", type=str, default=None)
 
+    p.add_argument("--limit", type=int, default=None, help="Optional max number of specs to run.")
+
     p.add_argument("--gpu-id", type=str, default=None)
     p.add_argument("--gpu-uuid", type=str, default=None)
 
     p.add_argument("--user", default="threshold-exp")
     p.add_argument("--estimator", default="None")
     p.add_argument("--window-seconds", type=float, default=30.0)
+
+    p.add_argument(
+        "--summary-windows",
+        default=DEFAULT_SUMMARY_WINDOWS,
+        help=f"Comma-separated post-TTFK summary windows. Default: {DEFAULT_SUMMARY_WINDOWS}",
+    )
+
     p.add_argument("--ttfk-timeout", type=float, default=300.0)
-    p.add_argument("--window-timeout", type=float, default=600.0)
+    p.add_argument("--window-timeout", type=float, default=900.0)
     p.add_argument("--finish-timeout", type=float, default=0.0)
     p.add_argument("--poll-seconds", type=float, default=0.5)
 
@@ -71,6 +81,11 @@ def load_spec_paths(args: argparse.Namespace, repo_root: Path) -> list[Path]:
             if not line or line.startswith("#"):
                 continue
             specs.append(resolve_maybe_relative(Path(line), repo_root))
+
+    if args.limit is not None:
+        if args.limit <= 0:
+            raise ValueError("--limit must be positive.")
+        specs = specs[: args.limit]
 
     return specs
 
@@ -110,6 +125,8 @@ def build_live_runner_command(
         args.estimator,
         "--window-seconds",
         str(args.window_seconds),
+        "--summary-windows",
+        args.summary_windows,
         "--ttfk-timeout",
         str(args.ttfk_timeout),
         "--window-timeout",
@@ -172,6 +189,8 @@ def main() -> int:
             "gpu_id": args.gpu_id,
             "gpu_uuid": args.gpu_uuid,
             "window_seconds": args.window_seconds,
+            "summary_windows": args.summary_windows,
+            "limit": args.limit,
             "ttfk_timeout": args.ttfk_timeout,
             "window_timeout": args.window_timeout,
             "finish_timeout": args.finish_timeout,
@@ -205,6 +224,8 @@ def main() -> int:
                 "run_id": run_id,
                 "spec_path": str(spec_path),
                 "event_path": str(event_path),
+                "window_seconds": args.window_seconds,
+                "summary_windows": args.summary_windows,
                 "command": cmd,
                 "dry_run": args.dry_run,
             },
@@ -225,6 +246,8 @@ def main() -> int:
                 "timestamp": dt.datetime.now().isoformat(),
                 "run_id": run_id,
                 "spec_path": str(spec_path),
+                "window_seconds": args.window_seconds,
+                "summary_windows": args.summary_windows,
                 "return_code": result.returncode,
             },
         )
@@ -238,6 +261,8 @@ def main() -> int:
     print(f"output_csv={output_csv}")
     print(f"commands_jsonl={commands_jsonl}")
     print(f"total_specs={len(spec_paths)}")
+    print(f"window_seconds={args.window_seconds}")
+    print(f"summary_windows={args.summary_windows}")
     print(f"runner_failures={failures}")
 
     return 1 if failures else 0
