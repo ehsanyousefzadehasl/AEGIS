@@ -55,6 +55,8 @@ INDEX_COLUMNS = [
     "err_log",
     "time_log",
     "terminal_event",
+    "return_code",
+    "terminal_failure_reason",
     "output_csv",
     "command_to_execute",
     "num_gpus_requested",
@@ -246,6 +248,8 @@ def main() -> int:
     t_finish = None
     launch_wall = None
     terminal_event_name = None
+    return_code = None
+    terminal_failure_reason = None
     finish_status = "not_started"
     event_path = args.event_path
     out_log = None
@@ -283,6 +287,8 @@ def main() -> int:
         "err_log": None,
         "time_log": None,
         "terminal_event": None,
+        "return_code": None,
+        "terminal_failure_reason": None,
         "output_csv": args.output_csv,
         "command_to_execute": None,
         "num_gpus_requested": None,
@@ -444,13 +450,19 @@ def main() -> int:
         )
 
         finish_status = "unknown"
-        terminal_event_name = None
+
         if terminal_event is not None:
             terminal_event_name = terminal_event.get("event")
+            return_code = terminal_event.get("return_code")
+            terminal_failure_reason = terminal_event.get("failure_reason")
+
             if terminal_event_name == "completed":
                 finish_status = "completed"
             elif terminal_event_name == "failed":
                 finish_status = "failed"
+
+        if return_code is not None:
+            return_code = int(return_code)
 
         wall_now = dt.datetime.now().isoformat()
         measurement = {
@@ -476,6 +488,8 @@ def main() -> int:
             "time_log": time_log,
             "finish_status": finish_status,
             "terminal_event": terminal_event_name,
+            "return_code": return_code,
+            "terminal_failure_reason": terminal_failure_reason,
             "command_to_execute": job_spec.command_to_execute,
             "num_gpus_requested": int(job_spec.num_gpus_requested),
             "gpu_memory_requirement_mib": job_spec.gpu_memory_requirement_mib,
@@ -504,6 +518,8 @@ def main() -> int:
                 "smocc_risk": measurement.get("smocc_risk", measurement.get("smocc")),
                 "drama_risk": measurement.get("drama_risk", measurement.get("drama")),
                 "finish_status": finish_status,
+                "return_code": return_code,
+                "terminal_failure_reason": terminal_failure_reason,
                 "total_runtime_seconds": measurement["total_runtime_seconds"],
             },
         )
@@ -516,6 +532,8 @@ def main() -> int:
                 "measurement_recorded": True,
                 "finished_wall_time": wall_now,
                 "terminal_event": terminal_event_name,
+                "return_code": return_code,
+                "terminal_failure_reason": terminal_failure_reason,
                 "total_runtime_seconds": float(t_finish - t_launch),
                 "time_from_window_ready_to_finish_seconds": float(t_finish - t_window_ready),
             }
@@ -571,6 +589,8 @@ def main() -> int:
                 "tracked_pid_after_ttfk": None if tracked_pid_after_ttfk is None else int(tracked_pid_after_ttfk),
                 "tracked_pid_after_window": None if tracked_pid_after_window is None else int(tracked_pid_after_window),
                 "terminal_event": terminal_event_name,
+                "return_code": return_code,
+                "terminal_failure_reason": terminal_failure_reason,
             }
         )
 
