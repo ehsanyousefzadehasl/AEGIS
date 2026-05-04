@@ -101,6 +101,24 @@ This summary is generated from extracted solo profiling results.
 | bert_base_wiki_bs32_1gpu        |                  1 | single      |        19868 |        19868 |                        0 |                        0      |
 
 
+## Horus-like oracle utilization inputs
+
+For a generous Horus-like analysis, `horus_oracle_util_full` uses the observed full-run mean GPU utilization (`gputl_mean_full`) as if utilization were predicted perfectly. `horus_profile_util_200s` keeps the first-200s profiled value for comparison.
+
+| workload_id                    |   source_gpu_count | gpu_label   |   horus_oracle_util_full |   horus_profile_util_200s |   horus_oracle_util_median_full |   horus_oracle_util_max_full |   horus_oracle_memory_full_mib |   horus_abs_error_200s_vs_full_util |   horus_relative_error_200s_vs_full_util |
+|:-------------------------------|-------------------:|:------------|-------------------------:|--------------------------:|--------------------------------:|-----------------------------:|-------------------------------:|------------------------------------:|-----------------------------------------:|
+| gpt2_large_wiki_bs8_2gpu       |                  2 | gpu_a       |                  96.5384 |                   95.0107 |                              99 |                          100 |                          28330 |                              1.5277 |                                   0.0158 |
+| xlnet_base_cased_wiki_bs8_2gpu |                  2 | gpu_a       |                  92.1616 |                   90.8251 |                              93 |                          100 |                           8988 |                              1.3364 |                                   0.0145 |
+| gpt2_large_wiki_bs8_2gpu       |                  2 | gpu_b       |                  92.063  |                   91.0214 |                              98 |                          100 |                          16458 |                              1.0416 |                                   0.0113 |
+| unet_voc_1gpu                  |                  1 | single      |                  88.1983 |                   84.2015 |                              99 |                          100 |                           5636 |                              3.9968 |                                   0.0453 |
+| xception_imagenet_bs128_1gpu   |                  1 | single      |                  86.7304 |                   87.3955 |                              84 |                          100 |                          21004 |                              0.6651 |                                   0.0077 |
+| vgg16_imagenet_bs128_1gpu      |                  1 | single      |                  86.1971 |                   82.7519 |                              84 |                          100 |                          21668 |                              3.4452 |                                   0.04   |
+| vgg16_imagenet_bs32_1gpu       |                  1 | single      |                  86.1591 |                   86.1343 |                              86 |                           92 |                           6680 |                              0.0247 |                                   0.0003 |
+| xception_imagenet_bs64_1gpu    |                  1 | single      |                  85.9587 |                   86.597  |                              88 |                           92 |                          10978 |                              0.6383 |                                   0.0074 |
+| vgg16_imagenet_bs64_1gpu       |                  1 | single      |                  85.8903 |                   82.7068 |                              87 |                           92 |                          11776 |                              3.1835 |                                   0.0371 |
+| xception_imagenet_bs32_1gpu    |                  1 | single      |                  84.9492 |                   82.3955 |                              85 |                           91 |                           5922 |                              2.5537 |                                   0.0301 |
+
+
 ## Notes for paper analysis
 
 - `lucid_style_class_200s` is a Lucid-style profile class, not an exact Lucid reproduction.
