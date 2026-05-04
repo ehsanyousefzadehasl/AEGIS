@@ -41,3 +41,14 @@ evaluation/data/
 
 
 test_logs_folder
+
+
+# Keep compact solo profile analysis outputs used for paper inspection.
+!evaluation/profiling/solo/analysis/lucid_style_profile_labels.csv
+!evaluation/profiling/solo/analysis/profile_200s_vs_full.csv
+!evaluation/profiling/solo/analysis/workload_characterization.csv
+
+# Keep the large normalized table ignored; it can be regenerated.
+evaluation/profiling/solo/analysis/solo_profiles_long.csv
+
+evaluation/threshold_sensitivity/solo_runs/
