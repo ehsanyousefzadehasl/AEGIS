@@ -1,0 +1,1 @@
+evaluation/workloads/training/specs/yaml/xlnet_large_cased_wiki_bs4_2gpu.yaml
