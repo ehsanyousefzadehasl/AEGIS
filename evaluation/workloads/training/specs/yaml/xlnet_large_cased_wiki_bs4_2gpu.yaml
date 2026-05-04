@@ -25,4 +25,4 @@ profile:
 online_estimation:
   summary_path: xlnet_large_cased.model
   parser_arg_1: WIKI dataset
-  parser_arg_2: 8
+  parser_arg_2: 4
