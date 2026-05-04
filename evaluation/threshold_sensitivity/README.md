@@ -218,3 +218,78 @@ PY
 - Use `--dry-run` before long campaigns.
 - Failed runs are kept in `index.csv`; do not delete them from the dataset.
 - The default windows are intended for window-sensitivity analysis. The final paper should select the decision window based on the collected data.
+
+
+
+## Analyze window stability
+
+After a solo suite finishes, run the window-stability analyzer on its measurement CSV:
+
+```bash
+python evaluation/threshold_sensitivity/analyze_solo_windows.py \
+  --measurements-csv <suite-dir>/live_threshold_measurements.csv \
+  --output-dir <suite-dir>/window_analysis \
+  --reference-window 200
+```
+
+This writes:
+
+```text
+<suite-dir>/window_analysis/window_metrics_long.csv
+<suite-dir>/window_analysis/window_stability_summary.csv
+```
+
+### `window_metrics_long.csv`
+
+This file converts the wide per-run metric columns into long format.
+
+Example wide columns:
+
+```text
+smact_risk_w5s
+smact_risk_w10s
+smact_risk_w30s
+smact_risk_w200s
+```
+
+become rows like:
+
+```text
+run_id, task_path, summary_window_seconds, metric, value
+```
+
+This format is easier to group, filter, and plot.
+
+### `window_stability_summary.csv`
+
+This file compares each shorter window against the reference window, usually 200 seconds.
+
+Important columns:
+
+```text
+metric
+summary_window_seconds
+reference_window_seconds
+n
+mean_abs_error
+median_abs_error
+p95_abs_error
+mean_abs_relative_error
+```
+
+Use this output to check whether the 30-second decision window is close enough to the 200-second reference window, or whether another window is more stable.
+
+Example question this file helps answer:
+
+```text
+Is smact_risk_w30s close enough to smact_risk_w200s across workloads?
+```
+
+## Suggested commit
+
+After appending this section to `evaluation/threshold_sensitivity/README.md`, commit with:
+
+```bash
+git add evaluation/threshold_sensitivity/README.md
+git commit -m "docs(eval): document solo window analyzer"
+```
