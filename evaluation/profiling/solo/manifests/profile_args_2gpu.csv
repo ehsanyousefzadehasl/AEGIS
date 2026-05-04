@@ -1,0 +1,4 @@
+spec_path,extra_profile_args
+evaluation/workloads/training/specs/yaml/gpt2_large_wiki_bs8_2gpu.yaml,--print_model_summary --summary_output {summary_path} --print_faketensor_estimate
+evaluation/workloads/training/specs/yaml/xlnet_base_cased_wiki_bs8_2gpu.yaml,--print_model_summary --summary_output {summary_path} --print_faketensor_estimate
+evaluation/workloads/training/specs/yaml/xlnet_large_cased_wiki_bs8_2gpu.yaml,--print_model_summary --summary_output {summary_path} --print_faketensor_estimate

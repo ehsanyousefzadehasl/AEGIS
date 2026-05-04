@@ -7,6 +7,10 @@ __pycache__/
 *.et
 *.csv
 
+!evaluation/profiling/solo/manifests/profile_args_1gpu.csv
+!evaluation/profiling/solo/manifests/profile_args_2gpu.csv
+!evaluation/profiling/solo/manifests/profile_args.csv
+
 # Model and artifact files
 *.model
 
@@ -28,7 +32,10 @@ evaluation/workloads/training/third_party/
 
 # local external run folder
 run_kaggle_pt/
-
+runs/
 
 # downloaded local datasets
 evaluation/data/
+
+
+test_logs_folder
