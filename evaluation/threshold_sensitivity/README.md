@@ -282,10 +282,15 @@ PY
 Run window analysis on partial results:
 
 ```bash
-python evaluation/threshold_sensitivity/analyze_solo_windows.py \
+export SUITE=$(ls -td evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_* | head -1)
+echo "$SUITE"
+
+python evaluation/threshold_sensitivity/summarize_solo_windows.py \
+  --analysis-dir "$SUITE/window_analysis_partial" \
   --measurements-csv "$SUITE/live_threshold_measurements.csv" \
-  --output-dir "$SUITE/window_analysis_partial" \
-  --reference-window 200
+  --output-md evaluation/threshold_sensitivity/summaries/window_analysis_summary_partial.md \
+  --reference-window 200 \
+  --decision-window 30
 ```
 
 Inspect the partial stability summary:
