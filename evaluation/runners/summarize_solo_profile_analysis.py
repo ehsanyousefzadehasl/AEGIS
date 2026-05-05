@@ -43,6 +43,69 @@ def markdown_table(df: pd.DataFrame, columns: list[str], max_rows: int) -> str:
 
     return out.to_markdown(index=False) + "\n"
 
+def summarize_profile_risk_components(comparison: pd.DataFrame) -> pd.DataFrame:
+    if comparison.empty:
+        return pd.DataFrame()
+
+    required = {
+        "metric",
+        "stat",
+        "value_200s",
+        "value_full",
+        "abs_error_200s_vs_full",
+    }
+    if not required.issubset(comparison.columns):
+        return pd.DataFrame()
+
+    wanted_metrics = ["smact", "smocc", "drama"]
+    wanted_stats = ["mean", "median", "mode", "max", "profile_risk"]
+
+    subset = comparison[
+        comparison["metric"].isin(wanted_metrics)
+        & comparison["stat"].isin(wanted_stats)
+    ].copy()
+
+    if subset.empty:
+        return pd.DataFrame()
+
+    for col in ["value_200s", "value_full", "abs_error_200s_vs_full"]:
+        subset[col] = pd.to_numeric(subset[col], errors="coerce")
+
+    if "relative_error_200s_vs_full" in subset.columns:
+        subset["relative_error_200s_vs_full"] = pd.to_numeric(
+            subset["relative_error_200s_vs_full"],
+            errors="coerce",
+        )
+
+    grouped = (
+        subset.groupby(["metric", "stat"], dropna=False)
+        .agg(
+            n=("abs_error_200s_vs_full", "count"),
+            mean_200s=("value_200s", "mean"),
+            mean_full=("value_full", "mean"),
+            mean_abs_error=("abs_error_200s_vs_full", "mean"),
+            median_abs_error=("abs_error_200s_vs_full", "median"),
+            p95_abs_error=("abs_error_200s_vs_full", lambda x: x.quantile(0.95)),
+            mean_relative_error=(
+                "relative_error_200s_vs_full",
+                "mean",
+            )
+            if "relative_error_200s_vs_full" in subset.columns
+            else ("abs_error_200s_vs_full", "mean"),
+        )
+        .reset_index()
+    )
+
+    stat_order = {name: i for i, name in enumerate(wanted_stats)}
+    metric_order = {name: i for i, name in enumerate(wanted_metrics)}
+    grouped["metric_order"] = grouped["metric"].map(metric_order)
+    grouped["stat_order"] = grouped["stat"].map(stat_order)
+
+    grouped = grouped.sort_values(["metric_order", "stat_order"]).drop(
+        columns=["metric_order", "stat_order"]
+    )
+
+    return grouped
 
 def summarize_label_distribution(labels: pd.DataFrame) -> str:
     if labels.empty or "lucid_style_class_200s" not in labels.columns:
@@ -203,6 +266,34 @@ def build_summary(
         )
     else:
         lines.append("_Horus-like oracle input data is missing._\n")
+
+
+    lines.append("\n## Profile-risk component breakdown\n")
+    lines.append(
+        "The `profile_risk` value is the equal-weight average of mean, median, mode, and max. "
+        "This table shows each component separately so we can compare whether one statistic alone "
+        "would be too noisy, too conservative, or too insensitive.\n"
+    )
+
+    component_summary = summarize_profile_risk_components(comparison)
+    lines.append(
+        markdown_table(
+            component_summary,
+            [
+                "metric",
+                "stat",
+                "n",
+                "mean_200s",
+                "mean_full",
+                "mean_abs_error",
+                "median_abs_error",
+                "p95_abs_error",
+                "mean_relative_error",
+            ],
+            max_rows=100,
+        )
+    )
+
 
     lines.append("\n## Notes for paper analysis\n")
     lines.append(

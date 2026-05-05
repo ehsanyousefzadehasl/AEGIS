@@ -6,6 +6,7 @@ from evaluation.runners.summarize_solo_profile_analysis import (
     build_summary,
     markdown_table,
     summarize_label_distribution,
+    summarize_profile_risk_components,
 )
 
 
@@ -80,7 +81,34 @@ class TestSoloProfileSummary(unittest.TestCase):
         self.assertIn("Largest 200s-vs-full mismatches", text)
         self.assertIn("Jumbo", text)
         self.assertIn("compute_heavy", text)
+    def test_summarize_profile_risk_components(self):
+        comparison = pd.DataFrame(
+            [
+                {
+                    "metric": "smact",
+                    "stat": "mean",
+                    "value_200s": 10.0,
+                    "value_full": 20.0,
+                    "abs_error_200s_vs_full": 10.0,
+                    "relative_error_200s_vs_full": 0.5,
+                },
+                {
+                    "metric": "smact",
+                    "stat": "profile_risk",
+                    "value_200s": 15.0,
+                    "value_full": 25.0,
+                    "abs_error_200s_vs_full": 10.0,
+                    "relative_error_200s_vs_full": 0.4,
+                },
+            ]
+        )
 
+        out = summarize_profile_risk_components(comparison)
+
+        self.assertIn("mean_200s", out.columns)
+        self.assertIn("mean_full", out.columns)
+        self.assertIn("mean_abs_error", out.columns)
+        self.assertIn("profile_risk", set(out["stat"]))
 
 if __name__ == "__main__":
     unittest.main()
