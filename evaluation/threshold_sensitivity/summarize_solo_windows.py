@@ -266,6 +266,125 @@ def build_per_workload_risk_components(
 
     return out
 
+
+def build_risk_component_stability_summary(
+    stability: pd.DataFrame,
+    *,
+    reference_window: float,
+) -> pd.DataFrame:
+    if stability.empty:
+        return pd.DataFrame()
+
+    required = {
+        "metric",
+        "summary_window_seconds",
+        "reference_window_seconds",
+        "n",
+        "mean_abs_error",
+        "median_abs_error",
+        "p95_abs_error",
+        "mean_abs_relative_error",
+    }
+    if not required.issubset(stability.columns):
+        return pd.DataFrame()
+
+    data = stability.copy()
+    parsed = data["metric"].astype(str).apply(split_risk_component_metric)
+    data["base_metric"] = parsed.apply(lambda x: x[0])
+    data["risk_component"] = parsed.apply(lambda x: x[1])
+
+    data = data[
+        data["base_metric"].notna()
+        & data["risk_component"].notna()
+        & (
+            pd.to_numeric(data["reference_window_seconds"], errors="coerce")
+            == float(reference_window)
+        )
+    ].copy()
+
+    if data.empty:
+        return pd.DataFrame()
+
+    data["summary_window_seconds"] = pd.to_numeric(
+        data["summary_window_seconds"],
+        errors="coerce",
+    )
+
+    component_order = {name: i for i, name in enumerate(RISK_COMPONENTS)}
+    metric_order = {name: i for i, name in enumerate(RISK_BASE_METRICS)}
+
+    data["metric_order"] = data["base_metric"].map(metric_order)
+    data["component_order"] = data["risk_component"].map(component_order)
+
+    return data.sort_values(
+        ["metric_order", "component_order", "summary_window_seconds"]
+    ).drop(columns=["metric_order", "component_order"])
+
+
+def build_risk_component_stability_rollup(
+    component_stability: pd.DataFrame,
+) -> pd.DataFrame:
+    if component_stability.empty:
+        return pd.DataFrame()
+
+    required = {
+        "risk_component",
+        "summary_window_seconds",
+        "n",
+        "mean_abs_error",
+        "median_abs_error",
+        "p95_abs_error",
+        "mean_abs_relative_error",
+    }
+    if not required.issubset(component_stability.columns):
+        return pd.DataFrame()
+
+    data = component_stability.copy()
+    data["n"] = pd.to_numeric(data["n"], errors="coerce").fillna(0)
+
+    rows = []
+    for (component, window), group in data.groupby(
+        ["risk_component", "summary_window_seconds"],
+        dropna=False,
+        sort=False,
+    ):
+        weights = group["n"]
+        total_n = int(weights.sum())
+
+        row = {
+            "risk_component": component,
+            "summary_window_seconds": float(window),
+            "total_n": total_n,
+        }
+
+        for col in [
+            "mean_abs_error",
+            "median_abs_error",
+            "p95_abs_error",
+            "mean_abs_relative_error",
+        ]:
+            values = pd.to_numeric(group[col], errors="coerce")
+            valid = values.notna() & (weights > 0)
+
+            if valid.any():
+                row[f"weighted_{col}"] = float(
+                    (values[valid] * weights[valid]).sum() / weights[valid].sum()
+                )
+            else:
+                row[f"weighted_{col}"] = None
+
+        rows.append(row)
+
+    out = pd.DataFrame(rows)
+
+    component_order = {name: i for i, name in enumerate(RISK_COMPONENTS)}
+    out["component_order"] = out["risk_component"].map(component_order)
+
+    return out.sort_values(
+        ["component_order", "summary_window_seconds"]
+    ).drop(columns=["component_order"])
+
+
 def build_summary(
     *,
     stability: pd.DataFrame,
@@ -284,6 +403,12 @@ def build_summary(
             decision_window=decision_window,
             reference_window=reference_window,
         )
+
+    component_stability = build_risk_component_stability_summary(
+        stability,
+        reference_window=reference_window,
+    )
+    component_rollup = build_risk_component_stability_rollup(component_stability)
 
     lines.append("# Threshold Window Analysis Summary\n")
     lines.append(
@@ -356,6 +481,49 @@ def build_summary(
     decision_suffix = format_window_suffix(decision_window)
     reference_suffix = format_window_suffix(reference_window)
 
+    lines.append("\n## Risk-component ablation\n")
+    lines.append(
+        "AEGIS risk is the equal-weight average of mean, median, p95, and EWMA. "
+        "This section compares each component against the same reference window to show "
+        "what each statistic contributes and whether the combined risk behaves as a balanced signal.\n"
+    )
+
+    lines.append("\n### Component stability rollup\n")
+    lines.append(
+        markdown_table(
+            component_rollup,
+            [
+                "risk_component",
+                "summary_window_seconds",
+                "total_n",
+                "weighted_mean_abs_error",
+                "weighted_median_abs_error",
+                "weighted_p95_abs_error",
+                "weighted_mean_abs_relative_error",
+            ],
+            max_rows=100,
+        )
+    )
+
+    lines.append("\n### Component stability by metric\n")
+    lines.append(
+        markdown_table(
+            component_stability,
+            [
+                "base_metric",
+                "risk_component",
+                "summary_window_seconds",
+                "reference_window_seconds",
+                "n",
+                "mean_abs_error",
+                "median_abs_error",
+                "p95_abs_error",
+                "mean_abs_relative_error",
+            ],
+            max_rows=200,
+        )
+    )
+
     lines.append("\n## Per-workload risk-component breakdown\n")
     lines.append(
         "The risk score is the equal-weight average of mean, median, p95, and EWMA. "
@@ -422,9 +590,19 @@ def main() -> int:
         reference_window=float(args.reference_window),
     )
 
-    per_workload_components_path = analysis_dir / "per_workload_risk_components.csv"
-    per_workload_components.to_csv(per_workload_components_path, index=False)
+    component_stability = build_risk_component_stability_summary(
+        stability,
+        reference_window=float(args.reference_window),
+    )
+    component_rollup = build_risk_component_stability_rollup(component_stability)
 
+
+    per_workload_components_path = analysis_dir / "per_workload_risk_components.csv"
+    component_stability_path = analysis_dir / "risk_component_stability.csv"
+    component_rollup_path = analysis_dir / "risk_component_stability_rollup.csv"
+    per_workload_components.to_csv(per_workload_components_path, index=False)
+    component_stability.to_csv(component_stability_path, index=False)
+    component_rollup.to_csv(component_rollup_path, index=False)
     summary = build_summary(
         stability=stability,
         long_df=long_df,
@@ -440,6 +618,8 @@ def main() -> int:
 
     print(f"wrote {output_md}")
     print(f"wrote {per_workload_components_path}")
+    print(f"wrote {component_stability_path}")
+    print(f"wrote {component_rollup_path}")
     return 0
 
 
