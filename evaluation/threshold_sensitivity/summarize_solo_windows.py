@@ -9,6 +9,8 @@ import pandas as pd
 
 DEFAULT_RISK_METRICS = ["smact_risk", "smocc_risk", "drama_risk"]
 
+RISK_BASE_METRICS = ["smact", "smocc", "drama"]
+RISK_COMPONENTS = ["mean", "median", "p95", "ewma", "risk"]
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -129,6 +131,129 @@ def build_top_decision_window_mismatches(
     return out.sort_values("abs_error", ascending=False).head(top_k)
 
 
+def format_window_suffix(window_seconds: float) -> str:
+    if float(window_seconds).is_integer():
+        return f"w{int(window_seconds)}s"
+    return f"w{str(window_seconds).replace('.', 'p')}s"
+
+
+def split_risk_component_metric(metric: str) -> tuple[str | None, str | None]:
+    for base_metric in RISK_BASE_METRICS:
+        prefix = f"{base_metric}_"
+        if metric.startswith(prefix):
+            component = metric[len(prefix):]
+            if component in RISK_COMPONENTS:
+                return base_metric, component
+
+    return None, None
+
+
+def first_value_for_window(group: pd.DataFrame, window_seconds: float):
+    values = group.loc[
+        (group["summary_window_seconds"] - float(window_seconds)).abs() < 1e-9,
+        "value",
+    ]
+    if values.empty:
+        return None
+    value = pd.to_numeric(values.iloc[0], errors="coerce")
+    if pd.isna(value):
+        return None
+    return float(value)
+
+
+def build_per_workload_risk_components(
+    long_df: pd.DataFrame,
+    *,
+    decision_window: float,
+    reference_window: float,
+) -> pd.DataFrame:
+    if long_df.empty:
+        return pd.DataFrame()
+
+    needed = {"metric", "summary_window_seconds", "value"}
+    if not needed.issubset(long_df.columns):
+        return pd.DataFrame()
+
+    data = long_df.copy()
+    parsed = data["metric"].astype(str).apply(split_risk_component_metric)
+    data["base_metric"] = parsed.apply(lambda x: x[0])
+    data["risk_component"] = parsed.apply(lambda x: x[1])
+
+    data = data[
+        data["base_metric"].notna()
+        & data["risk_component"].notna()
+    ].copy()
+
+    if data.empty:
+        return pd.DataFrame()
+
+    data["summary_window_seconds"] = pd.to_numeric(
+        data["summary_window_seconds"],
+        errors="coerce",
+    )
+    data["value"] = pd.to_numeric(data["value"], errors="coerce")
+
+    id_cols = [
+        c
+        for c in [
+            "row_index",
+            "run_id",
+            "task_path",
+            "finish_status",
+            "return_code",
+            "total_runtime_seconds",
+            "ttfk_wait_seconds",
+        ]
+        if c in data.columns
+    ]
+
+    decision_suffix = format_window_suffix(decision_window)
+    reference_suffix = format_window_suffix(reference_window)
+
+    rows = []
+    group_cols = id_cols + ["base_metric"]
+
+    for keys, group in data.groupby(group_cols, dropna=False, sort=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+
+        row = dict(zip(group_cols, keys))
+
+        for component in RISK_COMPONENTS:
+            component_group = group[group["risk_component"] == component]
+
+            decision_value = first_value_for_window(component_group, decision_window)
+            reference_value = first_value_for_window(component_group, reference_window)
+
+            row[f"{component}_{decision_suffix}"] = decision_value
+            row[f"{component}_{reference_suffix}"] = reference_value
+
+            if decision_value is not None and reference_value is not None:
+                abs_error = abs(decision_value - reference_value)
+                row[f"{component}_abs_error"] = abs_error
+                row[f"{component}_relative_error"] = (
+                    abs_error / abs(reference_value)
+                    if abs(reference_value) > 1e-9
+                    else None
+                )
+            else:
+                row[f"{component}_abs_error"] = None
+                row[f"{component}_relative_error"] = None
+
+        rows.append(row)
+
+    out = pd.DataFrame(rows)
+
+    if "risk_abs_error" in out.columns:
+        out["risk_abs_error"] = pd.to_numeric(out["risk_abs_error"], errors="coerce")
+        out = out.sort_values(
+            ["risk_abs_error", "base_metric"],
+            ascending=[False, True],
+            na_position="last",
+        )
+
+    return out
+
 def build_summary(
     *,
     stability: pd.DataFrame,
@@ -137,8 +262,16 @@ def build_summary(
     reference_window: float,
     decision_window: float,
     top_k: int,
+    per_workload_components: pd.DataFrame | None = None,
 ) -> str:
     lines: list[str] = []
+
+    if per_workload_components is None:
+        per_workload_components = build_per_workload_risk_components(
+            long_df,
+            decision_window=decision_window,
+            reference_window=reference_window,
+        )
 
     lines.append("# Threshold Window Analysis Summary\n")
     lines.append(
@@ -208,6 +341,41 @@ def build_summary(
         )
     )
 
+    decision_suffix = format_window_suffix(decision_window)
+    reference_suffix = format_window_suffix(reference_window)
+
+    lines.append("\n## Per-workload risk-component breakdown\n")
+    lines.append(
+        "The risk score is the equal-weight average of mean, median, p95, and EWMA. "
+        "This table keeps those components visible per workload so we can see when one "
+        "component is stable while another differs between the decision and reference windows.\n"
+    )
+
+    lines.append(
+        markdown_table(
+            per_workload_components,
+            [
+                "task_path",
+                "base_metric",
+                f"mean_{decision_suffix}",
+                f"mean_{reference_suffix}",
+                f"median_{decision_suffix}",
+                f"median_{reference_suffix}",
+                f"p95_{decision_suffix}",
+                f"p95_{reference_suffix}",
+                f"ewma_{decision_suffix}",
+                f"ewma_{reference_suffix}",
+                f"risk_{decision_suffix}",
+                f"risk_{reference_suffix}",
+                "risk_abs_error",
+                "risk_relative_error",
+                "total_runtime_seconds",
+                "ttfk_wait_seconds",
+            ],
+            max_rows=200,
+        )
+    )
+
     lines.append("\n## Notes\n")
     lines.append(
         "- The unsuffixed live-runner metric columns correspond to the decision window.\n"
@@ -229,6 +397,15 @@ def main() -> int:
     long_df = read_csv_if_exists(analysis_dir / "window_metrics_long.csv")
     measurements = read_csv_if_exists(Path(args.measurements_csv)) if args.measurements_csv else pd.DataFrame()
 
+    per_workload_components = build_per_workload_risk_components(
+        long_df,
+        decision_window=float(args.decision_window),
+        reference_window=float(args.reference_window),
+    )
+
+    per_workload_components_path = analysis_dir / "per_workload_risk_components.csv"
+    per_workload_components.to_csv(per_workload_components_path, index=False)
+
     summary = build_summary(
         stability=stability,
         long_df=long_df,
@@ -236,12 +413,14 @@ def main() -> int:
         reference_window=float(args.reference_window),
         decision_window=float(args.decision_window),
         top_k=int(args.top_k),
+        per_workload_components=per_workload_components,
     )
 
     output_md.parent.mkdir(parents=True, exist_ok=True)
     output_md.write_text(summary, encoding="utf-8")
 
     print(f"wrote {output_md}")
+    print(f"wrote {per_workload_components_path}")
     return 0
 
 
