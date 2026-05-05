@@ -215,15 +215,44 @@ def build_summary(
     lines.append("\n## Largest 200s-vs-full mismatches\n")
 
     mismatch_specs = [
+        ("smact", "mean", "SMACT mean"),
+        ("smact", "median", "SMACT median"),
+        ("smact", "mode", "SMACT mode"),
+        ("smact", "max", "SMACT max"),
+        ("smact", "p95", "SMACT p95"),
+        ("smact", "ewma", "SMACT EWMA"),
         ("smact", "profile_stat_score", "SMACT profile stat score"),
+        ("smact", "aegis_profile_risk", "SMACT AEGIS profile risk"),
+
+        ("smocc", "mean", "SMOCC mean"),
+        ("smocc", "median", "SMOCC median"),
+        ("smocc", "mode", "SMOCC mode"),
+        ("smocc", "max", "SMOCC max"),
+        ("smocc", "p95", "SMOCC p95"),
+        ("smocc", "ewma", "SMOCC EWMA"),
         ("smocc", "profile_stat_score", "SMOCC profile stat score"),
+        ("smocc", "aegis_profile_risk", "SMOCC AEGIS profile risk"),
+
+        ("drama", "mean", "DRAMA mean"),
+        ("drama", "median", "DRAMA median"),
+        ("drama", "mode", "DRAMA mode"),
+        ("drama", "max", "DRAMA max"),
+        ("drama", "p95", "DRAMA p95"),
+        ("drama", "ewma", "DRAMA EWMA"),
         ("drama", "profile_stat_score", "DRAMA profile stat score"),
+        ("drama", "aegis_profile_risk", "DRAMA AEGIS profile risk"),
+
         ("gpu_memory_peak_mib", "peak", "GPU memory peak"),
     ]
 
     for metric, stat, title in mismatch_specs:
         lines.append(f"\n### {title}\n")
         subset = summarize_metric_mismatch(comparison, metric, stat, top_k)
+        
+        if subset.empty:
+            lines.append("_No data available for this metric/statistic._\n")
+            continue
+
         lines.append(
             markdown_table(
                 subset,

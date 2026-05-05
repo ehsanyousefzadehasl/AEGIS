@@ -37,6 +37,80 @@ This summary is generated from extracted solo profiling results.
 ## Largest 200s-vs-full mismatches
 
 
+### SMACT mean
+
+| workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| gpt2_xl_wiki_bs2_1gpu               |                  1 | single      |       0.6758 |       0.9408 |                   0.265  |                        0.2817 |
+| bert_large_wiki_bs8_1gpu            |                  1 | single      |       0.7255 |       0.9208 |                   0.1953 |                        0.2121 |
+| dlrm_criteo_bs32768_1gpu            |                  1 | single      |       0.1395 |       0.1192 |                   0.0203 |                        0.17   |
+| mobilenet_cifar100_bs64_50e_1gpu    |                  1 | single      |       0.1093 |       0.1185 |                   0.0092 |                        0.0775 |
+| mobilenet_cifar100_bs32_20e_1gpu    |                  1 | single      |       0.0715 |       0.0757 |                   0.0042 |                        0.0555 |
+| mobilenet_cifar100_bs32_50e_1gpu    |                  1 | single      |       0.0878 |       0.0832 |                   0.0046 |                        0.055  |
+| resnet34_cifar100_bs128_50e_1gpu    |                  1 | single      |       0.2148 |       0.2042 |                   0.0106 |                        0.0517 |
+| maskrcnn_coco_bs8_1gpu              |                  1 | single      |       0.6879 |       0.6548 |                   0.0331 |                        0.0506 |
+| efficientnet_cifar100_bs32_50e_1gpu |                  1 | single      |       0.1525 |       0.1599 |                   0.0074 |                        0.0462 |
+| unet_voc_1gpu                       |                  1 | single      |       0.6109 |       0.6363 |                   0.0254 |                        0.0399 |
+
+
+### SMACT median
+
+| workload_id                       |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:----------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| mobilenet_cifar100_bs64_50e_1gpu  |                  1 | single      |       0.0965 |       0.13   |                   0.0335 |                        0.2577 |
+| mobilenet_cifar100_bs64_20e_1gpu  |                  1 | single      |       0.1245 |       0.1035 |                   0.021  |                        0.2029 |
+| mobilenet_cifar100_bs32_50e_1gpu  |                  1 | single      |       0.099  |       0.083  |                   0.016  |                        0.1928 |
+| bert_large_wiki_bs8_1gpu          |                  1 | single      |       0.91   |       0.955  |                   0.045  |                        0.0471 |
+| resnet34_cifar100_bs128_50e_1gpu  |                  1 | single      |       0.215  |       0.208  |                   0.007  |                        0.0337 |
+| mobilenet_cifar100_bs128_50e_1gpu |                  1 | single      |       0.158  |       0.155  |                   0.003  |                        0.0194 |
+| gpt2_xl_wiki_bs2_1gpu             |                  1 | single      |       0.934  |       0.952  |                   0.018  |                        0.0189 |
+| mobilenet_cifar100_bs32_20e_1gpu  |                  1 | single      |       0.069  |       0.07   |                   0.001  |                        0.0143 |
+| resnet18_cifar100_bs64_50e_1gpu   |                  1 | single      |       0.177  |       0.175  |                   0.002  |                        0.0114 |
+| resnet50_imagenet_bs32_1gpu       |                  1 | single      |       0.6715 |       0.665  |                   0.0065 |                        0.0098 |
+
+
+### SMACT mode
+
+| workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:---------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| bert_large_wiki_bs8_1gpu         |                  1 | single      |        0     |        0.964 |                    0.964 |                        1      |
+| inception_imagenet_bs32_1gpu     |                  1 | single      |        0     |        0.636 |                    0.636 |                        1      |
+| efficientnet_imagenet_bs128_1gpu |                  1 | single      |        0     |        0.607 |                    0.607 |                        1      |
+| gpt2_xl_wiki_bs2_1gpu            |                  1 | single      |        0     |        0.958 |                    0.958 |                        1      |
+| inception_imagenet_bs128_1gpu    |                  1 | single      |        0     |        0.661 |                    0.661 |                        1      |
+| resnet50_imagenet_bs32_1gpu      |                  1 | single      |        0     |        0.663 |                    0.663 |                        1      |
+| mobilenet_imagenet_bs64_1gpu     |                  1 | single      |        0     |        0.531 |                    0.531 |                        1      |
+| vgg16_imagenet_bs128_1gpu        |                  1 | single      |        0     |        0.851 |                    0.851 |                        1      |
+| mobilenet_cifar100_bs64_20e_1gpu |                  1 | single      |        0.142 |        0.099 |                    0.043 |                        0.4343 |
+| mobilenet_cifar100_bs64_50e_1gpu |                  1 | single      |        0.091 |        0.144 |                    0.053 |                        0.3681 |
+
+
+### SMACT max
+
+| workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| dlrm_criteo_bs32768_1gpu            |                  1 | single      |        0.617 |        0.822 |                    0.205 |                        0.2494 |
+| resnet34_cifar100_bs64_50e_1gpu     |                  1 | single      |        0.243 |        0.293 |                    0.05  |                        0.1706 |
+| resnet18_cifar100_bs32_20e_1gpu     |                  1 | single      |        0.201 |        0.233 |                    0.032 |                        0.1373 |
+| efficientnet_cifar100_bs64_50e_1gpu |                  1 | single      |        0.222 |        0.253 |                    0.031 |                        0.1225 |
+| mobilenet_cifar100_bs32_50e_1gpu    |                  1 | single      |        0.116 |        0.131 |                    0.015 |                        0.1145 |
+| mobilenet_cifar100_bs64_50e_1gpu    |                  1 | single      |        0.156 |        0.175 |                    0.019 |                        0.1086 |
+| efficientnet_cifar100_bs32_20e_1gpu |                  1 | single      |        0.178 |        0.198 |                    0.02  |                        0.101  |
+| resnet18_cifar100_bs64_50e_1gpu     |                  1 | single      |        0.229 |        0.251 |                    0.022 |                        0.0876 |
+| efficientnet_cifar100_bs64_20e_1gpu |                  1 | single      |        0.218 |        0.238 |                    0.02  |                        0.084  |
+| efficientnet_cifar100_bs32_50e_1gpu |                  1 | single      |        0.174 |        0.185 |                    0.011 |                        0.0595 |
+
+
+### SMACT p95
+
+_No data available for this metric/statistic._
+
+
+### SMACT EWMA
+
+_No data available for this metric/statistic._
+
+
 ### SMACT profile stat score
 
 | workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
@@ -51,6 +125,85 @@ This summary is generated from extracted solo profiling results.
 | efficientnet_imagenet_bs128_1gpu |                  1 | single      |       0.4875 |       0.6422 |                   0.1546 |                        0.2408 |
 | mobilenet_cifar100_bs64_50e_1gpu |                  1 | single      |       0.1132 |       0.1419 |                   0.0287 |                        0.2021 |
 | mobilenet_cifar100_bs64_20e_1gpu |                  1 | single      |       0.1353 |       0.1182 |                   0.017  |                        0.1441 |
+
+
+### SMACT AEGIS profile risk
+
+_No data available for this metric/statistic._
+
+
+### SMOCC mean
+
+| workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:---------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| gpt2_xl_wiki_bs2_1gpu            |                  1 | single      |       0.2351 |       0.3256 |                   0.0905 |                        0.278  |
+| bert_large_wiki_bs8_1gpu         |                  1 | single      |       0.2286 |       0.2896 |                   0.061  |                        0.2107 |
+| dlrm_criteo_bs32768_1gpu         |                  1 | single      |       0.0465 |       0.0399 |                   0.0066 |                        0.1663 |
+| mobilenet_cifar100_bs64_50e_1gpu |                  1 | single      |       0.0571 |       0.0622 |                   0.0051 |                        0.0825 |
+| mobilenet_cifar100_bs32_50e_1gpu |                  1 | single      |       0.0437 |       0.0413 |                   0.0024 |                        0.058  |
+| maskrcnn_coco_bs8_1gpu           |                  1 | single      |       0.3342 |       0.316  |                   0.0182 |                        0.0575 |
+| mobilenet_cifar100_bs32_20e_1gpu |                  1 | single      |       0.0356 |       0.0375 |                   0.002  |                        0.0523 |
+| resnet34_cifar100_bs128_50e_1gpu |                  1 | single      |       0.0837 |       0.0799 |                   0.0038 |                        0.0479 |
+| unet_voc_1gpu                    |                  1 | single      |       0.3039 |       0.3177 |                   0.0138 |                        0.0434 |
+| inception_imagenet_bs128_1gpu    |                  1 | single      |       0.2911 |       0.3037 |                   0.0127 |                        0.0417 |
+
+
+### SMOCC median
+
+| workload_id                       |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:----------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| mobilenet_cifar100_bs32_50e_1gpu  |                  1 | single      |       0.05   |        0.037 |                   0.013  |                        0.3514 |
+| mobilenet_cifar100_bs64_50e_1gpu  |                  1 | single      |       0.052  |        0.069 |                   0.017  |                        0.2464 |
+| mobilenet_cifar100_bs64_20e_1gpu  |                  1 | single      |       0.061  |        0.055 |                   0.006  |                        0.1091 |
+| gpt2_xl_wiki_bs2_1gpu             |                  1 | single      |       0.294  |        0.307 |                   0.013  |                        0.0423 |
+| bert_large_wiki_bs8_1gpu          |                  1 | single      |       0.281  |        0.292 |                   0.011  |                        0.0377 |
+| resnet34_cifar100_bs128_50e_1gpu  |                  1 | single      |       0.084  |        0.082 |                   0.002  |                        0.0244 |
+| mobilenet_cifar100_bs128_50e_1gpu |                  1 | single      |       0.093  |        0.091 |                   0.002  |                        0.022  |
+| bert_base_wiki_bs32_1gpu          |                  1 | single      |       0.2705 |        0.276 |                   0.0055 |                        0.0199 |
+| resnet34_cifar100_bs64_20e_1gpu   |                  1 | single      |       0.074  |        0.073 |                   0.001  |                        0.0137 |
+| resnet18_cifar100_bs128_50e_1gpu  |                  1 | single      |       0.08   |        0.079 |                   0.001  |                        0.0127 |
+
+
+### SMOCC mode
+
+| workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:---------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| bert_large_wiki_bs8_1gpu         |                  1 | single      |        0     |        0.257 |                    0.257 |                        1      |
+| efficientnet_imagenet_bs128_1gpu |                  1 | single      |        0     |        0.389 |                    0.389 |                        1      |
+| gpt2_xl_wiki_bs2_1gpu            |                  1 | single      |        0     |        0.308 |                    0.308 |                        1      |
+| mobilenet_imagenet_bs64_1gpu     |                  1 | single      |        0     |        0.291 |                    0.291 |                        1      |
+| unet_voc_1gpu                    |                  1 | single      |        0     |        0.333 |                    0.333 |                        1      |
+| vgg16_imagenet_bs128_1gpu        |                  1 | single      |        0     |        0.425 |                    0.425 |                        1      |
+| mobilenet_cifar100_bs64_50e_1gpu |                  1 | single      |        0.05  |        0.078 |                    0.028 |                        0.359  |
+| resnet34_cifar100_bs128_50e_1gpu |                  1 | single      |        0.094 |        0.082 |                    0.012 |                        0.1463 |
+| efficientnet_imagenet_bs64_1gpu  |                  1 | single      |        0.338 |        0.378 |                    0.04  |                        0.1058 |
+| resnet34_cifar100_bs32_50e_1gpu  |                  1 | single      |        0.079 |        0.072 |                    0.007 |                        0.0972 |
+
+
+### SMOCC max
+
+| workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| dlrm_criteo_bs32768_1gpu            |                  1 | single      |        0.203 |        0.269 |                    0.066 |                        0.2454 |
+| resnet18_cifar100_bs32_20e_1gpu     |                  1 | single      |        0.073 |        0.085 |                    0.012 |                        0.1412 |
+| mobilenet_cifar100_bs128_50e_1gpu   |                  1 | single      |        0.116 |        0.132 |                    0.016 |                        0.1212 |
+| efficientnet_cifar100_bs32_20e_1gpu |                  1 | single      |        0.1   |        0.112 |                    0.012 |                        0.1071 |
+| mobilenet_cifar100_bs64_50e_1gpu    |                  1 | single      |        0.085 |        0.095 |                    0.01  |                        0.1053 |
+| mobilenet_cifar100_bs32_50e_1gpu    |                  1 | single      |        0.06  |        0.067 |                    0.007 |                        0.1045 |
+| resnet18_cifar100_bs64_50e_1gpu     |                  1 | single      |        0.086 |        0.095 |                    0.009 |                        0.0947 |
+| efficientnet_cifar100_bs64_20e_1gpu |                  1 | single      |        0.136 |        0.145 |                    0.009 |                        0.0621 |
+| efficientnet_cifar100_bs32_50e_1gpu |                  1 | single      |        0.099 |        0.104 |                    0.005 |                        0.0481 |
+| inception_imagenet_bs128_1gpu       |                  1 | single      |        0.348 |        0.364 |                    0.016 |                        0.044  |
+
+
+### SMOCC p95
+
+_No data available for this metric/statistic._
+
+
+### SMOCC EWMA
+
+_No data available for this metric/statistic._
 
 
 ### SMOCC profile stat score
@@ -69,6 +222,85 @@ This summary is generated from extracted solo profiling results.
 | resnet18_cifar100_bs32_20e_1gpu  |                  1 | single      |       0.0676 |       0.0708 |                   0.0033 |                        0.0465 |
 
 
+### SMOCC AEGIS profile risk
+
+_No data available for this metric/statistic._
+
+
+### DRAMA mean
+
+| workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:---------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| gpt2_xl_wiki_bs2_1gpu            |                  1 | single      |       0.1556 |       0.2118 |                   0.0563 |                        0.2655 |
+| bert_large_wiki_bs8_1gpu         |                  1 | single      |       0.1225 |       0.1555 |                   0.033  |                        0.2123 |
+| dlrm_criteo_bs32768_1gpu         |                  1 | single      |       0.0271 |       0.0232 |                   0.004  |                        0.1716 |
+| mobilenet_cifar100_bs64_50e_1gpu |                  1 | single      |       0.0027 |       0.0031 |                   0.0004 |                        0.128  |
+| maskrcnn_coco_bs8_1gpu           |                  1 | single      |       0.3972 |       0.3696 |                   0.0276 |                        0.0746 |
+| resnet34_cifar100_bs128_50e_1gpu |                  1 | single      |       0.0727 |       0.0682 |                   0.0044 |                        0.0652 |
+| resnet18_cifar100_bs64_50e_1gpu  |                  1 | single      |       0.0518 |       0.0492 |                   0.0027 |                        0.0546 |
+| mobilenet_cifar100_bs32_50e_1gpu |                  1 | single      |       0.0019 |       0.0018 |                   0.0001 |                        0.0523 |
+| mobilenet_cifar100_bs64_20e_1gpu |                  1 | single      |       0.003  |       0.0029 |                   0.0001 |                        0.0504 |
+| resnet34_cifar100_bs32_50e_1gpu  |                  1 | single      |       0.058  |       0.0552 |                   0.0028 |                        0.0501 |
+
+
+### DRAMA median
+
+| workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| mobilenet_cifar100_bs64_50e_1gpu    |                  1 | single      |       0.002  |        0.004 |                   0.002  |                        0.5    |
+| gpt2_xl_wiki_bs2_1gpu               |                  1 | single      |       0.136  |        0.166 |                   0.03   |                        0.1807 |
+| efficientnet_cifar100_bs32_50e_1gpu |                  1 | single      |       0.008  |        0.009 |                   0.001  |                        0.1111 |
+| efficientnet_cifar100_bs32_20e_1gpu |                  1 | single      |       0.008  |        0.009 |                   0.001  |                        0.1111 |
+| resnet18_cifar100_bs64_50e_1gpu     |                  1 | single      |       0.052  |        0.048 |                   0.004  |                        0.0833 |
+| resnet18_cifar100_bs64_20e_1gpu     |                  1 | single      |       0.052  |        0.05  |                   0.002  |                        0.04   |
+| resnet34_cifar100_bs128_50e_1gpu    |                  1 | single      |       0.066  |        0.064 |                   0.002  |                        0.0312 |
+| resnet34_cifar100_bs32_20e_1gpu     |                  1 | single      |       0.0525 |        0.051 |                   0.0015 |                        0.0294 |
+| bert_large_wiki_bs8_1gpu            |                  1 | single      |       0.153  |        0.157 |                   0.004  |                        0.0255 |
+| resnet18_cifar100_bs32_50e_1gpu     |                  1 | single      |       0.047  |        0.048 |                   0.001  |                        0.0208 |
+
+
+### DRAMA mode
+
+| workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| bert_large_wiki_bs8_1gpu            |                  1 | single      |        0     |        0.153 |                    0.153 |                        1      |
+| gpt2_xl_wiki_bs2_1gpu               |                  1 | single      |        0     |        0.12  |                    0.12  |                        1      |
+| unet_voc_1gpu                       |                  1 | single      |        0     |        0.404 |                    0.404 |                        1      |
+| mobilenet_imagenet_bs64_1gpu        |                  1 | single      |        0     |        0.316 |                    0.316 |                        1      |
+| mobilenet_cifar100_bs64_50e_1gpu    |                  1 | single      |        0.002 |        0.004 |                    0.002 |                        0.5    |
+| resnet34_cifar100_bs64_20e_1gpu     |                  1 | single      |        0.077 |        0.052 |                    0.025 |                        0.4808 |
+| efficientnet_cifar100_bs32_20e_1gpu |                  1 | single      |        0.008 |        0.009 |                    0.001 |                        0.1111 |
+| efficientnet_cifar100_bs64_20e_1gpu |                  1 | single      |        0.012 |        0.011 |                    0.001 |                        0.0909 |
+| resnet34_cifar100_bs32_50e_1gpu     |                  1 | single      |        0.048 |        0.052 |                    0.004 |                        0.0769 |
+| maskrcnn_coco_bs8_1gpu              |                  1 | single      |        0.39  |        0.414 |                    0.024 |                        0.058  |
+
+
+### DRAMA max
+
+| workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
+|:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
+| dlrm_criteo_bs32768_1gpu            |                  1 | single      |        0.113 |        0.148 |                    0.035 |                        0.2365 |
+| resnet18_cifar100_bs32_20e_1gpu     |                  1 | single      |        0.071 |        0.09  |                    0.019 |                        0.2111 |
+| mobilenet_cifar100_bs128_50e_1gpu   |                  1 | single      |        0.007 |        0.008 |                    0.001 |                        0.125  |
+| efficientnet_cifar100_bs32_20e_1gpu |                  1 | single      |        0.011 |        0.012 |                    0.001 |                        0.0833 |
+| efficientnet_cifar100_bs64_20e_1gpu |                  1 | single      |        0.015 |        0.016 |                    0.001 |                        0.0625 |
+| efficientnet_cifar100_bs64_50e_1gpu |                  1 | single      |        0.015 |        0.016 |                    0.001 |                        0.0625 |
+| inception_imagenet_bs128_1gpu       |                  1 | single      |        0.412 |        0.433 |                    0.021 |                        0.0485 |
+| xlnet_base_cased_wiki_bs8_2gpu      |                  2 | gpu_a       |        0.231 |        0.242 |                    0.011 |                        0.0455 |
+| resnet34_cifar100_bs32_20e_1gpu     |                  1 | single      |        0.095 |        0.098 |                    0.003 |                        0.0306 |
+| gpt2_xl_wiki_bs2_1gpu               |                  1 | single      |        0.426 |        0.439 |                    0.013 |                        0.0296 |
+
+
+### DRAMA p95
+
+_No data available for this metric/statistic._
+
+
+### DRAMA EWMA
+
+_No data available for this metric/statistic._
+
+
 ### DRAMA profile stat score
 
 | workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
@@ -83,6 +315,11 @@ This summary is generated from extracted solo profiling results.
 | resnet18_cifar100_bs32_20e_1gpu     |                  1 | single      |       0.0537 |       0.0586 |                   0.005  |                        0.0847 |
 | efficientnet_cifar100_bs32_20e_1gpu |                  1 | single      |       0.0088 |       0.0096 |                   0.0008 |                        0.0796 |
 | mobilenet_cifar100_bs128_50e_1gpu   |                  1 | single      |       0.0049 |       0.0051 |                   0.0002 |                        0.0405 |
+
+
+### DRAMA AEGIS profile risk
+
+_No data available for this metric/statistic._
 
 
 ### GPU memory peak
