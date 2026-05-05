@@ -43,7 +43,7 @@ def markdown_table(df: pd.DataFrame, columns: list[str], max_rows: int) -> str:
 
     return out.to_markdown(index=False) + "\n"
 
-def summarize_profile_risk_components(comparison: pd.DataFrame) -> pd.DataFrame:
+def summarize_profile_score_components(comparison: pd.DataFrame) -> pd.DataFrame:
     if comparison.empty:
         return pd.DataFrame()
 
@@ -58,7 +58,16 @@ def summarize_profile_risk_components(comparison: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     wanted_metrics = ["smact", "smocc", "drama"]
-    wanted_stats = ["mean", "median", "mode", "max", "profile_risk"]
+    wanted_stats = [
+        "mean",
+        "median",
+        "mode",
+        "max",
+        "profile_stat_score",
+        "p95",
+        "ewma",
+        "aegis_profile_risk",
+    ]
 
     subset = comparison[
         comparison["metric"].isin(wanted_metrics)
@@ -206,9 +215,9 @@ def build_summary(
     lines.append("\n## Largest 200s-vs-full mismatches\n")
 
     mismatch_specs = [
-        ("smact", "profile_risk", "SMACT profile risk"),
-        ("smocc", "profile_risk", "SMOCC profile risk"),
-        ("drama", "profile_risk", "DRAMA profile risk"),
+        ("smact", "profile_stat_score", "SMACT profile stat score"),
+        ("smocc", "profile_stat_score", "SMOCC profile stat score"),
+        ("drama", "profile_stat_score", "DRAMA profile stat score"),
         ("gpu_memory_peak_mib", "peak", "GPU memory peak"),
     ]
 
@@ -268,14 +277,14 @@ def build_summary(
         lines.append("_Horus-like oracle input data is missing._\n")
 
 
-    lines.append("\n## Profile-risk component breakdown\n")
+    lines.append("\n## Profile score component breakdown\n")
     lines.append(
-        "The `profile_risk` value is the equal-weight average of mean, median, mode, and max. "
-        "This table shows each component separately so we can compare whether one statistic alone "
-        "would be too noisy, too conservative, or too insensitive.\n"
+        "`profile_stat_score` is the equal-weight average of mean, median, mode, and max "
+        "from the extracted solo-profile CSVs. It is not the AEGIS risk formula. "
+        "`aegis_profile_risk` is only available when mean, median, p95, and EWMA are present.\n"
     )
 
-    component_summary = summarize_profile_risk_components(comparison)
+    component_summary = summarize_profile_score_components(comparison)
     lines.append(
         markdown_table(
             component_summary,
@@ -298,7 +307,9 @@ def build_summary(
     lines.append("\n## Notes for paper analysis\n")
     lines.append(
         "- `lucid_style_class_200s` is a Lucid-style profile class, not an exact Lucid reproduction.\n"
-        "- `profile_risk` uses equal weights over mean, median, mode, and max.\n"
+        "- `profile_stat_score` uses equal weights over mean, median, mode, and max from extracted solo-profile CSVs.\n"
+        "- `profile_stat_score` is per metric/GPU/window, not a workload-level AEGIS risk.\n"
+        "- `aegis_profile_risk` should only be used when mean, median, p95, and EWMA are available.\n"
         "- For activity metrics on 2-GPU workloads, inspect `gpu_a` and `gpu_b` separately.\n"
         "- For memory footprint on 2-GPU workloads, use sum columns when reasoning about total memory demand.\n"
         "- Large 200s-vs-full mismatch indicates that a short profiling window may not represent the full run.\n"

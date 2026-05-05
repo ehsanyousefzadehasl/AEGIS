@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 
 from evaluation.runners.analyze_solo_profile_results import (
-    add_equal_weight_profile_risk,
+    add_equal_weight_profile_scores,
     build_200s_vs_full,
     build_lucid_style_profile_labels,
     build_horus_oracle_inputs,
@@ -56,12 +56,12 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         )
 
         long_df = normalize_profile_dataframe(df, gpu_count=1)
-        long_df = add_equal_weight_profile_risk(long_df)
+        long_df = add_equal_weight_profile_scores(long_df)
 
         risk_row = long_df[
             (long_df["metric"] == "smact")
             & (long_df["window"] == "200s")
-            & (long_df["stat"] == "profile_risk")
+            & (long_df["stat"] == "profile_stat_score")
         ].iloc[0]
 
         self.assertEqual(risk_row["value"], 25.0)
@@ -87,12 +87,12 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         )
 
         long_df = normalize_profile_dataframe(df, gpu_count=1)
-        long_df = add_equal_weight_profile_risk(long_df)
+        long_df = add_equal_weight_profile_scores(long_df)
         comparison = build_200s_vs_full(long_df)
 
         row = comparison[
             (comparison["metric"] == "smact")
-            & (comparison["stat"] == "profile_risk")
+            & (comparison["stat"] == "profile_stat_score")
         ].iloc[0]
 
         self.assertEqual(row["value_200s"], 25.0)
@@ -125,7 +125,7 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         )
 
         long_df = normalize_profile_dataframe(df, gpu_count=1)
-        long_df = add_equal_weight_profile_risk(long_df)
+        long_df = add_equal_weight_profile_scores(long_df)
         characterization = build_workload_characterization(
             long_df,
             compute_threshold=50.0,
@@ -133,7 +133,7 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         )
 
         self.assertEqual(characterization.iloc[0]["coarse_resource_label"], "compute_heavy")
-        self.assertIn("smact_profile_risk_full", characterization.columns)
+        self.assertIn("smact_profile_stat_score_full", characterization.columns)
 
     def test_build_lucid_style_profile_labels(self):
         df = pd.DataFrame(
@@ -199,7 +199,7 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         )
 
         long_df = normalize_profile_dataframe(df, gpu_count=1)
-        long_df = add_equal_weight_profile_risk(long_df)
+        long_df = add_equal_weight_profile_scores(long_df)
         labels = build_lucid_style_profile_labels(long_df)
 
         classes = dict(zip(labels["workload_id"], labels["lucid_style_class_200s"]))
@@ -245,6 +245,34 @@ class TestSoloProfileAnalyzer(unittest.TestCase):
         self.assertEqual(row["horus_oracle_util_max_full"], 95.0)
         self.assertEqual(row["horus_oracle_memory_full_mib"], 1200.0)
         self.assertEqual(row["horus_abs_error_200s_vs_full_util"], 10.0)
+
+    def test_aegis_profile_risk_is_only_computed_when_p95_and_ewma_exist(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "workload_id": "bert",
+                    "run_id": "r1",
+                    "spec_path": "bert.yaml",
+                    "gpu_count": 1,
+                    "smact_mean_200s": 10.0,
+                    "smact_median_200s": 20.0,
+                    "smact_p95_200s": 30.0,
+                    "smact_ewma_200s": 40.0,
+                }
+            ]
+        )
+
+        long_df = normalize_profile_dataframe(df, gpu_count=1)
+        long_df = add_equal_weight_profile_scores(long_df)
+
+        risk_row = long_df[
+            (long_df["metric"] == "smact")
+            & (long_df["window"] == "200s")
+            & (long_df["stat"] == "aegis_profile_risk")
+        ].iloc[0]
+
+        self.assertEqual(risk_row["value"], 25.0)
+
         
 if __name__ == "__main__":
     unittest.main()

@@ -37,7 +37,7 @@ This summary is generated from extracted solo profiling results.
 ## Largest 200s-vs-full mismatches
 
 
-### SMACT profile risk
+### SMACT profile stat score
 
 | workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
 |:---------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
@@ -53,7 +53,7 @@ This summary is generated from extracted solo profiling results.
 | mobilenet_cifar100_bs64_20e_1gpu |                  1 | single      |       0.1353 |       0.1182 |                   0.017  |                        0.1441 |
 
 
-### SMOCC profile risk
+### SMOCC profile stat score
 
 | workload_id                      |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
 |:---------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
@@ -69,7 +69,7 @@ This summary is generated from extracted solo profiling results.
 | resnet18_cifar100_bs32_20e_1gpu  |                  1 | single      |       0.0676 |       0.0708 |                   0.0033 |                        0.0465 |
 
 
-### DRAMA profile risk
+### DRAMA profile stat score
 
 | workload_id                         |   source_gpu_count | gpu_label   |   value_200s |   value_full |   abs_error_200s_vs_full |   relative_error_200s_vs_full |
 |:------------------------------------|-------------------:|:------------|-------------:|-------------:|-------------------------:|------------------------------:|
@@ -119,33 +119,35 @@ For a generous Horus-like analysis, `horus_oracle_util_full` uses the observed f
 | xception_imagenet_bs32_1gpu    |                  1 | single      |                  84.9492 |                   82.3955 |                              85 |                           91 |                           5922 |                              2.5537 |                                   0.0301 |
 
 
-## Profile-risk component breakdown
+## Profile score component breakdown
 
-The `profile_risk` value is the equal-weight average of mean, median, mode, and max. This table shows each component separately so we can compare whether one statistic alone would be too noisy, too conservative, or too insensitive.
+`profile_stat_score` is the equal-weight average of mean, median, mode, and max from the extracted solo-profile CSVs. It is not the AEGIS risk formula. `aegis_profile_risk` is only available when mean, median, p95, and EWMA are present.
 
-| metric   | stat         |   n |   mean_200s |   mean_full |   mean_abs_error |   median_abs_error |   p95_abs_error |   mean_relative_error |
-|:---------|:-------------|----:|------------:|------------:|-----------------:|-------------------:|----------------:|----------------------:|
-| smact    | mean         |  55 |      0.4139 |      0.4248 |           0.0163 |             0.0046 |          0.0315 |                0.0311 |
-| smact    | median       |  55 |      0.439  |      0.4384 |           0.0048 |             0.001  |          0.0247 |                0.0175 |
-| smact    | mode         |  55 |      0.3232 |      0.4319 |           0.1167 |             0.001  |          0.7194 |                0.1883 |
-| smact    | max          |  55 |      0.5055 |      0.5173 |           0.0119 |             0.002  |          0.0363 |                0.0298 |
-| smact    | profile_risk |  55 |      0.4204 |      0.4531 |           0.0354 |             0.0042 |          0.1936 |                0.061  |
-| smocc    | mean         |  55 |      0.1931 |      0.1971 |           0.0066 |             0.0024 |          0.0166 |                0.0314 |
-| smocc    | median       |  55 |      0.202  |      0.2019 |           0.0022 |             0.001  |          0.013  |                0.0189 |
-| smocc    | mode         |  55 |      0.1652 |      0.2026 |           0.0393 |             0.001  |          0.3155 |                0.1349 |
-| smocc    | max          |  55 |      0.2384 |      0.2433 |           0.0049 |             0.001  |          0.0146 |                0.0257 |
-| smocc    | profile_risk |  55 |      0.1997 |      0.2112 |           0.0123 |             0.002  |          0.0909 |                0.0465 |
-| drama    | mean         |  55 |      0.1683 |      0.1705 |           0.0051 |             0.0016 |          0.0193 |                0.0339 |
-| drama    | median       |  55 |      0.173  |      0.173  |           0.0017 |             0.001  |          0.0041 |                0.0244 |
-| drama    | mode         |  55 |      0.155  |      0.1723 |           0.0208 |             0.001  |          0.1299 |                0.1105 |
-| drama    | max          |  55 |      0.2086 |      0.2118 |           0.0032 |             0.001  |          0.0148 |                0.0213 |
-| drama    | profile_risk |  55 |      0.1762 |      0.1819 |           0.0066 |             0.0008 |          0.0502 |                0.0386 |
+| metric   | stat               |   n |   mean_200s |   mean_full |   mean_abs_error |   median_abs_error |   p95_abs_error |   mean_relative_error |
+|:---------|:-------------------|----:|------------:|------------:|-----------------:|-------------------:|----------------:|----------------------:|
+| smact    | mean               |  55 |      0.4139 |      0.4248 |           0.0163 |             0.0046 |          0.0315 |                0.0311 |
+| smact    | median             |  55 |      0.439  |      0.4384 |           0.0048 |             0.001  |          0.0247 |                0.0175 |
+| smact    | mode               |  55 |      0.3232 |      0.4319 |           0.1167 |             0.001  |          0.7194 |                0.1883 |
+| smact    | max                |  55 |      0.5055 |      0.5173 |           0.0119 |             0.002  |          0.0363 |                0.0298 |
+| smact    | profile_stat_score |  55 |      0.4204 |      0.4531 |           0.0354 |             0.0042 |          0.1936 |                0.061  |
+| smocc    | mean               |  55 |      0.1931 |      0.1971 |           0.0066 |             0.0024 |          0.0166 |                0.0314 |
+| smocc    | median             |  55 |      0.202  |      0.2019 |           0.0022 |             0.001  |          0.013  |                0.0189 |
+| smocc    | mode               |  55 |      0.1652 |      0.2026 |           0.0393 |             0.001  |          0.3155 |                0.1349 |
+| smocc    | max                |  55 |      0.2384 |      0.2433 |           0.0049 |             0.001  |          0.0146 |                0.0257 |
+| smocc    | profile_stat_score |  55 |      0.1997 |      0.2112 |           0.0123 |             0.002  |          0.0909 |                0.0465 |
+| drama    | mean               |  55 |      0.1683 |      0.1705 |           0.0051 |             0.0016 |          0.0193 |                0.0339 |
+| drama    | median             |  55 |      0.173  |      0.173  |           0.0017 |             0.001  |          0.0041 |                0.0244 |
+| drama    | mode               |  55 |      0.155  |      0.1723 |           0.0208 |             0.001  |          0.1299 |                0.1105 |
+| drama    | max                |  55 |      0.2086 |      0.2118 |           0.0032 |             0.001  |          0.0148 |                0.0213 |
+| drama    | profile_stat_score |  55 |      0.1762 |      0.1819 |           0.0066 |             0.0008 |          0.0502 |                0.0386 |
 
 
 ## Notes for paper analysis
 
 - `lucid_style_class_200s` is a Lucid-style profile class, not an exact Lucid reproduction.
-- `profile_risk` uses equal weights over mean, median, mode, and max.
+- `profile_stat_score` uses equal weights over mean, median, mode, and max from extracted solo-profile CSVs.
+- `profile_stat_score` is per metric/GPU/window, not a workload-level AEGIS risk.
+- `aegis_profile_risk` should only be used when mean, median, p95, and EWMA are available.
 - For activity metrics on 2-GPU workloads, inspect `gpu_a` and `gpu_b` separately.
 - For memory footprint on 2-GPU workloads, use sum columns when reasoning about total memory demand.
 - Large 200s-vs-full mismatch indicates that a short profiling window may not represent the full run.

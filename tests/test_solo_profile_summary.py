@@ -6,7 +6,7 @@ from evaluation.runners.summarize_solo_profile_analysis import (
     build_summary,
     markdown_table,
     summarize_label_distribution,
-    summarize_profile_risk_components,
+    summarize_profile_score_components,
 )
 
 
@@ -52,7 +52,7 @@ class TestSoloProfileSummary(unittest.TestCase):
                     "source_gpu_count": 1,
                     "gpu_label": "single",
                     "metric": "smact",
-                    "stat": "profile_risk",
+                    "stat": "profile_stat_score",
                     "value_200s": 20.0,
                     "value_full": 30.0,
                     "abs_error_200s_vs_full": 10.0,
@@ -81,7 +81,8 @@ class TestSoloProfileSummary(unittest.TestCase):
         self.assertIn("Largest 200s-vs-full mismatches", text)
         self.assertIn("Jumbo", text)
         self.assertIn("compute_heavy", text)
-    def test_summarize_profile_risk_components(self):
+        
+    def test_summarize_profile_score_components(self):
         comparison = pd.DataFrame(
             [
                 {
@@ -94,7 +95,7 @@ class TestSoloProfileSummary(unittest.TestCase):
                 },
                 {
                     "metric": "smact",
-                    "stat": "profile_risk",
+                    "stat": "profile_stat_score",
                     "value_200s": 15.0,
                     "value_full": 25.0,
                     "abs_error_200s_vs_full": 10.0,
@@ -103,12 +104,12 @@ class TestSoloProfileSummary(unittest.TestCase):
             ]
         )
 
-        out = summarize_profile_risk_components(comparison)
+        out = summarize_profile_score_components(comparison)
 
         self.assertIn("mean_200s", out.columns)
         self.assertIn("mean_full", out.columns)
         self.assertIn("mean_abs_error", out.columns)
-        self.assertIn("profile_risk", set(out["stat"]))
+        self.assertIn("profile_stat_score", set(out["stat"]))
 
 if __name__ == "__main__":
     unittest.main()

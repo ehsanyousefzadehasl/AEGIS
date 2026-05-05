@@ -37,7 +37,7 @@ DEFAULT_OUTPUT_DIR = (
 )
 
 GENERIC_PROFILE_RE = re.compile(
-    r"^(?P<metric>.+)_(?P<stat>max|mean|median|mode)_(?P<window>200s|full)$"
+    r"^(?P<metric>.+)_(?P<stat>max|mean|median|mode|p95|ewma)_(?P<window>200s|full)$"
 )
 
 MEMORY_PROFILE_RE = re.compile(
@@ -71,7 +71,8 @@ METADATA_COLUMNS = [
     "faketensor_path",
 ]
 
-PROFILE_RISK_STATS = ["mean", "median", "mode", "max"]
+PROFILE_STAT_SCORE_STATS = ["mean", "median", "mode", "max"]
+AEGIS_PROFILE_RISK_STATS = ["mean", "median", "p95", "ewma"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -167,7 +168,19 @@ def normalize_profile_dataframe(df: pd.DataFrame, *, gpu_count: int) -> pd.DataF
     return pd.DataFrame(rows)
 
 
-def add_equal_weight_profile_risk(long_df: pd.DataFrame) -> pd.DataFrame:
+def add_equal_weight_profile_scores(long_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add derived per-metric, per-GPU, per-window profile scores.
+
+    profile_stat_score:
+        Equal-weight score over mean, median, mode, and max.
+        This matches the statistics available in older extracted solo-profile CSVs.
+        It is not the AEGIS risk formula.
+
+    aegis_profile_risk:
+        Equal-weight score over mean, median, p95, and EWMA.
+        This is only computed when p95 and ewma are available in the input data.
+    """
     if long_df.empty:
         return long_df
 
@@ -181,35 +194,50 @@ def add_equal_weight_profile_risk(long_df: pd.DataFrame) -> pd.DataFrame:
         "metric",
     ]
 
-    rows = []
+    derived_rows = []
+
     grouped = long_df.groupby(group_cols, dropna=False, sort=False)
 
-    for _, group in grouped:
+    def build_score_row(group: pd.DataFrame, required_stats: list[str], score_name: str) -> dict | None:
         stats = set(group["stat"].dropna().astype(str))
-        if not set(PROFILE_RISK_STATS).issubset(stats):
-            continue
+        if not set(required_stats).issubset(stats):
+            return None
 
         values = {}
-        for stat in PROFILE_RISK_STATS:
+        for stat in required_stats:
             stat_values = group.loc[group["stat"] == stat, "value"]
             if stat_values.empty:
-                break
+                return None
             values[stat] = float(stat_values.iloc[0])
 
-        if set(values) != set(PROFILE_RISK_STATS):
-            continue
-
         base = group.iloc[0].to_dict()
-        base["stat"] = "profile_risk"
-        base["value"] = sum(values.values()) / len(PROFILE_RISK_STATS)
-        base["source_column"] = "computed_equal_weight_mean_median_mode_max"
-        rows.append(base)
+        base["stat"] = score_name
+        base["value"] = sum(values.values()) / len(required_stats)
+        base["source_column"] = f"computed_equal_weight_{'_'.join(required_stats)}"
+        return base
 
-    if not rows:
+    for _, group in grouped:
+        profile_stat_score = build_score_row(
+            group,
+            PROFILE_STAT_SCORE_STATS,
+            "profile_stat_score",
+        )
+        if profile_stat_score is not None:
+            derived_rows.append(profile_stat_score)
+
+        aegis_profile_risk = build_score_row(
+            group,
+            AEGIS_PROFILE_RISK_STATS,
+            "aegis_profile_risk",
+        )
+        if aegis_profile_risk is not None:
+            derived_rows.append(aegis_profile_risk)
+
+    if not derived_rows:
         return long_df
 
-    risk_df = pd.DataFrame(rows)
-    return pd.concat([long_df, risk_df], ignore_index=True)
+    return pd.concat([long_df, pd.DataFrame(derived_rows)], ignore_index=True)
+
 
 
 def build_200s_vs_full(long_df: pd.DataFrame) -> pd.DataFrame:
@@ -255,8 +283,14 @@ def build_200s_vs_full(long_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def classify_workload(row: pd.Series, compute_threshold: float, memory_threshold: float) -> str:
-    smact = row.get("smact_profile_risk_full", row.get("smact_mean_full"))
-    drama = row.get("drama_profile_risk_full", row.get("drama_mean_full"))
+    smact = row.get(
+        "smact_aegis_profile_risk_full",
+        row.get("smact_profile_stat_score_full", row.get("smact_mean_full")),
+    )
+    drama = row.get(
+        "drama_aegis_profile_risk_full",
+        row.get("drama_profile_stat_score_full", row.get("drama_mean_full")),
+    )
 
     if pd.isna(smact) or pd.isna(drama):
         return "unknown"
@@ -284,7 +318,21 @@ def build_workload_characterization(
     wanted = long_df[
         (
             (long_df["window"] == "full")
-            & (long_df["stat"].isin(["mean", "median", "max", "mode", "profile_risk", "peak"]))
+            & (
+                long_df["stat"].isin(
+                    [
+                        "mean",
+                        "median",
+                        "max",
+                        "mode",
+                        "p95",
+                        "ewma",
+                        "profile_stat_score",
+                        "aegis_profile_risk",
+                        "peak",
+                    ]
+                )
+            )
             & (long_df["metric"].isin(["smact", "smocc", "drama", "gpu_memory_peak_mib"]))
             & (long_df["gpu_label"] != "sum")
         )
@@ -334,7 +382,7 @@ def build_lucid_style_profile_labels(long_df: pd.DataFrame) -> pd.DataFrame:
     This is not an exact reproduction of Lucid's model. It uses the same high-level
     idea of assigning Tiny/Medium/Jumbo sharing classes from profiling signals.
 
-    We use equal-weight profile_risk rows for smact/smocc/drama and peak memory.
+    We use equal-weight profile_stat_score rows for smact/smocc/drama and peak memory.
     The final pressure score is the maximum normalized pressure across dimensions.
     """
     if long_df.empty:
@@ -346,7 +394,7 @@ def build_lucid_style_profile_labels(long_df: pd.DataFrame) -> pd.DataFrame:
             & (
                 (
                     long_df["metric"].isin(["smact", "smocc", "drama"])
-                    & (long_df["stat"] == "profile_risk")
+                    & (long_df["stat"] == "profile_stat_score")
                 )
                 | (
                     (long_df["metric"] == "gpu_memory_peak_mib")
@@ -389,9 +437,9 @@ def build_lucid_style_profile_labels(long_df: pd.DataFrame) -> pd.DataFrame:
     pressure_features = [
         c
         for c in [
-            "smact_profile_risk_200s",
-            "smocc_profile_risk_200s",
-            "drama_profile_risk_200s",
+            "smact_profile_stat_score_200s",
+            "smocc_profile_stat_score_200s",
+            "drama_profile_stat_score_200s",
             "gpu_memory_peak_mib_peak_200s",
         ]
         if c in out.columns
@@ -554,7 +602,7 @@ def main() -> int:
         long_parts.append(normalize_profile_dataframe(df_2gpu, gpu_count=2))
 
     long_df = pd.concat(long_parts, ignore_index=True) if long_parts else pd.DataFrame()
-    long_df = add_equal_weight_profile_risk(long_df)
+    long_df = add_equal_weight_profile_scores(long_df)
 
     comparison_df = build_200s_vs_full(long_df)
     characterization_df = build_workload_characterization(
