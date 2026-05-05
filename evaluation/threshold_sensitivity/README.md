@@ -211,6 +211,91 @@ if measurements_path.exists():
 PY
 ```
 
+## Run with screen
+
+For long solo campaigns, use `screen` so the run continues after disconnecting:
+
+```bash
+screen -S solo-1gpu
+```
+
+Inside the screen session:
+
+```bash
+cd /home/ehyo/AEGIS
+
+python evaluation/threshold_sensitivity/run_solo_baselines.py \
+  --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
+  --workdir . \
+  --gpu-id 0 \
+  --suite-id solo_1gpu_threshold_windows_$(date +%Y%m%d_%H%M%S) \
+  2>&1 | tee evaluation/threshold_sensitivity/solo_1gpu_threshold_windows.log
+```
+
+Detach:
+
+```bash
+Ctrl-a d
+```
+
+Reattach:
+
+```bash
+screen -r solo-1gpu
+```
+
+### Inspect partial results while a run is still active
+Set the latest suite directory:
+
+```bash
+export SUITE=$(ls -td evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_* | head -1)
+echo "$SUITE"
+```
+
+Check run status:
+
+```bash
+python - <<'PY'
+import os
+import pandas as pd
+
+suite = os.environ["SUITE"]
+index = pd.read_csv(f"{suite}/index.csv")
+
+print("attempted runs:", len(index))
+print(index["runner_status"].value_counts(dropna=False))
+print(index["workload_status"].value_counts(dropna=False))
+
+cols = [
+    "task_path",
+    "runner_status",
+    "workload_status",
+    "failure_stage",
+    "failure_reason",
+    "return_code",
+    "measurement_recorded",
+]
+print(index[[c for c in cols if c in index.columns]].tail(10))
+PY
+```
+
+Run window analysis on partial results:
+
+```bash
+python evaluation/threshold_sensitivity/analyze_solo_windows.py \
+  --measurements-csv "$SUITE/live_threshold_measurements.csv" \
+  --output-dir "$SUITE/window_analysis_partial" \
+  --reference-window 200
+```
+
+Inspect the partial stability summary:
+
+```bash
+cat "$SUITE/window_analysis_partial/window_stability_summary.csv"
+```
+
+
+
 ## Notes
 
 - Start with `all_specs_1gpu.txt`.
@@ -283,13 +368,4 @@ Example question this file helps answer:
 
 ```text
 Is smact_risk_w30s close enough to smact_risk_w200s across workloads?
-```
-
-## Suggested commit
-
-After appending this section to `evaluation/threshold_sensitivity/README.md`, commit with:
-
-```bash
-git add evaluation/threshold_sensitivity/README.md
-git commit -m "docs(eval): document solo window analyzer"
 ```
