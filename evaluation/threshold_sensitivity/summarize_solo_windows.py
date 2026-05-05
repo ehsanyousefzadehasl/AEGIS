@@ -599,8 +599,22 @@ def main() -> int:
 
     per_workload_components_path = analysis_dir / "per_workload_risk_components.csv"
     component_stability_path = analysis_dir / "risk_component_stability.csv"
+    decision_suffix = format_window_suffix(float(args.decision_window))
+    reference_suffix = format_window_suffix(float(args.reference_window))
+
+    per_workload_components_path = (
+        analysis_dir
+        / f"per_workload_risk_components_{decision_suffix}_vs_{reference_suffix}.csv"
+    )
+
+    component_stability_path = analysis_dir / "risk_component_stability.csv"
     component_rollup_path = analysis_dir / "risk_component_stability_rollup.csv"
+    
+    # Keep this as the latest/default file for backwards compatibility.
+    legacy_per_workload_components_path = analysis_dir / "per_workload_risk_components.csv"
+
     per_workload_components.to_csv(per_workload_components_path, index=False)
+    per_workload_components.to_csv(legacy_per_workload_components_path, index=False)
     component_stability.to_csv(component_stability_path, index=False)
     component_rollup.to_csv(component_rollup_path, index=False)
     summary = build_summary(
@@ -618,6 +632,7 @@ def main() -> int:
 
     print(f"wrote {output_md}")
     print(f"wrote {per_workload_components_path}")
+    print(f"wrote {legacy_per_workload_components_path}")
     print(f"wrote {component_stability_path}")
     print(f"wrote {component_rollup_path}")
     return 0
