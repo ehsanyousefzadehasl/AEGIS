@@ -30,7 +30,19 @@ def read_csv_if_exists(path: Path) -> pd.DataFrame:
         return pd.DataFrame()
     return pd.read_csv(path)
 
+def require_file(path: Path, description: str) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing {description}: {path}")
+    if not path.is_file():
+        raise FileNotFoundError(f"{description} is not a file: {path}")
 
+
+def require_dir(path: Path, description: str) -> None:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing {description}: {path}")
+    if not path.is_dir():
+        raise NotADirectoryError(f"{description} is not a directory: {path}")
+    
 def markdown_table(df: pd.DataFrame, columns: list[str], max_rows: int) -> str:
     if df.empty:
         return "_No data available._\n"
@@ -392,6 +404,13 @@ def main() -> int:
 
     analysis_dir = Path(args.analysis_dir)
     output_md = Path(args.output_md) if args.output_md else analysis_dir / "window_analysis_summary.md"
+
+    require_dir(analysis_dir, "window analysis directory")
+    require_file(analysis_dir / "window_stability_summary.csv", "window stability summary CSV")
+    require_file(analysis_dir / "window_metrics_long.csv", "window metrics long CSV")
+
+    if args.measurements_csv:
+        require_file(Path(args.measurements_csv), "live threshold measurements CSV")
 
     stability = read_csv_if_exists(analysis_dir / "window_stability_summary.csv")
     long_df = read_csv_if_exists(analysis_dir / "window_metrics_long.csv")

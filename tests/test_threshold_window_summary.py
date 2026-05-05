@@ -2,9 +2,15 @@ import unittest
 
 import pandas as pd
 
+from pathlib import Path
+import tempfile
+
+
 from evaluation.threshold_sensitivity.summarize_solo_windows import (
     build_per_workload_risk_components,
     build_summary,
+    require_dir,
+    require_file,
     split_risk_component_metric,
 )
 
@@ -104,6 +110,18 @@ class TestThresholdWindowSummary(unittest.TestCase):
         self.assertIn("Per-workload risk-component breakdown", text)
         self.assertIn("a.yaml", text)
 
+    def test_require_file_reports_missing_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing.csv"
+            with self.assertRaises(FileNotFoundError):
+                require_file(missing, "test CSV")
 
+    def test_require_dir_reports_missing_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing_dir"
+            with self.assertRaises(FileNotFoundError):
+                require_dir(missing, "test directory")
+
+                
 if __name__ == "__main__":
     unittest.main()
