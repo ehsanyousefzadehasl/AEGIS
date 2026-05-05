@@ -369,3 +369,28 @@ Example question this file helps answer:
 ```text
 Is smact_risk_w30s close enough to smact_risk_w200s across workloads?
 ```
+
+
+## Generate a Markdown window-analysis summary
+
+After running `analyze_solo_windows.py`, generate a compact Markdown summary:
+
+```bash
+python evaluation/threshold_sensitivity/summarize_solo_windows.py \
+  --analysis-dir <suite-dir>/window_analysis \
+  --measurements-csv <suite-dir>/live_threshold_measurements.csv \
+  --output-md evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu.md \
+  --reference-window 200 \
+  --decision-window 30
+  ```
+
+  For partial results while a run is still active:
+
+  ```bash
+python evaluation/threshold_sensitivity/summarize_solo_windows.py \
+  --analysis-dir <suite-dir>/window_analysis_partial \
+  --measurements-csv <suite-dir>/live_threshold_measurements.csv \
+  --output-md evaluation/threshold_sensitivity/summaries/window_analysis_summary_partial.md \
+  --reference-window 200 \
+  --decision-window 30
+  ```
