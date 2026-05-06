@@ -19,6 +19,19 @@ PROFILE_METRICS = ["smact", "smocc", "drama"]
 RISK_METRICS = ["smact_risk", "smocc_risk", "drama_risk"]
 RISK_COMPONENTS = ["mean", "median", "p95", "ewma", "risk"]
 
+PROFILE_COMPONENT_STATS = [
+    ("mean", "Mean"),
+    ("median", "Median"),
+    ("p95", "P95"),
+    ("ewma", "EWMA"),
+    ("aegis_profile_risk", "AEGIS risk"),
+]
+
+PROFILE_COMPONENT_METRICS = [
+    ("smact", "SMACT"),
+    ("smocc", "SMOCC"),
+    ("drama", "DRAMA"),
+]
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -87,6 +100,98 @@ def save_figure(fig, output_dir: Path, stem: str, formats: list[str]) -> list[Pa
 
     plt.close(fig)
     return written
+
+def build_profile_component_error_frame(comparison: pd.DataFrame) -> pd.DataFrame:
+    if comparison.empty:
+        return pd.DataFrame()
+
+    required = {
+        "metric",
+        "stat",
+        "workload_id",
+        "source_gpu_count",
+        "gpu_label",
+        "relative_error_200s_vs_full",
+        "abs_error_200s_vs_full",
+    }
+    if not required.issubset(comparison.columns):
+        return pd.DataFrame()
+
+    stats = {name for name, _ in PROFILE_COMPONENT_STATS}
+    metrics = {name for name, _ in PROFILE_COMPONENT_METRICS}
+
+    df = comparison[
+        comparison["metric"].isin(metrics)
+        & comparison["stat"].isin(stats)
+    ].copy()
+
+    if df.empty:
+        return pd.DataFrame()
+
+    df["relative_error_200s_vs_full"] = pd.to_numeric(
+        df["relative_error_200s_vs_full"],
+        errors="coerce",
+    )
+    df["relative_error_percent"] = df["relative_error_200s_vs_full"] * 100.0
+
+    return df.dropna(subset=["relative_error_percent"])
+
+
+def plot_profile_component_boxplots(
+    comparison: pd.DataFrame,
+    output_dir: Path,
+    formats: list[str],
+) -> list[Path]:
+    df = build_profile_component_error_frame(comparison)
+    if df.empty:
+        return []
+
+    metric_order = [name for name, _ in PROFILE_COMPONENT_METRICS]
+    metric_labels = {name: label for name, label in PROFILE_COMPONENT_METRICS}
+
+    fig, axes = plt.subplots(1, len(metric_order), figsize=(16, 5), sharey=True)
+    if len(metric_order) == 1:
+        axes = [axes]
+
+    for ax, metric_name in zip(axes, metric_order):
+        metric_df = df[df["metric"] == metric_name].copy()
+
+        series_list = []
+        labels = []
+
+        for stat_name, stat_label in PROFILE_COMPONENT_STATS:
+            vals = metric_df.loc[
+                metric_df["stat"] == stat_name,
+                "relative_error_percent",
+            ].dropna()
+
+            if vals.empty:
+                continue
+
+            series_list.append(vals.to_list())
+            labels.append(stat_label)
+
+        ax.set_title(metric_labels[metric_name])
+
+        if not series_list:
+            ax.set_xticks([])
+            continue
+
+        ax.boxplot(series_list, tick_labels=labels, showmeans=True)
+        ax.set_xlabel("Statistic")
+        ax.tick_params(axis="x", rotation=30)
+        ax.grid(True, axis="y", alpha=0.3)
+
+    axes[0].set_ylabel("200s-vs-full relative error (%)")
+    fig.suptitle("Fixed 200s profile mismatch by statistic", y=1.02)
+    fig.tight_layout()
+
+    return save_figure(
+        fig,
+        output_dir,
+        "profile_200s_vs_full_component_boxplots",
+        formats,
+    )
 
 
 def prepare_profile_score_mismatches(comparison: pd.DataFrame) -> pd.DataFrame:
@@ -433,6 +538,15 @@ def main() -> int:
     written: list[Path] = []
 
     written.extend(plot_profile_mismatch_boxplot(profile_comparison, output_dir, formats))
+
+    written.extend(
+        plot_profile_component_boxplots(
+            profile_comparison,
+            output_dir,
+            formats,
+        )
+    )
+
     written.extend(plot_profile_top_mismatches(profile_comparison, output_dir, formats, int(args.top_k)))
 
     written.extend(

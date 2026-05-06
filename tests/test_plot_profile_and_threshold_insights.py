@@ -24,7 +24,7 @@ class TestPlotProfileAndThresholdInsights(unittest.TestCase):
                 {
                     "workload_id": "bert",
                     "metric": "smact",
-                    "stat": "profile_stat_score",
+                    "stat": "aegis_profile_risk",
                     "value_200s": 0.5,
                     "value_full": 1.0,
                     "relative_error_200s_vs_full": 0.5,
