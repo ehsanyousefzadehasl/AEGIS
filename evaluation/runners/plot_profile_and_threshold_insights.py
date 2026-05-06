@@ -33,6 +33,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--decision-window", type=float, default=30.0)
     p.add_argument("--reference-window", type=float, default=200.0)
     p.add_argument("--formats", default="pdf,png")
+    p.add_argument(
+        "--heatmap-components",
+        default="risk,mean,median,p95,ewma",
+        help="Comma-separated components for per-workload heatmaps.",
+    )
     return p.parse_args()
 
 
@@ -306,22 +311,25 @@ def prepare_per_workload_heatmap(
     per_workload: pd.DataFrame,
     *,
     top_k: int,
+    component: str,
 ) -> pd.DataFrame:
     if per_workload.empty:
         return pd.DataFrame()
 
-    required = {"task_path", "base_metric", "risk_abs_error"}
+    error_col = f"{component}_abs_error"
+
+    required = {"task_path", "base_metric", error_col}
     if not required.issubset(per_workload.columns):
         return pd.DataFrame()
 
     data = per_workload.copy()
-    data["risk_abs_error"] = pd.to_numeric(data["risk_abs_error"], errors="coerce")
+    data[error_col] = pd.to_numeric(data[error_col], errors="coerce")
     data["workload_label"] = data["task_path"].apply(lambda x: Path(str(x)).stem)
 
     pivot = data.pivot_table(
         index="workload_label",
         columns="base_metric",
-        values="risk_abs_error",
+        values=error_col,
         aggfunc="max",
     )
 
@@ -347,8 +355,13 @@ def plot_per_workload_error_heatmap(
     top_k: int,
     decision_window: float,
     reference_window: float,
+    component: str,
 ) -> list[Path]:
-    pivot = prepare_per_workload_heatmap(per_workload, top_k=top_k)
+    pivot = prepare_per_workload_heatmap(
+        per_workload,
+        top_k=top_k,
+        component=component,
+    )
     if pivot.empty:
         return []
 
@@ -365,7 +378,11 @@ def plot_per_workload_error_heatmap(
     ax.set_yticks(range(len(row_labels)))
     ax.set_yticklabels(row_labels)
 
-    ax.set_title(f"Per-workload risk error: {decision_window:g}s vs {reference_window:g}s")
+    pretty_component = "EWMA" if component == "ewma" else component.upper()
+    ax.set_title(
+        f"Per-workload {pretty_component} error: "
+        f"{decision_window:g}s vs {reference_window:g}s"
+    )
     ax.set_xlabel("Metric")
     ax.set_ylabel("Workload")
 
@@ -376,7 +393,12 @@ def plot_per_workload_error_heatmap(
 
     fig.colorbar(image, ax=ax, label="Absolute error")
 
-    return save_figure(fig, output_dir, "per_workload_risk_error_heatmap", formats)
+    return save_figure(
+        fig,
+        output_dir,
+        f"per_workload_{component}_error_heatmap",
+        formats,
+    )
 
 
 def write_inventory(output_dir: Path, written: list[Path]) -> Path:
@@ -396,6 +418,12 @@ def main() -> int:
 
     output_dir = Path(args.output_dir)
     formats = [item.strip() for item in str(args.formats).split(",") if item.strip()]
+
+    heatmap_components = [
+        item.strip()
+        for item in str(args.heatmap_components).split(",")
+        if item.strip()
+    ]
 
     profile_comparison = read_csv_if_exists(args.profile_comparison)
     window_stability = read_csv_if_exists(args.window_stability)
@@ -427,16 +455,18 @@ def main() -> int:
         )
     )
 
-    written.extend(
-        plot_per_workload_error_heatmap(
-            per_workload_components,
-            output_dir,
-            formats,
-            top_k=int(args.top_k),
-            decision_window=float(args.decision_window),
-            reference_window=float(args.reference_window),
+    for component in heatmap_components:
+        written.extend(
+            plot_per_workload_error_heatmap(
+                per_workload_components,
+                output_dir,
+                formats,
+                top_k=int(args.top_k),
+                decision_window=float(args.decision_window),
+                reference_window=float(args.reference_window),
+                component=component,
+            )
         )
-    )
 
     inventory = write_inventory(output_dir, written)
 

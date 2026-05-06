@@ -96,21 +96,24 @@ class TestPlotProfileAndThresholdInsights(unittest.TestCase):
                     "task_path": "/tmp/bert.yaml",
                     "base_metric": "smact",
                     "risk_abs_error": 0.1,
+                    "mean_abs_error": 0.2,
                 },
                 {
                     "task_path": "/tmp/bert.yaml",
                     "base_metric": "smocc",
                     "risk_abs_error": 0.2,
+                    "mean_abs_error": 0.3,
                 },
                 {
                     "task_path": "/tmp/gpt.yaml",
                     "base_metric": "drama",
                     "risk_abs_error": 0.3,
+                    "mean_abs_error": 0.4,
                 },
             ]
         )
 
-        out = prepare_per_workload_heatmap(df, top_k=2)
+        out = prepare_per_workload_heatmap(df, top_k=2, component="mean")
 
         self.assertIn("smact", out.columns)
         self.assertIn("smocc", out.columns)

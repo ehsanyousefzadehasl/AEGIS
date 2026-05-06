@@ -156,6 +156,8 @@ def main() -> int:
                 str(args.top_k),
                 "--formats",
                 str(args.formats),
+                "--heatmap-components",
+                "risk,mean,median,p95,ewma",
             ],
             dry_run=args.dry_run,
         )
