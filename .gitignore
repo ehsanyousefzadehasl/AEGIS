@@ -54,3 +54,12 @@ test_logs_folder
 evaluation/profiling/solo/analysis/solo_profiles_long.csv
 
 evaluation/threshold_sensitivity/solo_runs/
+
+
+# Keep first-memory anchored solo profile analysis artifacts.
+!evaluation/profiling/solo/analysis_first_memory_anchor/
+!evaluation/profiling/solo/analysis_first_memory_anchor/profile_200s_vs_full.csv
+!evaluation/profiling/solo/analysis_first_memory_anchor/workload_characterization.csv
+!evaluation/profiling/solo/analysis_first_memory_anchor/lucid_style_profile_labels.csv
+!evaluation/profiling/solo/analysis_first_memory_anchor/horus_oracle_inputs.csv
+!evaluation/profiling/solo/analysis_first_memory_anchor/*.md
