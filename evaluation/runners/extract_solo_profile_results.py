@@ -24,6 +24,8 @@ TIME_RE = {
     "end_to_end_time_s": re.compile(r"end_to_end_time_s:\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE),
 }
 
+PROFILE_STATS = ["mean", "max", "median", "mode", "p95", "ewma"]
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Extract solo profiling results into CSV.")
@@ -62,6 +64,11 @@ def resolve_target_uuids(meta: dict[str, Any], uuid_map: dict[int, str]) -> list
 
     visible_devices = parse_visible_devices(meta)
     return [uuid_map[idx] for idx in visible_devices if idx in uuid_map]
+
+def window_alpha(window_size: int) -> float:
+    if window_size <= 0:
+        return 0.5
+    return 2.0 / (window_size + 1.0)
 
 def first_mode_or_none(series: pd.Series) -> float | None:
     s = pd.to_numeric(series, errors="coerce").dropna()
@@ -374,13 +381,19 @@ def active_start_from_dcgm(df: pd.DataFrame, metrics: list[str]) -> pd.Timestamp
 
 def summarize_one_metric(series: pd.Series) -> dict[str, float | None]:
     s = pd.to_numeric(series, errors="coerce").dropna()
+
     if s.empty:
-        return {"mean": None, "max": None, "median": None, "mode": None}
+        return {stat: None for stat in PROFILE_STATS}
+
+    alpha = window_alpha(len(s))
+
     return {
         "mean": safe_float(s.mean()),
         "max": safe_float(s.max()),
         "median": safe_float(s.median()),
         "mode": first_mode_or_none(s),
+        "p95": safe_float(s.quantile(0.95)),
+        "ewma": safe_float(s.ewm(alpha=alpha, adjust=False).mean().iloc[-1]),
     }
 
 
@@ -428,10 +441,18 @@ def summarize_dcgm(
                 out[f"{metric_l}_delta_j"] = full_j
                 continue
 
-            stats_full = summarize_one_metric(one_full[metric]) if metric in one_full.columns else {}
-            stats_200 = summarize_one_metric(one_200[metric]) if metric in one_200.columns else {}
+            stats_full = (
+                summarize_one_metric(one_full[metric])
+                if metric in one_full.columns
+                else {}
+            )
+            stats_200 = (
+                summarize_one_metric(one_200[metric])
+                if metric in one_200.columns
+                else {}
+            )
 
-            for stat_name in ["mean", "max", "median", "mode"]:
+            for stat_name in PROFILE_STATS:
                 out[f"{metric_l}_{stat_name}_full"] = stats_full.get(stat_name)
                 out[f"{metric_l}_{stat_name}_200s"] = stats_200.get(stat_name)
 
@@ -454,7 +475,7 @@ def summarize_dcgm(
             stats_full = summarize_one_metric(one_full[metric]) if metric in one_full.columns else {}
             stats_200 = summarize_one_metric(one_200[metric]) if metric in one_200.columns else {}
 
-            for stat_name in ["mean", "max", "median", "mode"]:
+            for stat_name in PROFILE_STATS:
                 out[f"{metric_l}_{stat_name}_full{suffix}"] = stats_full.get(stat_name)
                 out[f"{metric_l}_{stat_name}_200s{suffix}"] = stats_200.get(stat_name)
 
@@ -511,7 +532,10 @@ def build_common_row(
     return row
 
 
-def extract_rows(runs_root: Path, window_sec: float) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def extract_rows(
+    runs_root: Path,
+    window_sec: float,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     index_map = load_index_map(runs_root)
     uuid_map = current_uuid_map_by_index()
 
