@@ -63,3 +63,9 @@ evaluation/threshold_sensitivity/solo_runs/
 !evaluation/profiling/solo/analysis_first_memory_anchor/lucid_style_profile_labels.csv
 !evaluation/profiling/solo/analysis_first_memory_anchor/horus_oracle_inputs.csv
 !evaluation/profiling/solo/analysis_first_memory_anchor/*.md
+
+
+# Keep first-memory anchored extracted solo profile CSVs.
+!evaluation/profiling/solo/extracted_first_memory_anchor/
+!evaluation/profiling/solo/extracted_first_memory_anchor/solo_profile_results_1gpu.csv
+!evaluation/profiling/solo/extracted_first_memory_anchor/solo_profile_results_2gpu.csv
