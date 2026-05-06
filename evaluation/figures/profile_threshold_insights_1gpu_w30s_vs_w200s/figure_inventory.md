@@ -2,6 +2,8 @@
 
 - `profile_200s_vs_full_boxplot.pdf`
 - `profile_200s_vs_full_boxplot.png`
+- `profile_200s_vs_full_component_boxplots.pdf`
+- `profile_200s_vs_full_component_boxplots.png`
 - `profile_top_mismatches.pdf`
 - `profile_top_mismatches.png`
 - `threshold_window_stability_curve.pdf`
