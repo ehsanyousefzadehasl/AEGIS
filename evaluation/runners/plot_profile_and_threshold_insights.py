@@ -99,7 +99,7 @@ def prepare_profile_score_mismatches(comparison: pd.DataFrame) -> pd.DataFrame:
 
     out = comparison[
         comparison["metric"].isin(PROFILE_METRICS)
-        & (comparison["stat"] == "profile_stat_score")
+        & (comparison["stat"] == "aegis_profile_risk")
     ].copy()
 
     if out.empty:
