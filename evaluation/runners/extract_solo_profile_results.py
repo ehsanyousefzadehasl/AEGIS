@@ -32,6 +32,21 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--runs-root", type=str, default=str(DEFAULT_RUNS_ROOT))
     p.add_argument("--output-dir", type=str, default=str(DEFAULT_OUTPUT_DIR))
     p.add_argument("--window-sec", type=float, default=200.0)
+    p.add_argument(
+        "--anchor",
+        choices=["activity", "first-memory"],
+        default="activity",
+        help=(
+            "activity keeps the existing behavior. first-memory anchors all metrics "
+            "to the first assigned-GPU memory increase."
+        ),
+    )
+    p.add_argument(
+        "--memory-active-delta-mib",
+        type=float,
+        default=1.0,
+        help="Minimum memory increase over initial baseline to define first-memory anchor.",
+    )
     return p.parse_args()
 
 
@@ -226,6 +241,93 @@ def normalize_nvidia_smi_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def first_sample_at_or_after(
+    df: pd.DataFrame,
+    anchor_ts: pd.Timestamp | None,
+) -> pd.Timestamp | None:
+    if anchor_ts is None or df.empty or "timestamp" not in df.columns:
+        return None
+
+    timestamps = pd.to_datetime(df["timestamp"], errors="coerce")
+    candidates = timestamps[timestamps >= anchor_ts].dropna()
+
+    if candidates.empty:
+        return None
+
+    return candidates.min()
+
+
+def first_memory_anchor_from_nvidia(
+    csv_path: Path,
+    target_uuids_in_order: list[str],
+    memory_active_delta_mib: float,
+) -> pd.Timestamp | None:
+    if not csv_path.exists() or not target_uuids_in_order:
+        return None
+
+    try:
+        df = pd.read_csv(csv_path, skipinitialspace=True)
+    except Exception:
+        return None
+
+    df = normalize_nvidia_smi_columns(df)
+    required = {"uuid", "timestamp", "memory_used"}
+    if not required.issubset(df.columns):
+        return None
+
+    df = df[df["uuid"].isin(target_uuids_in_order)].copy()
+    df = df.dropna(subset=["timestamp", "memory_used"])
+    if df.empty:
+        return None
+
+    df = df.sort_values(["uuid", "timestamp"])
+
+    anchor_times: list[pd.Timestamp] = []
+
+    for uuid in target_uuids_in_order:
+        one = df[df["uuid"] == uuid].copy()
+        if one.empty:
+            continue
+
+        baseline = safe_float(one["memory_used"].iloc[0])
+        if baseline is None:
+            continue
+
+        active = one[
+            one["memory_used"]
+            > float(baseline) + float(memory_active_delta_mib)
+        ]
+
+        # If logging started after allocation, the first sample may already be nonzero.
+        if active.empty and float(baseline) > float(memory_active_delta_mib):
+            anchor_times.append(one["timestamp"].iloc[0])
+            continue
+
+        if not active.empty:
+            anchor_times.append(active["timestamp"].iloc[0])
+
+    if not anchor_times:
+        return None
+
+    return min(anchor_times)
+
+
+def timestamp_diff_seconds(
+    later: pd.Timestamp | None,
+    earlier: pd.Timestamp | None,
+) -> float | None:
+    if later is None or earlier is None:
+        return None
+    return safe_float((later - earlier).total_seconds())
+
+
+def timestamp_to_str(value: pd.Timestamp | None) -> str | None:
+    if value is None or pd.isna(value):
+        return None
+    return value.isoformat()
+
+
+
 def active_start_from_nvidia(df: pd.DataFrame) -> pd.Timestamp | None:
     if df.empty or "timestamp" not in df.columns or "memory_used" not in df.columns:
         return None
@@ -239,6 +341,8 @@ def summarize_nvidia_memory(
     csv_path: Path,
     target_uuids_in_order: list[str],
     window_sec: float,
+    *,
+    anchor_ts: pd.Timestamp | None = None,
 ) -> dict[str, float | None]:
     out: dict[str, float | None] = {}
     if not csv_path.exists() or not target_uuids_in_order:
@@ -257,7 +361,11 @@ def summarize_nvidia_memory(
     if df.empty:
         return out
 
-    start_ts = active_start_from_nvidia(df)
+    if anchor_ts is not None:
+        start_ts = first_sample_at_or_after(df, anchor_ts)
+    else:
+        start_ts = active_start_from_nvidia(df)
+
     if start_ts is None:
         return out
 
@@ -379,6 +487,46 @@ def active_start_from_dcgm(df: pd.DataFrame, metrics: list[str]) -> pd.Timestamp
     return active["timestamp"].min()
 
 
+def load_target_dcgm_df(
+    dcgm_path: Path,
+    target_gpu_indices_in_order: list[int],
+) -> pd.DataFrame:
+    if not dcgm_path.exists() or not target_gpu_indices_in_order:
+        return pd.DataFrame()
+
+    df = parse_dcgm_log(dcgm_path)
+    if df.empty:
+        return pd.DataFrame()
+
+    df = df[df["gpu_index"].isin(target_gpu_indices_in_order)].copy()
+    if df.empty:
+        return pd.DataFrame()
+
+    return df
+
+
+def dcgm_activity_anchor_from_df(df: pd.DataFrame) -> pd.Timestamp | None:
+    return active_start_from_dcgm(
+        df,
+        metrics=["GPUTL", "SMACT", "SMOCC", "DRAMA"],
+    )
+
+def dcgm_activity_anchor_from_df_at_or_after(
+    df: pd.DataFrame,
+    anchor_ts: pd.Timestamp | None,
+) -> pd.Timestamp | None:
+    if anchor_ts is None or df.empty or "timestamp" not in df.columns:
+        return None
+
+    data = df[df["timestamp"] >= anchor_ts].copy()
+    if data.empty:
+        return None
+
+    return active_start_from_dcgm(
+        data,
+        metrics=["GPUTL", "SMACT", "SMOCC", "DRAMA"],
+    )
+
 def summarize_one_metric(series: pd.Series) -> dict[str, float | None]:
     s = pd.to_numeric(series, errors="coerce").dropna()
 
@@ -401,20 +549,22 @@ def summarize_dcgm(
     dcgm_path: Path,
     target_gpu_indices_in_order: list[int],
     window_sec: float,
+    *,
+    anchor_ts: pd.Timestamp | None = None,
 ) -> dict[str, float | None]:
     out: dict[str, float | None] = {}
     if not dcgm_path.exists() or not target_gpu_indices_in_order:
         return out
 
-    df = parse_dcgm_log(dcgm_path)
+    df = load_target_dcgm_df(dcgm_path, target_gpu_indices_in_order)
     if df.empty:
         return out
 
-    df = df[df["gpu_index"].isin(target_gpu_indices_in_order)].copy()
-    if df.empty:
-        return out
+    if anchor_ts is not None:
+        start_ts = first_sample_at_or_after(df, anchor_ts)
+    else:
+        start_ts = dcgm_activity_anchor_from_df(df)
 
-    start_ts = active_start_from_dcgm(df, metrics=["GPUTL", "SMACT", "SMOCC", "DRAMA"])
     if start_ts is None:
         return out
 
@@ -535,6 +685,9 @@ def build_common_row(
 def extract_rows(
     runs_root: Path,
     window_sec: float,
+    *,
+    anchor: str = "activity",
+    memory_active_delta_mib: float = 1.0,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     index_map = load_index_map(runs_root)
     uuid_map = current_uuid_map_by_index()
@@ -546,6 +699,37 @@ def extract_rows(
         meta = read_json(run_dir / "meta.json")
         visible_devices = parse_visible_devices(meta)
         target_uuids = resolve_target_uuids(meta, uuid_map)
+
+        memory_anchor_ts = first_memory_anchor_from_nvidia(
+            run_dir / "nvidia_smi.csv",
+            target_uuids,
+            memory_active_delta_mib=float(memory_active_delta_mib),
+        )
+
+        dcgm_df_for_anchor = load_target_dcgm_df(
+            run_dir / "dcgm.log",
+            visible_devices,
+        )
+
+        dcgm_activity_ts = (
+            dcgm_activity_anchor_from_df(dcgm_df_for_anchor)
+            if not dcgm_df_for_anchor.empty
+            else None
+        )
+
+        dcgm_activity_after_memory_ts = (
+            dcgm_activity_anchor_from_df_at_or_after(dcgm_df_for_anchor, memory_anchor_ts)
+            if memory_anchor_ts is not None and not dcgm_df_for_anchor.empty
+            else None
+        )
+
+        dcgm_effective_memory_anchor_ts = (
+            first_sample_at_or_after(dcgm_df_for_anchor, memory_anchor_ts)
+            if memory_anchor_ts is not None and not dcgm_df_for_anchor.empty
+            else None
+        )
+
+        profile_anchor_ts = memory_anchor_ts if anchor == "first-memory" else None
 
         stdout_text = read_text(run_dir / "stdout.log")
         time_json = read_json(run_dir / "time.json")
@@ -574,6 +758,20 @@ def extract_rows(
             "summary_exists": (run_dir / "artifacts" / "summary" / "summary.txt").exists(),
             "summary_path": str(run_dir / "artifacts" / "summary" / "summary.txt"),
             "faketensor_path": str(run_dir / "artifacts" / "faketensor" / "faketensor.txt"),
+            "profile_anchor": anchor,
+            "profile_anchor_found": profile_anchor_ts is not None if anchor == "first-memory" else True,
+            "first_memory_anchor_timestamp": timestamp_to_str(memory_anchor_ts),
+            "first_dcgm_activity_timestamp": timestamp_to_str(dcgm_activity_ts),
+            "first_dcgm_activity_after_memory_timestamp": timestamp_to_str(dcgm_activity_after_memory_ts),
+            "dcgm_effective_memory_anchor_timestamp": timestamp_to_str(dcgm_effective_memory_anchor_ts),
+            "memory_to_dcgm_sample_lag_s": timestamp_diff_seconds(
+                dcgm_effective_memory_anchor_ts,
+                memory_anchor_ts,
+            ),
+            "memory_to_dcgm_activity_lag_s": timestamp_diff_seconds(
+                dcgm_activity_after_memory_ts,
+                memory_anchor_ts,
+            ),
         }
 
         row.update(
@@ -581,13 +779,16 @@ def extract_rows(
                 run_dir / "nvidia_smi.csv",
                 target_uuids_in_order=target_uuids,
                 window_sec=window_sec,
+                anchor_ts=profile_anchor_ts,
             )
         )
+
         row.update(
             summarize_dcgm(
                 run_dir / "dcgm.log",
                 target_gpu_indices_in_order=visible_devices,
                 window_sec=window_sec,
+                anchor_ts=profile_anchor_ts,
             )
         )
 
@@ -650,7 +851,12 @@ def main() -> None:
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows_1gpu, rows_2gpu = extract_rows(runs_root, args.window_sec)
+    rows_1gpu, rows_2gpu = extract_rows(
+        runs_root,
+        args.window_sec,
+        anchor=args.anchor,
+        memory_active_delta_mib=float(args.memory_active_delta_mib),
+    )
 
     out_1 = output_dir / "solo_profile_results_1gpu.csv"
     out_2 = output_dir / "solo_profile_results_2gpu.csv"
