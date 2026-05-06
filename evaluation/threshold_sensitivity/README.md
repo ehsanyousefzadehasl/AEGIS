@@ -399,3 +399,15 @@ python evaluation/threshold_sensitivity/summarize_solo_windows.py \
   --reference-window 200 \
   --decision-window 30
   ```
+
+
+
+  ```bash
+  python evaluation/threshold_sensitivity/generate_analysis_artifacts.py \
+  --suite-dir "$SUITE" \
+  --analysis-name window_analysis \
+  --summary-prefix window_analysis_summary_1gpu \
+  --figure-prefix profile_threshold_insights_1gpu \
+  --decision-windows 30,40,60,120 \
+  --reference-window 200
+  ```
