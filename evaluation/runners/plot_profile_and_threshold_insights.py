@@ -33,6 +33,16 @@ PROFILE_COMPONENT_METRICS = [
     ("drama", "DRAMA"),
 ]
 
+
+PROFILE_TOP_MISMATCH_STATS = [
+    ("aegis_profile_risk", "AEGIS risk", "profile_top_mismatches"),
+    ("mean", "Mean", "profile_top_mismatches_mean"),
+    ("median", "Median", "profile_top_mismatches_median"),
+    ("p95", "P95", "profile_top_mismatches_p95"),
+    ("ewma", "EWMA", "profile_top_mismatches_ewma"),
+]
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Plot profile-mismatch and threshold-window insight figures."
@@ -137,6 +147,44 @@ def build_profile_component_error_frame(comparison: pd.DataFrame) -> pd.DataFram
     return df.dropna(subset=["relative_error_percent"])
 
 
+def prepare_profile_mismatches(
+    comparison: pd.DataFrame,
+    *,
+    stat_name: str,
+) -> pd.DataFrame:
+    if comparison.empty:
+        return pd.DataFrame()
+
+    required = {
+        "metric",
+        "stat",
+        "relative_error_200s_vs_full",
+        "value_200s",
+        "value_full",
+    }
+    if not required.issubset(comparison.columns):
+        return pd.DataFrame()
+
+    out = comparison[
+        comparison["metric"].isin(PROFILE_METRICS)
+        & (comparison["stat"] == stat_name)
+    ].copy()
+
+    if out.empty:
+        return out
+
+    out["relative_error_200s_vs_full"] = pd.to_numeric(
+        out["relative_error_200s_vs_full"],
+        errors="coerce",
+    )
+    out["relative_error_percent"] = out["relative_error_200s_vs_full"] * 100.0
+    out["value_200s"] = pd.to_numeric(out["value_200s"], errors="coerce")
+    out["value_full"] = pd.to_numeric(out["value_full"], errors="coerce")
+    out["workload_label"] = out.apply(workload_label, axis=1)
+
+    return out.dropna(subset=["relative_error_percent"])
+
+
 def plot_profile_component_boxplots(
     comparison: pd.DataFrame,
     output_dir: Path,
@@ -195,31 +243,10 @@ def plot_profile_component_boxplots(
 
 
 def prepare_profile_score_mismatches(comparison: pd.DataFrame) -> pd.DataFrame:
-    if comparison.empty:
-        return pd.DataFrame()
-
-    required = {"metric", "stat", "relative_error_200s_vs_full", "value_200s", "value_full"}
-    if not required.issubset(comparison.columns):
-        return pd.DataFrame()
-
-    out = comparison[
-        comparison["metric"].isin(PROFILE_METRICS)
-        & (comparison["stat"] == "aegis_profile_risk")
-    ].copy()
-
-    if out.empty:
-        return out
-
-    out["relative_error_200s_vs_full"] = pd.to_numeric(
-        out["relative_error_200s_vs_full"],
-        errors="coerce",
+    return prepare_profile_mismatches(
+        comparison,
+        stat_name="aegis_profile_risk",
     )
-    out["relative_error_percent"] = out["relative_error_200s_vs_full"] * 100.0
-    out["value_200s"] = pd.to_numeric(out["value_200s"], errors="coerce")
-    out["value_full"] = pd.to_numeric(out["value_full"], errors="coerce")
-    out["workload_label"] = out.apply(workload_label, axis=1)
-
-    return out.dropna(subset=["relative_error_percent"])
 
 
 def plot_profile_mismatch_boxplot(
@@ -254,13 +281,20 @@ def plot_profile_mismatch_boxplot(
     return save_figure(fig, output_dir, "profile_200s_vs_full_boxplot", formats)
 
 
-def plot_profile_top_mismatches(
+def plot_profile_top_mismatches_for_stat(
     comparison: pd.DataFrame,
     output_dir: Path,
     formats: list[str],
     top_k: int,
+    *,
+    stat_name: str,
+    stat_label: str,
+    stem: str,
 ) -> list[Path]:
-    data = prepare_profile_score_mismatches(comparison)
+    data = prepare_profile_mismatches(
+        comparison,
+        stat_name=stat_name,
+    )
     if data.empty:
         return []
 
@@ -275,11 +309,27 @@ def plot_profile_top_mismatches(
     ax.barh(top["label"], top["relative_error_percent"])
     ax.invert_yaxis()
     ax.set_xlabel("200s-vs-full relative error (%)")
-    ax.set_title("Largest fixed-profile mismatches")
+    ax.set_title(f"Largest fixed-profile mismatches ({stat_label})")
     ax.grid(True, axis="x", alpha=0.3)
 
-    return save_figure(fig, output_dir, "profile_top_mismatches", formats)
+    return save_figure(fig, output_dir, stem, formats)
 
+
+def plot_profile_top_mismatches(
+    comparison: pd.DataFrame,
+    output_dir: Path,
+    formats: list[str],
+    top_k: int,
+) -> list[Path]:
+    return plot_profile_top_mismatches_for_stat(
+        comparison,
+        output_dir,
+        formats,
+        top_k,
+        stat_name="aegis_profile_risk",
+        stat_label="AEGIS risk",
+        stem="profile_top_mismatches",
+    )
 
 def prepare_window_stability(stability: pd.DataFrame, reference_window: float) -> pd.DataFrame:
     if stability.empty:
@@ -548,6 +598,19 @@ def main() -> int:
     )
 
     written.extend(plot_profile_top_mismatches(profile_comparison, output_dir, formats, int(args.top_k)))
+
+    for stat_name, stat_label, stem in PROFILE_TOP_MISMATCH_STATS[1:]:
+        written.extend(
+            plot_profile_top_mismatches_for_stat(
+                profile_comparison,
+                output_dir,
+                formats,
+                int(args.top_k),
+                stat_name=stat_name,
+                stat_label=stat_label,
+                stem=stem,
+            )
+        )
 
     written.extend(
         plot_window_stability_curve(
