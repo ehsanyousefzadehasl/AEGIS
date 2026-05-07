@@ -1,8 +1,10 @@
-# Threshold Sensitivity: Solo Runs
+# Threshold Sensitivity: First-Observed-GPU-Activity Solo Runs
 
 > For the full paper-artifact workflow, see [Paper Artifact Workflow](../PAPER_ARTIFACT_WORKFLOW.md).
 
-The solo workflow runs each workload alone, waits for time-to-first-kernel (TTFK), and records GPU metric summaries for several post-TTFK windows from the same workload execution.
+This workflow runs each workload alone, waits until the target job is first observed as active on the GPU, and records GPU metric summaries for several post-activity windows from the same workload execution.
+
+Older scripts and CSV columns may still use `ttfk` as an internal shorthand. In this artifact, `ttfk_wait_seconds` means the wait until first observed GPU activity, not an exact CUDA kernel-launch timestamp.
 
 ## Default summary windows
 
@@ -12,13 +14,19 @@ The manifest runner uses these windows by default:
 5,10,20,30,40,60,120,200
 ```
 
-The main AEGIS decision window remains:
+The current candidate decision windows used for paper figures are:
 
 ```text
-30 seconds
+30,40,60,120
 ```
 
-So each workload is executed once, and the output row includes metrics for all requested summary windows.
+The reference window is:
+
+```text
+200 seconds
+```
+
+Each workload is executed once, and the output row includes metrics for all requested summary windows.
 
 ## Dry run a manifest
 
@@ -67,6 +75,39 @@ python evaluation/threshold_sensitivity/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0
+```
+
+## Run with `screen`
+
+For long solo campaigns, use `screen` so the run continues after disconnecting:
+
+```bash
+screen -S solo-1gpu
+```
+
+Inside the screen session:
+
+```bash
+cd /home/ehyo/AEGIS
+
+python evaluation/threshold_sensitivity/run_solo_baselines.py \
+  --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
+  --workdir . \
+  --gpu-id 0 \
+  --suite-id solo_1gpu_threshold_windows_$(date +%Y%m%d_%H%M%S) \
+  2>&1 | tee evaluation/threshold_sensitivity/solo_1gpu_threshold_windows.log
+```
+
+Detach:
+
+```bash
+Ctrl-a d
+```
+
+Reattach:
+
+```bash
+screen -r solo-1gpu
 ```
 
 ## Override summary windows
@@ -132,7 +173,9 @@ time_from_ttfk_to_window_ready_seconds
 time_from_window_ready_to_finish_seconds
 ```
 
-Important decision-window metric columns:
+The `ttfk_*` names are legacy/internal names. Interpret them as first-observed-GPU-activity timing fields.
+
+Important metric columns:
 
 ```text
 smact_mean
@@ -171,82 +214,8 @@ smact_risk_w200s
 
 The same suffix pattern applies to `smocc_*`, `drama_*`, memory, and window metadata columns.
 
-## Inspect a completed suite
+## Inspect a completed or running suite
 
-Replace `<suite-dir>` with the printed suite directory:
-
-```bash
-python - <<'PY'
-import pandas as pd
-from pathlib import Path
-
-suite = Path("<suite-dir>")
-index = pd.read_csv(suite / "index.csv")
-print(index[[
-    "runner_status",
-    "workload_status",
-    "failure_stage",
-    "return_code",
-    "measurement_recorded",
-    "summary_windows_collected",
-]])
-
-measurements_path = suite / "live_threshold_measurements.csv"
-if measurements_path.exists():
-    df = pd.read_csv(measurements_path)
-    cols = [
-        "finish_status",
-        "return_code",
-        "window_seconds",
-        "summary_windows_collected",
-        "smact_risk",
-        "smact_risk_w5s",
-        "smact_risk_w10s",
-        "smact_risk_w20s",
-        "smact_risk_w30s",
-        "smact_risk_w40s",
-        "smact_risk_w60s",
-        "smact_risk_w120s",
-        "smact_risk_w200s",
-    ]
-    print(df[[c for c in cols if c in df.columns]])
-PY
-```
-
-## Run with screen
-
-For long solo campaigns, use `screen` so the run continues after disconnecting:
-
-```bash
-screen -S solo-1gpu
-```
-
-Inside the screen session:
-
-```bash
-cd /home/ehyo/AEGIS
-
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
-  --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
-  --workdir . \
-  --gpu-id 0 \
-  --suite-id solo_1gpu_threshold_windows_$(date +%Y%m%d_%H%M%S) \
-  2>&1 | tee evaluation/threshold_sensitivity/solo_1gpu_threshold_windows.log
-```
-
-Detach:
-
-```bash
-Ctrl-a d
-```
-
-Reattach:
-
-```bash
-screen -r solo-1gpu
-```
-
-### Inspect partial results while a run is still active
 Set the latest suite directory:
 
 ```bash
@@ -281,59 +250,56 @@ print(index[[c for c in cols if c in index.columns]].tail(10))
 PY
 ```
 
-Run window analysis on partial results:
+Inspect measurement rows:
 
 ```bash
-export SUITE=$(ls -td evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_* | head -1)
-echo "$SUITE"
+python - <<'PY'
+import os
+import pandas as pd
 
-python evaluation/threshold_sensitivity/summarize_solo_windows.py \
-  --analysis-dir "$SUITE/window_analysis_partial" \
-  --measurements-csv "$SUITE/live_threshold_measurements.csv" \
-  --output-md evaluation/threshold_sensitivity/summaries/window_analysis_summary_partial.md \
-  --reference-window 200 \
-  --decision-window 30
+suite = os.environ["SUITE"]
+measurements_path = f"{suite}/live_threshold_measurements.csv"
+df = pd.read_csv(measurements_path)
+
+cols = [
+    "finish_status",
+    "return_code",
+    "window_seconds",
+    "summary_windows_collected",
+    "smact_risk",
+    "smact_risk_w30s",
+    "smact_risk_w40s",
+    "smact_risk_w60s",
+    "smact_risk_w120s",
+    "smact_risk_w200s",
+]
+print(df[[c for c in cols if c in df.columns]].tail(20))
+PY
 ```
-
-Inspect the partial stability summary:
-
-```bash
-cat "$SUITE/window_analysis_partial/window_stability_summary.csv"
-```
-
-
-
-## Notes
-
-- Start with `all_specs_1gpu.txt`.
-- The current solo runner selects one GPU for each run.
-- Use `--dry-run` before long campaigns.
-- Failed runs are kept in `index.csv`; do not delete them from the dataset.
-- The default windows are intended for window-sensitivity analysis. The final paper should select the decision window based on the collected data.
-
-
 
 ## Analyze window stability
 
-After a solo suite finishes, run the window-stability analyzer on its measurement CSV:
+After a suite finishes, run the window-stability analyzer:
 
 ```bash
 python evaluation/threshold_sensitivity/analyze_solo_windows.py \
-  --measurements-csv <suite-dir>/live_threshold_measurements.csv \
-  --output-dir <suite-dir>/window_analysis \
+  --measurements-csv "$SUITE/live_threshold_measurements.csv" \
+  --output-dir "$SUITE/window_analysis" \
   --reference-window 200
 ```
 
 This writes:
 
 ```text
-<suite-dir>/window_analysis/window_metrics_long.csv
-<suite-dir>/window_analysis/window_stability_summary.csv
+$SUITE/window_analysis/window_metrics_long.csv
+$SUITE/window_analysis/window_stability_summary.csv
+$SUITE/window_analysis/risk_component_stability.csv
+$SUITE/window_analysis/risk_component_stability_rollup.csv
 ```
 
 ### `window_metrics_long.csv`
 
-This file converts the wide per-run metric columns into long format.
+This file converts wide per-run metric columns into long format.
 
 Example wide columns:
 
@@ -349,8 +315,6 @@ become rows like:
 ```text
 run_id, task_path, summary_window_seconds, metric, value
 ```
-
-This format is easier to group, filter, and plot.
 
 ### `window_stability_summary.csv`
 
@@ -369,47 +333,114 @@ p95_abs_error
 mean_abs_relative_error
 ```
 
-Use this output to check whether the 30-second decision window is close enough to the 200-second reference window, or whether another window is more stable.
+## Generate final Markdown summaries
 
-Example question this file helps answer:
+Generate final summaries for the decision-window candidates:
 
-```text
-Is smact_risk_w30s close enough to smact_risk_w200s across workloads?
+```bash
+for W in 30 40 60 120; do
+  python evaluation/threshold_sensitivity/summarize_solo_windows.py \
+    --analysis-dir "$SUITE/window_analysis" \
+    --measurements-csv "$SUITE/live_threshold_measurements.csv" \
+    --output-md "evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu_w${W}s_vs_w200s.md" \
+    --reference-window 200 \
+    --decision-window "$W"
+done
 ```
 
+This writes:
 
-## Generate a Markdown window-analysis summary
+```text
+evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu_w30s_vs_w200s.md
+evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu_w40s_vs_w200s.md
+evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu_w60s_vs_w200s.md
+evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu_w120s_vs_w200s.md
+```
 
-After running `analyze_solo_windows.py`, generate a compact Markdown summary:
+## Generate clean threshold-window figures
+
+Generate first-observed-GPU-activity threshold figures in separate folders:
+
+```bash
+for W in 30 40 60 120; do
+  python evaluation/runners/plot_profile_and_threshold_insights.py \
+    --window-stability "$SUITE/window_analysis/window_stability_summary.csv" \
+    --risk-component-rollup "$SUITE/window_analysis/risk_component_stability_rollup.csv" \
+    --per-workload-components "$SUITE/window_analysis/per_workload_risk_components_w${W}s_vs_w200s.csv" \
+    --output-dir "evaluation/figures/first_gpu_activity_windows_w${W}s_vs_w200s" \
+    --decision-window "$W" \
+    --reference-window 200 \
+    --top-k 12 \
+    --heatmap-components risk,mean,median,p95,ewma \
+    --skip-profile-plots
+done
+```
+
+Expected figure folders:
+
+```text
+evaluation/figures/first_gpu_activity_windows_w30s_vs_w200s/
+evaluation/figures/first_gpu_activity_windows_w40s_vs_w200s/
+evaluation/figures/first_gpu_activity_windows_w60s_vs_w200s/
+evaluation/figures/first_gpu_activity_windows_w120s_vs_w200s/
+```
+
+Each folder should contain only threshold-window figures:
+
+```text
+threshold_window_stability_curve.*
+risk_component_ablation_curve.*
+per_workload_risk_error_heatmap.*
+per_workload_mean_error_heatmap.*
+per_workload_median_error_heatmap.*
+per_workload_p95_error_heatmap.*
+per_workload_ewma_error_heatmap.*
+figure_inventory.md
+```
+
+## Partial results while a run is still active
+
+Run analysis into a separate partial directory:
+
+```bash
+python evaluation/threshold_sensitivity/analyze_solo_windows.py \
+  --measurements-csv "$SUITE/live_threshold_measurements.csv" \
+  --output-dir "$SUITE/window_analysis_partial" \
+  --reference-window 200
+```
+
+Then generate a partial summary:
 
 ```bash
 python evaluation/threshold_sensitivity/summarize_solo_windows.py \
-  --analysis-dir <suite-dir>/window_analysis \
-  --measurements-csv <suite-dir>/live_threshold_measurements.csv \
-  --output-md evaluation/threshold_sensitivity/summaries/window_analysis_summary_1gpu.md \
-  --reference-window 200 \
-  --decision-window 30
-  ```
-
-  For partial results while a run is still active:
-
-  ```bash
-python evaluation/threshold_sensitivity/summarize_solo_windows.py \
-  --analysis-dir <suite-dir>/window_analysis_partial \
-  --measurements-csv <suite-dir>/live_threshold_measurements.csv \
+  --analysis-dir "$SUITE/window_analysis_partial" \
+  --measurements-csv "$SUITE/live_threshold_measurements.csv" \
   --output-md evaluation/threshold_sensitivity/summaries/window_analysis_summary_partial.md \
   --reference-window 200 \
   --decision-window 30
-  ```
+```
 
+Use partial artifacts only for inspection, not final paper claims.
 
+## Build the curated paper artifact index
 
-  ```bash
-  python evaluation/threshold_sensitivity/generate_analysis_artifacts.py \
-  --suite-dir "$SUITE" \
-  --analysis-name window_analysis \
-  --summary-prefix window_analysis_summary_1gpu \
-  --figure-prefix profile_threshold_insights_1gpu \
-  --decision-windows 30,40,60,120 \
-  --reference-window 200
-  ```
+After final analyses and figures are generated:
+
+```bash
+python evaluation/runners/build_paper_artifact_index.py \
+  --suite-dir "$SUITE"
+```
+
+This writes:
+
+```text
+evaluation/paper_artifacts/
+```
+
+## Notes
+
+- Start with `all_specs_1gpu.txt`.
+- The current solo runner selects one GPU for each run.
+- Use `--dry-run` before long campaigns.
+- Failed runs are kept in `index.csv`; do not delete them from the dataset.
+- The final paper should choose the decision window based on the collected latency/stability tradeoff, not by assumption.
