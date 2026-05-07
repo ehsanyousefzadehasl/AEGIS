@@ -61,6 +61,8 @@ def parse_args() -> argparse.Namespace:
         default="risk,mean,median,p95,ewma",
         help="Comma-separated components for per-workload heatmaps.",
     )
+    p.add_argument("--skip-profile-plots", action="store_true")
+    p.add_argument("--skip-threshold-plots", action="store_true")
     return p.parse_args()
 
 
@@ -587,63 +589,65 @@ def main() -> int:
 
     written: list[Path] = []
 
-    written.extend(plot_profile_mismatch_boxplot(profile_comparison, output_dir, formats))
+    if not args.skip_profile_plots:
+        written.extend(plot_profile_mismatch_boxplot(profile_comparison, output_dir, formats))
 
-    written.extend(
-        plot_profile_component_boxplots(
-            profile_comparison,
-            output_dir,
-            formats,
-        )
-    )
-
-    written.extend(plot_profile_top_mismatches(profile_comparison, output_dir, formats, int(args.top_k)))
-
-    for stat_name, stat_label, stem in PROFILE_TOP_MISMATCH_STATS[1:]:
         written.extend(
-            plot_profile_top_mismatches_for_stat(
+            plot_profile_component_boxplots(
                 profile_comparison,
                 output_dir,
                 formats,
-                int(args.top_k),
-                stat_name=stat_name,
-                stat_label=stat_label,
-                stem=stem,
             )
         )
 
-    written.extend(
-        plot_window_stability_curve(
-            window_stability,
-            output_dir,
-            formats,
-            reference_window=float(args.reference_window),
-            decision_window=float(args.decision_window),
-        )
-    )
+        written.extend(plot_profile_top_mismatches(profile_comparison, output_dir, formats, int(args.top_k)))
 
-    written.extend(
-        plot_risk_component_ablation(
-            risk_component_rollup,
-            output_dir,
-            formats,
-            reference_window=float(args.reference_window),
-            decision_window=float(args.decision_window),
-        )
-    )
+        for stat_name, stat_label, stem in PROFILE_TOP_MISMATCH_STATS[1:]:
+            written.extend(
+                plot_profile_top_mismatches_for_stat(
+                    profile_comparison,
+                    output_dir,
+                    formats,
+                    int(args.top_k),
+                    stat_name=stat_name,
+                    stat_label=stat_label,
+                    stem=stem,
+                )
+            )
 
-    for component in heatmap_components:
+    if not args.skip_threshold_plots:
         written.extend(
-            plot_per_workload_error_heatmap(
-                per_workload_components,
+            plot_window_stability_curve(
+                window_stability,
                 output_dir,
                 formats,
-                top_k=int(args.top_k),
-                decision_window=float(args.decision_window),
                 reference_window=float(args.reference_window),
-                component=component,
+                decision_window=float(args.decision_window),
             )
         )
+
+        written.extend(
+            plot_risk_component_ablation(
+                risk_component_rollup,
+                output_dir,
+                formats,
+                reference_window=float(args.reference_window),
+                decision_window=float(args.decision_window),
+            )
+        )
+
+        for component in heatmap_components:
+            written.extend(
+                plot_per_workload_error_heatmap(
+                    per_workload_components,
+                    output_dir,
+                    formats,
+                    top_k=int(args.top_k),
+                    decision_window=float(args.decision_window),
+                    reference_window=float(args.reference_window),
+                    component=component,
+                )
+            )
 
     inventory = write_inventory(output_dir, written)
 
