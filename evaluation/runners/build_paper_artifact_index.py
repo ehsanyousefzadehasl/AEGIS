@@ -567,44 +567,73 @@ def build_figure_index(figures_dir: Path, output_dir: Path) -> None:
     figure_md = output_dir / "figure_index.md"
 
     lines = ["# Figure Index\n"]
-    lines.append("## First-observed-GPU-activity threshold-window figures\n")
 
-    for window in DECISION_WINDOWS:
-        fig_dir = figures_dir / f"profile_threshold_insights_1gpu_w{window}s_vs_w{REFERENCE_WINDOW}s"
-        lines.append(f"\n### {window}s vs {REFERENCE_WINDOW}s\n")
+    lines.append(
+        "This file groups generated figures by experiment family. "
+        "Solo-profile figures compare a fixed 200s profile window against the full solo run. "
+        "First-GPU-activity figures compare shorter online monitoring windows against the 200s reference window.\n"
+    )
+
+    lines.append("\n## Solo-profile anchor figures\n")
+
+    solo_profile_figure_dirs = {
+        "Launch anchored: 200s vs full": figures_dir / "solo_profile_launch_w200s_vs_full",
+        "First-memory anchored: 200s vs full": figures_dir / "solo_profile_first_memory_w200s_vs_full",
+        "Activity-filtered: 200s vs full": figures_dir / "solo_profile_activity_filtered_w200s_vs_full",
+    }
+
+    for title, fig_dir in solo_profile_figure_dirs.items():
+        lines.append(f"\n### {title}\n")
+        lines.append(f"Folder: `{fig_dir.relative_to(REPO_ROOT)}`\n")
+
         if not fig_dir.exists():
-            lines.append(f"_Missing: `{fig_dir}`_\n")
+            lines.append("_Missing folder._\n")
             continue
 
-        for path in sorted(fig_dir.glob("*.pdf")):
+        pdfs = sorted(fig_dir.glob("*.pdf"))
+        if not pdfs:
+            lines.append("_No PDF figures found._\n")
+            continue
+
+        for path in pdfs:
             lines.append(f"- `{path.relative_to(REPO_ROOT)}`")
 
-    lines.append("\n## First-memory anchored solo-profile figures\n")
-    first_memory_dir = figures_dir / "profile_insights_first_memory_anchor_w200s_vs_full"
-    if first_memory_dir.exists():
-        for path in sorted(first_memory_dir.glob("*.pdf")):
-            lines.append(f"- `{path.relative_to(REPO_ROOT)}`")
-    else:
-        lines.append(f"_Missing: `{first_memory_dir}`_")
+    lines.append("\n## First-GPU-activity threshold-window figures\n")
 
-    figure_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"wrote {figure_md}")
+    for window in DECISION_WINDOWS:
+        fig_dir = figures_dir / f"first_gpu_activity_windows_w{window}s_vs_w{REFERENCE_WINDOW}s"
+        lines.append(f"\n### {window}s vs {REFERENCE_WINDOW}s\n")
+        lines.append(f"Folder: `{fig_dir.relative_to(REPO_ROOT)}`\n")
+
+        if not fig_dir.exists():
+            lines.append("_Missing folder._\n")
+            continue
+
+        pdfs = sorted(fig_dir.glob("*.pdf"))
+        if not pdfs:
+            lines.append("_No PDF figures found._\n")
+            continue
+
+        for path in pdfs:
+            lines.append(f"- `{path.relative_to(REPO_ROOT)}`")
 
     lines.append("\n## Memory figures\n")
 
     memory_dir = figures_dir / "memory"
-
     lines.append(f"Folder: `{memory_dir.relative_to(REPO_ROOT)}`\n")
 
-    if memory_dir.exists():
-
-        for path in sorted(memory_dir.glob("*.pdf")):
-
-            lines.append(f"- `{path.relative_to(REPO_ROOT)}`")
-
-    else:
-
+    if not memory_dir.exists():
         lines.append("_Missing folder._\n")
+    else:
+        pdfs = sorted(memory_dir.glob("*.pdf"))
+        if not pdfs:
+            lines.append("_No PDF figures found._\n")
+        else:
+            for path in pdfs:
+                lines.append(f"- `{path.relative_to(REPO_ROOT)}`")
+
+    figure_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {figure_md}")
 
 def md_image(path: Path, output_dir: Path, title: str) -> str:
     if not path.exists():
@@ -917,7 +946,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - Suite directory: `{suite_dir.relative_to(REPO_ROOT)}`
 - Window analysis: `{(suite_dir / "window_analysis").relative_to(REPO_ROOT)}`
 - Summaries: `evaluation/threshold_sensitivity/summaries/`
-- Figures: `evaluation/figures/profile_threshold_insights_1gpu_w{{30,40,60,120}}s_vs_w200s/`
+- Figures: `evaluation/figures/first_gpu_activity_windows_w{30,40,60,120}s_vs_w200s/`
 
 ## Curated files
 

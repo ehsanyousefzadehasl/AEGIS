@@ -15,7 +15,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - Suite directory: `evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217`
 - Window analysis: `evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217/window_analysis`
 - Summaries: `evaluation/threshold_sensitivity/summaries/`
-- Figures: `evaluation/figures/profile_threshold_insights_1gpu_w{30,40,60,120}s_vs_w200s/`
+- Figures: `evaluation/figures/first_gpu_activity_windows_w(30, 40, 60, 120)s_vs_w200s/`
 
 ## Curated files
 
