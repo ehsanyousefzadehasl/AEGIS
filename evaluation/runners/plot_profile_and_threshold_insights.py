@@ -186,7 +186,6 @@ def prepare_profile_mismatches(
 
     return out.dropna(subset=["relative_error_percent"])
 
-
 def plot_profile_component_boxplots(
     comparison: pd.DataFrame,
     output_dir: Path,
@@ -196,10 +195,15 @@ def plot_profile_component_boxplots(
     if df.empty:
         return []
 
+    title_fontsize = 17
+    label_fontsize = 15
+    tick_fontsize = 13
+    suptitle_fontsize = 18
+
     metric_order = [name for name, _ in PROFILE_COMPONENT_METRICS]
     metric_labels = {name: label for name, label in PROFILE_COMPONENT_METRICS}
 
-    fig, axes = plt.subplots(1, len(metric_order), figsize=(16, 5), sharey=True)
+    fig, axes = plt.subplots(len(metric_order), 1, figsize=(7.2, 10.0), sharey=True)
     if len(metric_order) == 1:
         axes = [axes]
 
@@ -221,20 +225,31 @@ def plot_profile_component_boxplots(
             series_list.append(vals.to_list())
             labels.append(stat_label)
 
-        ax.set_title(metric_labels[metric_name])
+        ax.set_title(metric_labels[metric_name], fontsize=title_fontsize, pad=8)
 
         if not series_list:
             ax.set_xticks([])
             continue
 
-        ax.boxplot(series_list, tick_labels=labels, showmeans=True)
-        ax.set_xlabel("Statistic")
-        ax.tick_params(axis="x", rotation=30)
+        ax.boxplot(
+            series_list,
+            tick_labels=labels,
+            showmeans=True,
+            widths=0.6,
+        )
+        ax.tick_params(axis="x", rotation=20, labelsize=tick_fontsize)
+        ax.tick_params(axis="y", labelsize=tick_fontsize)
         ax.grid(True, axis="y", alpha=0.3)
 
-    axes[0].set_ylabel("200s-vs-full relative error (%)")
-    fig.suptitle("Fixed 200s profile mismatch by statistic", y=1.02)
-    fig.tight_layout()
+    axes[-1].set_xlabel("Statistic", fontsize=label_fontsize)
+    axes[1].set_ylabel("200s-vs-full relative error (%)", fontsize=label_fontsize)
+
+    # fig.suptitle(
+    #     "Fixed 200s profile mismatch by statistic",
+    #     y=0.995,
+    #     fontsize=suptitle_fontsize,
+    # )
+    # fig.tight_layout(rect=[0, 0, 1, 0.975])
 
     return save_figure(
         fig,
@@ -242,7 +257,6 @@ def plot_profile_component_boxplots(
         "profile_200s_vs_full_component_boxplots",
         formats,
     )
-
 
 def prepare_profile_score_mismatches(comparison: pd.DataFrame) -> pd.DataFrame:
     return prepare_profile_mismatches(
