@@ -1,5 +1,7 @@
 # Threshold Sensitivity: Solo Runs
 
+> For the full paper-artifact workflow, see [Paper Artifact Workflow](../PAPER_ARTIFACT_WORKFLOW.md).
+
 The solo workflow runs each workload alone, waits for time-to-first-kernel (TTFK), and records GPU metric summaries for several post-TTFK windows from the same workload execution.
 
 ## Default summary windows

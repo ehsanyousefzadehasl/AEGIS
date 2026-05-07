@@ -1,5 +1,7 @@
 # Solo profiling workflow
 
+> For the full paper-artifact workflow, see [Paper Artifact Workflow](../../PAPER_ARTIFACT_WORKFLOW.md).
+
 This directory contains the artifacts, manifests, and extracted results for solo workload profiling.
 
 ## What is here
