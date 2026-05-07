@@ -293,6 +293,146 @@ def build_figure_index(figures_dir: Path, output_dir: Path) -> None:
     print(f"wrote {figure_md}")
 
 
+def build_memory_safety_summary(output_dir: Path) -> pd.DataFrame:
+    sources = {
+        "launch": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted_launch_anchor" / "solo_profile_results_1gpu.csv",
+        "first_memory": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted_first_memory_anchor" / "solo_profile_results_1gpu.csv",
+        "activity_filtered": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted" / "solo_profile_results_1gpu.csv",
+    }
+
+    rows = []
+
+    for anchor, path in sources.items():
+        df = read_csv(path)
+        if df.empty:
+            continue
+
+        required = {
+            "gpu_memory_peak_200s_mib",
+            "gpu_memory_peak_full_mib",
+            "gpu_memory_requirement_mib",
+        }
+        if not required.issubset(df.columns):
+            continue
+
+        data = df.copy()
+        data["gpu_memory_peak_200s_mib"] = pd.to_numeric(
+            data["gpu_memory_peak_200s_mib"], errors="coerce"
+        )
+        data["gpu_memory_peak_full_mib"] = pd.to_numeric(
+            data["gpu_memory_peak_full_mib"], errors="coerce"
+        )
+        data["gpu_memory_requirement_mib"] = pd.to_numeric(
+            data["gpu_memory_requirement_mib"], errors="coerce"
+        )
+
+        valid = data.dropna(
+            subset=["gpu_memory_peak_200s_mib", "gpu_memory_peak_full_mib"]
+        ).copy()
+
+        if valid.empty:
+            continue
+
+        underestimate = (
+            valid["gpu_memory_peak_full_mib"] - valid["gpu_memory_peak_200s_mib"]
+        )
+        under_positive = underestimate[underestimate > 0]
+
+        requirement_valid = valid.dropna(subset=["gpu_memory_requirement_mib"]).copy()
+        requirement_under = (
+            requirement_valid["gpu_memory_requirement_mib"]
+            - requirement_valid["gpu_memory_peak_200s_mib"]
+        )
+        requirement_under_positive = requirement_under[requirement_under > 0]
+
+        rows.append(
+            {
+                "anchor": anchor,
+                "n": int(len(valid)),
+                "underestimates_full_peak_count": int(len(under_positive)),
+                "underestimates_full_peak_rate": (
+                    float(len(under_positive) / len(valid)) if len(valid) else None
+                ),
+                "median_full_peak_underestimate_mib": (
+                    float(under_positive.median()) if not under_positive.empty else 0.0
+                ),
+                "p95_full_peak_underestimate_mib": (
+                    float(under_positive.quantile(0.95)) if not under_positive.empty else 0.0
+                ),
+                "max_full_peak_underestimate_mib": (
+                    float(under_positive.max()) if not under_positive.empty else 0.0
+                ),
+                "n_with_requirement": int(len(requirement_valid)),
+                "window_peak_below_requirement_count": int(len(requirement_under_positive)),
+                "window_peak_below_requirement_rate": (
+                    float(len(requirement_under_positive) / len(requirement_valid))
+                    if len(requirement_valid)
+                    else None
+                ),
+                "median_requirement_gap_mib": (
+                    float(requirement_under_positive.median())
+                    if not requirement_under_positive.empty
+                    else 0.0
+                ),
+                "max_requirement_gap_mib": (
+                    float(requirement_under_positive.max())
+                    if not requirement_under_positive.empty
+                    else 0.0
+                ),
+            }
+        )
+
+    summary = pd.DataFrame(rows)
+
+    if summary.empty:
+        return summary
+
+    anchor_order = {"launch": 0, "first_memory": 1, "activity_filtered": 2}
+    summary["anchor_order"] = summary["anchor"].map(anchor_order)
+    summary = summary.sort_values("anchor_order").drop(columns=["anchor_order"])
+
+    tables_dir = output_dir / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = tables_dir / "memory_safety_summary.csv"
+    md_path = tables_dir / "memory_safety_summary.md"
+
+    summary.to_csv(csv_path, index=False)
+
+    md = ["# Memory Safety Summary\n"]
+    md.append(
+        "This table compares the 200s-window observed GPU memory peak against the full-run "
+        "observed peak and the workload memory requirement. Memory is a hard constraint for "
+        "collocation, so underestimating peak memory can lead to unsafe placements.\n"
+    )
+    md.append(
+        markdown_table(
+            summary,
+            [
+                "anchor",
+                "n",
+                "underestimates_full_peak_count",
+                "underestimates_full_peak_rate",
+                "median_full_peak_underestimate_mib",
+                "p95_full_peak_underestimate_mib",
+                "max_full_peak_underestimate_mib",
+                "n_with_requirement",
+                "window_peak_below_requirement_count",
+                "window_peak_below_requirement_rate",
+                "median_requirement_gap_mib",
+                "max_requirement_gap_mib",
+            ],
+            max_rows=50,
+        )
+    )
+    md_path.write_text("\n".join(md), encoding="utf-8")
+
+    print(f"wrote {csv_path}")
+    print(f"wrote {md_path}")
+
+    return summary
+
+
 def build_claims_and_evidence(
     output_dir: Path,
     anchor_summary: pd.DataFrame,
@@ -400,6 +540,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `tables/solo_profile_anchor_comparison.md`: launch vs first-memory vs activity-filtered comparison.
 - `tables/first_gpu_activity_window_stability.md`: stability of shorter windows vs 200s.
 - `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
+- `tables/memory_safety_summary.md`: 200s-window memory peak vs full-run peak and workload memory requirement.
 
 ## Terminology note
 
@@ -423,8 +564,17 @@ def main() -> int:
     window_summary = build_first_gpu_activity_window_summary(suite_dir, output_dir)
     component_summary = build_risk_component_ablation_summary(suite_dir, output_dir)
 
+    memory_summary = build_memory_safety_summary(output_dir)
+
     build_figure_index(figures_dir, output_dir)
-    build_claims_and_evidence(output_dir, anchor_summary, window_summary, component_summary)
+
+    build_claims_and_evidence(
+        output_dir,
+        anchor_summary,
+        window_summary,
+        component_summary,
+    )
+
     build_readme(output_dir, suite_dir)
 
     return 0
