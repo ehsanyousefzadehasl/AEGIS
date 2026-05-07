@@ -149,6 +149,32 @@ def build_solo_profile_memory_peak_summary(output_dir: Path) -> pd.DataFrame:
             max_rows=50,
         )
     )
+
+    top_misses = (
+        long_df.sort_values("underestimate_mib", ascending=False)
+        .head(15)
+        .copy()
+    )
+
+    md.append("\n## Largest 200s-vs-full memory peak misses\n")
+    md.append(
+        "These rows identify the workloads responsible for the memory underestimation outliers.\n"
+    )
+    md.append(
+        markdown_table(
+            top_misses,
+            [
+                "anchor",
+                "workload_id",
+                "gpu_memory_peak_200s_mib",
+                "gpu_memory_peak_full_mib",
+                "underestimate_mib",
+                "abs_error_mib",
+            ],
+            max_rows=15,
+        )
+    )
+
     summary_md.write_text("\n".join(md), encoding="utf-8")
 
     print(f"wrote {summary_csv}")
