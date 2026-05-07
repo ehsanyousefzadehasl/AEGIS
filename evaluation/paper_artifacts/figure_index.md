@@ -1,0 +1,76 @@
+# Figure Index
+
+## First-observed-GPU-activity threshold-window figures
+
+
+### 30s vs 200s
+
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/per_workload_ewma_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/per_workload_mean_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/per_workload_median_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/per_workload_p95_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/per_workload_risk_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_200s_vs_full_boxplot.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_200s_vs_full_component_boxplots.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_top_mismatches.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_top_mismatches_ewma.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_top_mismatches_mean.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_top_mismatches_median.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/profile_top_mismatches_p95.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/risk_component_ablation_curve.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w30s_vs_w200s/threshold_window_stability_curve.pdf`
+
+### 40s vs 200s
+
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/per_workload_ewma_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/per_workload_mean_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/per_workload_median_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/per_workload_p95_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/per_workload_risk_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_200s_vs_full_boxplot.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_200s_vs_full_component_boxplots.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_top_mismatches.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_top_mismatches_ewma.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_top_mismatches_mean.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_top_mismatches_median.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/profile_top_mismatches_p95.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/risk_component_ablation_curve.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w40s_vs_w200s/threshold_window_stability_curve.pdf`
+
+### 60s vs 200s
+
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/per_workload_ewma_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/per_workload_mean_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/per_workload_median_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/per_workload_p95_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/per_workload_risk_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_200s_vs_full_boxplot.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_200s_vs_full_component_boxplots.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_top_mismatches.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_top_mismatches_ewma.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_top_mismatches_mean.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_top_mismatches_median.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/profile_top_mismatches_p95.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/risk_component_ablation_curve.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w60s_vs_w200s/threshold_window_stability_curve.pdf`
+
+### 120s vs 200s
+
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/per_workload_ewma_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/per_workload_mean_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/per_workload_median_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/per_workload_p95_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/per_workload_risk_error_heatmap.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_200s_vs_full_boxplot.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_200s_vs_full_component_boxplots.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_top_mismatches.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_top_mismatches_ewma.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_top_mismatches_mean.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_top_mismatches_median.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/profile_top_mismatches_p95.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/risk_component_ablation_curve.pdf`
+- `evaluation/figures/profile_threshold_insights_1gpu_w120s_vs_w200s/threshold_window_stability_curve.pdf`
+
+## First-memory anchored solo-profile figures
+
+_Missing: `/home/ehyo/AEGIS/evaluation/figures/profile_insights_first_memory_anchor_w200s_vs_full`_

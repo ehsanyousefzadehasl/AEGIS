@@ -83,3 +83,10 @@ evaluation/threshold_sensitivity/solo_runs/
 !evaluation/profiling/solo/analysis_launch_anchor/lucid_style_profile_labels.csv
 !evaluation/profiling/solo/analysis_launch_anchor/horus_oracle_inputs.csv
 !evaluation/profiling/solo/analysis_launch_anchor/*.md
+
+# Keep curated paper artifact tables.
+!evaluation/paper_artifacts/
+!evaluation/paper_artifacts/*.md
+!evaluation/paper_artifacts/tables/
+!evaluation/paper_artifacts/tables/*.csv
+!evaluation/paper_artifacts/tables/*.md

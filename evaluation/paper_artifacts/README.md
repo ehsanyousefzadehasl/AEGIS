@@ -1,0 +1,30 @@
+# AEGIS Paper Artifacts
+
+This folder is a curated index for paper-writing. It does not replace the raw experiment outputs; it points to the stable analysis tables and figures.
+
+## Source locations
+
+### Solo profile anchor analyses
+
+- Activity-filtered solo profile analysis: `evaluation/profiling/solo/analysis/`
+- First-memory anchored solo profile analysis: `evaluation/profiling/solo/analysis_first_memory_anchor/`
+- Launch anchored solo profile analysis: `evaluation/profiling/solo/analysis_launch_anchor/`
+
+### First-observed-GPU-activity threshold-window analysis
+
+- Suite directory: `evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217`
+- Window analysis: `evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217/window_analysis`
+- Summaries: `evaluation/threshold_sensitivity/summaries/`
+- Figures: `evaluation/figures/profile_threshold_insights_1gpu_w{30,40,60,120}s_vs_w200s/`
+
+## Curated files
+
+- `claims_and_evidence.md`: paper-facing claims and where the evidence lives.
+- `figure_index.md`: figure paths grouped by experiment.
+- `tables/solo_profile_anchor_comparison.md`: launch vs first-memory vs activity-filtered comparison.
+- `tables/first_gpu_activity_window_stability.md`: stability of shorter windows vs 200s.
+- `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
+
+## Terminology note
+
+The current threshold-window pipeline uses a first-observed-GPU-activity anchor. Some internal CSV columns may still use legacy names such as `ttfk_wait_seconds`; interpret those as wait time until the job is first observed as active on GPU, not as exact CUDA-kernel-launch instrumentation.
