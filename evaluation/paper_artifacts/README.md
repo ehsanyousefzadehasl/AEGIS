@@ -26,6 +26,8 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
 - `tables/memory_safety_summary.md`: 200s-window memory peak vs full-run peak and workload memory requirement.
 - `figure_gallery.md`: visual gallery of selected generated figures.
+- `tables/solo_profile_memory_peak_summary.md`: 200s observed memory peak vs full-run observed memory peak from solo profiles.
+- `tables/first_gpu_activity_memory_stability.md`: first-GPU-activity memory usage windows vs the 200s reference.
 
 ## Terminology note
 

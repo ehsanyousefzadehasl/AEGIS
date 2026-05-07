@@ -6,7 +6,7 @@ from pathlib import Path
 import os
 
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -19,6 +19,8 @@ RISK_METRICS = ["smact_risk", "smocc_risk", "drama_risk"]
 DECISION_WINDOWS = [30, 40, 60, 120]
 REFERENCE_WINDOW = 200
 
+MEMORY_WINDOWS = [30, 40, 60, 120]
+MEMORY_REFERENCE_WINDOW = 200
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -28,6 +30,275 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     p.add_argument("--figures-dir", default=str(DEFAULT_FIGURES_DIR))
     return p.parse_args()
+
+def save_plot(fig, output_dir: Path, stem: str) -> list[Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for suffix in ["pdf", "png"]:
+        path = output_dir / f"{stem}.{suffix}"
+        fig.savefig(path, bbox_inches="tight", dpi=200)
+        paths.append(path)
+    plt.close(fig)
+    for path in paths:
+        print(f"wrote {path}")
+    return paths
+
+def build_solo_profile_memory_peak_summary(output_dir: Path) -> pd.DataFrame:
+    sources = {
+        "launch": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted_launch_anchor" / "solo_profile_results_1gpu.csv",
+        "first_memory": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted_first_memory_anchor" / "solo_profile_results_1gpu.csv",
+        "activity_filtered": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted" / "solo_profile_results_1gpu.csv",
+    }
+
+    rows = []
+    long_rows = []
+
+    for anchor, path in sources.items():
+        df = read_csv(path)
+        if df.empty:
+            continue
+
+        required = {"workload_id", "gpu_memory_peak_200s_mib", "gpu_memory_peak_full_mib"}
+        if not required.issubset(df.columns):
+            continue
+
+        data = df.copy()
+        data["gpu_memory_peak_200s_mib"] = pd.to_numeric(
+            data["gpu_memory_peak_200s_mib"], errors="coerce"
+        )
+        data["gpu_memory_peak_full_mib"] = pd.to_numeric(
+            data["gpu_memory_peak_full_mib"], errors="coerce"
+        )
+        data = data.dropna(subset=["gpu_memory_peak_200s_mib", "gpu_memory_peak_full_mib"])
+
+        if data.empty:
+            continue
+
+        diff = data["gpu_memory_peak_full_mib"] - data["gpu_memory_peak_200s_mib"]
+        abs_err = diff.abs()
+        under = diff[diff > 0]
+
+        rows.append(
+            {
+                "anchor": anchor,
+                "n": int(len(data)),
+                "underestimates_full_peak_count": int(len(under)),
+                "underestimates_full_peak_rate": float(len(under) / len(data)),
+                "median_underestimate_mib": float(under.median()) if not under.empty else 0.0,
+                "p95_underestimate_mib": float(under.quantile(0.95)) if not under.empty else 0.0,
+                "max_underestimate_mib": float(under.max()) if not under.empty else 0.0,
+                "median_abs_error_mib": float(abs_err.median()),
+                "p95_abs_error_mib": float(abs_err.quantile(0.95)),
+                "max_abs_error_mib": float(abs_err.max()),
+            }
+        )
+
+        for _, row in data.iterrows():
+            long_rows.append(
+                {
+                    "anchor": anchor,
+                    "workload_id": row.get("workload_id"),
+                    "gpu_memory_peak_200s_mib": row["gpu_memory_peak_200s_mib"],
+                    "gpu_memory_peak_full_mib": row["gpu_memory_peak_full_mib"],
+                    "underestimate_mib": max(
+                        0.0,
+                        float(row["gpu_memory_peak_full_mib"] - row["gpu_memory_peak_200s_mib"]),
+                    ),
+                    "abs_error_mib": abs(
+                        float(row["gpu_memory_peak_full_mib"] - row["gpu_memory_peak_200s_mib"])
+                    ),
+                }
+            )
+
+    summary = pd.DataFrame(rows)
+    long_df = pd.DataFrame(long_rows)
+
+    if summary.empty:
+        return summary
+
+    tables_dir = output_dir / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
+
+    summary_csv = tables_dir / "solo_profile_memory_peak_summary.csv"
+    summary_md = tables_dir / "solo_profile_memory_peak_summary.md"
+    long_csv = tables_dir / "solo_profile_memory_peak_long.csv"
+
+    summary.to_csv(summary_csv, index=False)
+    long_df.to_csv(long_csv, index=False)
+
+    md = ["# Solo Profile Memory Peak Summary\n"]
+    md.append(
+        "This table compares the 200s observed GPU memory peak against the full-run observed GPU memory peak "
+        "from solo profiling runs. It does not use YAML memory requirements.\n"
+    )
+    md.append(
+        markdown_table(
+            summary,
+            [
+                "anchor",
+                "n",
+                "underestimates_full_peak_count",
+                "underestimates_full_peak_rate",
+                "median_underestimate_mib",
+                "p95_underestimate_mib",
+                "max_underestimate_mib",
+                "median_abs_error_mib",
+                "p95_abs_error_mib",
+                "max_abs_error_mib",
+            ],
+            max_rows=50,
+        )
+    )
+    summary_md.write_text("\n".join(md), encoding="utf-8")
+
+    print(f"wrote {summary_csv}")
+    print(f"wrote {summary_md}")
+    print(f"wrote {long_csv}")
+
+    # Plot: underestimation distribution by anchor.
+    fig_dir = REPO_ROOT / "evaluation" / "figures" / "memory"
+    plot_data = []
+    labels = []
+    for anchor in ["launch", "first_memory", "activity_filtered"]:
+        vals = long_df.loc[long_df["anchor"] == anchor, "underestimate_mib"].dropna()
+        if vals.empty:
+            continue
+        plot_data.append(vals.to_list())
+        labels.append(anchor)
+
+    if plot_data:
+        fig, ax = plt.subplots(figsize=(7.2, 3.8))
+        ax.boxplot(plot_data, tick_labels=labels, showmeans=True)
+        ax.set_ylabel("Full peak - 200s peak (MiB)")
+        ax.set_xlabel("Anchor")
+        ax.set_title("Solo profile memory peak underestimation")
+        ax.grid(True, axis="y", alpha=0.3)
+        save_plot(fig, fig_dir, "solo_profile_200s_vs_full_memory_peak")
+
+    return summary
+
+def build_first_gpu_activity_memory_stability(
+    suite_dir: Path,
+    output_dir: Path,
+) -> pd.DataFrame:
+    measurements = read_csv(suite_dir / "live_threshold_measurements.csv")
+    if measurements.empty:
+        return pd.DataFrame()
+
+    rows = []
+
+    ref_used = (
+        pd.to_numeric(measurements[f"GPU_mem_total_w{MEMORY_REFERENCE_WINDOW}s"], errors="coerce")
+        - pd.to_numeric(measurements[f"GPU_mem_available_w{MEMORY_REFERENCE_WINDOW}s"], errors="coerce")
+    )
+
+    for window in MEMORY_WINDOWS:
+        total_col = f"GPU_mem_total_w{window}s"
+        available_col = f"GPU_mem_available_w{window}s"
+
+        if total_col not in measurements.columns or available_col not in measurements.columns:
+            continue
+
+        used = (
+            pd.to_numeric(measurements[total_col], errors="coerce")
+            - pd.to_numeric(measurements[available_col], errors="coerce")
+        )
+
+        valid = pd.DataFrame(
+            {
+                "used_window_mib": used,
+                "used_reference_mib": ref_used,
+            }
+        ).dropna()
+
+        if valid.empty:
+            continue
+
+        diff = valid["used_reference_mib"] - valid["used_window_mib"]
+        abs_err = diff.abs()
+        under = diff[diff > 0]
+
+        rows.append(
+            {
+                "summary_window_seconds": float(window),
+                "reference_window_seconds": float(MEMORY_REFERENCE_WINDOW),
+                "n": int(len(valid)),
+                "underestimates_reference_count": int(len(under)),
+                "underestimates_reference_rate": float(len(under) / len(valid)),
+                "median_underestimate_mib": float(under.median()) if not under.empty else 0.0,
+                "p95_underestimate_mib": float(under.quantile(0.95)) if not under.empty else 0.0,
+                "max_underestimate_mib": float(under.max()) if not under.empty else 0.0,
+                "median_abs_error_mib": float(abs_err.median()),
+                "p95_abs_error_mib": float(abs_err.quantile(0.95)),
+                "max_abs_error_mib": float(abs_err.max()),
+            }
+        )
+
+    summary = pd.DataFrame(rows)
+    if summary.empty:
+        return summary
+
+    tables_dir = output_dir / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = tables_dir / "first_gpu_activity_memory_stability.csv"
+    md_path = tables_dir / "first_gpu_activity_memory_stability.md"
+
+    summary.to_csv(csv_path, index=False)
+
+    md = ["# First-GPU-Activity Memory Stability\n"]
+    md.append(
+        "This table compares observed GPU memory used in shorter first-GPU-activity windows "
+        f"against the {MEMORY_REFERENCE_WINDOW}s reference window. Memory used is computed as "
+        "`GPU_mem_total - GPU_mem_available`. This is a window-vs-reference comparison, not a full-run peak comparison.\n"
+    )
+    md.append(
+        markdown_table(
+            summary,
+            [
+                "summary_window_seconds",
+                "reference_window_seconds",
+                "n",
+                "underestimates_reference_count",
+                "underestimates_reference_rate",
+                "median_underestimate_mib",
+                "p95_underestimate_mib",
+                "max_underestimate_mib",
+                "median_abs_error_mib",
+                "p95_abs_error_mib",
+                "max_abs_error_mib",
+            ],
+            max_rows=100,
+        )
+    )
+    md_path.write_text("\n".join(md), encoding="utf-8")
+
+    print(f"wrote {csv_path}")
+    print(f"wrote {md_path}")
+
+    fig_dir = REPO_ROOT / "evaluation" / "figures" / "memory"
+
+    fig, ax = plt.subplots(figsize=(7.0, 3.8))
+    ax.plot(
+        summary["summary_window_seconds"],
+        summary["median_abs_error_mib"],
+        marker="o",
+        label="median abs. error",
+    )
+    ax.plot(
+        summary["summary_window_seconds"],
+        summary["p95_abs_error_mib"],
+        marker="o",
+        label="p95 abs. error",
+    )
+    ax.set_xlabel("First-GPU-activity window (s)")
+    ax.set_ylabel(f"Memory error vs {MEMORY_REFERENCE_WINDOW}s (MiB)")
+    ax.set_title("First-GPU-activity memory stability")
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    save_plot(fig, fig_dir, "first_gpu_activity_memory_stability_curve")
+
+    return summary
 
 
 def latest_suite_dir() -> Path:
@@ -293,6 +564,21 @@ def build_figure_index(figures_dir: Path, output_dir: Path) -> None:
     figure_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {figure_md}")
 
+    lines.append("\n## Memory figures\n")
+
+    memory_dir = figures_dir / "memory"
+
+    lines.append(f"Folder: `{memory_dir.relative_to(REPO_ROOT)}`\n")
+
+    if memory_dir.exists():
+
+        for path in sorted(memory_dir.glob("*.pdf")):
+
+            lines.append(f"- `{path.relative_to(REPO_ROOT)}`")
+
+    else:
+
+        lines.append("_Missing folder._\n")
 
 def md_image(path: Path, output_dir: Path, title: str) -> str:
     if not path.exists():
@@ -342,6 +628,18 @@ def build_figure_gallery(figures_dir: Path, output_dir: Path) -> None:
         ("per_workload_p95_error_heatmap.png", "Per-workload p95 error heatmap"),
         ("per_workload_ewma_error_heatmap.png", "Per-workload EWMA error heatmap"),
     ]
+
+    lines.append("\n## Memory figures\n")
+
+    memory_dir = REPO_ROOT / "evaluation" / "figures" / "memory"
+    memory_figures = [
+        ("solo_profile_200s_vs_full_memory_peak.png", "Solo profile memory peak: 200s vs full"),
+        ("first_gpu_activity_memory_stability_curve.png", "First-GPU-activity memory stability"),
+    ]
+
+    lines.append(f"\nFolder: `{memory_dir.relative_to(REPO_ROOT)}`\n")
+    for filename, title in memory_figures:
+        lines.append(md_image(memory_dir / filename, output_dir, title))
 
     lines.append("\n## First-observed-GPU-activity threshold-window figures\n")
     for window in DECISION_WINDOWS:
@@ -604,6 +902,8 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
 - `tables/memory_safety_summary.md`: 200s-window memory peak vs full-run peak and workload memory requirement.
 - `figure_gallery.md`: visual gallery of selected generated figures.
+- `tables/solo_profile_memory_peak_summary.md`: 200s observed memory peak vs full-run observed memory peak from solo profiles.
+- `tables/first_gpu_activity_memory_stability.md`: first-GPU-activity memory usage windows vs the 200s reference.
 
 ## Terminology note
 
@@ -627,10 +927,15 @@ def main() -> int:
     window_summary = build_first_gpu_activity_window_summary(suite_dir, output_dir)
     component_summary = build_risk_component_ablation_summary(suite_dir, output_dir)
 
-    memory_summary = build_memory_safety_summary(output_dir)
+    # Memory summaries also write their Markdown/CSV tables and memory figures.
+    build_solo_profile_memory_peak_summary(output_dir)
+    build_first_gpu_activity_memory_stability(
+        suite_dir,
+        output_dir,
+    )
 
+    # Build indexes/galleries after all figures have been generated.
     build_figure_index(figures_dir, output_dir)
-
     build_figure_gallery(figures_dir, output_dir)
 
     build_claims_and_evidence(

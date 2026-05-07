@@ -93,6 +93,20 @@ Folder: `evaluation/figures/solo_profile_activity_filtered_w200s_vs_full`
 ![Top EWMA profile mismatches](../figures/solo_profile_activity_filtered_w200s_vs_full/profile_top_mismatches_ewma.png)
 
 
+## Memory figures
+
+
+Folder: `evaluation/figures/memory`
+
+**Solo profile memory peak: 200s vs full**
+
+![Solo profile memory peak: 200s vs full](../figures/memory/solo_profile_200s_vs_full_memory_peak.png)
+
+**First-GPU-activity memory stability**
+
+![First-GPU-activity memory stability](../figures/memory/first_gpu_activity_memory_stability_curve.png)
+
+
 ## First-observed-GPU-activity threshold-window figures
 
 
