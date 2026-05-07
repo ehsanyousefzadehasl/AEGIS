@@ -195,15 +195,19 @@ def plot_profile_component_boxplots(
     if df.empty:
         return []
 
-    title_fontsize = 17
-    label_fontsize = 15
-    tick_fontsize = 13
-    suptitle_fontsize = 18
+    title_fontsize = 16
+    label_fontsize = 14
+    tick_fontsize = 12
 
     metric_order = [name for name, _ in PROFILE_COMPONENT_METRICS]
     metric_labels = {name: label for name, label in PROFILE_COMPONENT_METRICS}
 
-    fig, axes = plt.subplots(len(metric_order), 1, figsize=(7.2, 10.0), sharey=True)
+    fig, axes = plt.subplots(
+        len(metric_order),
+        1,
+        figsize=(7.4, 9.0),
+        sharex=True,
+    )
     if len(metric_order) == 1:
         axes = [axes]
 
@@ -225,31 +229,42 @@ def plot_profile_component_boxplots(
             series_list.append(vals.to_list())
             labels.append(stat_label)
 
-        ax.set_title(metric_labels[metric_name], fontsize=title_fontsize, pad=8)
-
         if not series_list:
-            ax.set_xticks([])
+            ax.set_yticks([])
             continue
 
         ax.boxplot(
             series_list,
-            tick_labels=labels,
+            labels=labels,
+            vert=False,
             showmeans=True,
-            widths=0.6,
+            widths=0.55,
         )
-        ax.tick_params(axis="x", rotation=20, labelsize=tick_fontsize)
+
+        ax.text(
+            0.98,
+            0.90,
+            metric_labels[metric_name],
+            transform=ax.transAxes,
+            fontsize=title_fontsize,
+            fontweight="bold",
+            va="top",
+            ha="right",
+            bbox={
+                "boxstyle": "round,pad=0.25",
+                "facecolor": "white",
+                "edgecolor": "0.8",
+                "alpha": 0.9,
+            },
+        )
+
+        ax.tick_params(axis="x", labelsize=tick_fontsize)
         ax.tick_params(axis="y", labelsize=tick_fontsize)
-        ax.grid(True, axis="y", alpha=0.3)
+        ax.grid(True, axis="x", alpha=0.3)
 
-    axes[-1].set_xlabel("Statistic", fontsize=label_fontsize)
-    axes[1].set_ylabel("200s-vs-full relative error (%)", fontsize=label_fontsize)
+    axes[-1].set_xlabel("200s-vs-full relative error (%)", fontsize=label_fontsize)
 
-    # fig.suptitle(
-    #     "Fixed 200s profile mismatch by statistic",
-    #     y=0.995,
-    #     fontsize=suptitle_fontsize,
-    # )
-    # fig.tight_layout(rect=[0, 0, 1, 0.975])
+    fig.tight_layout(h_pad=1.2)
 
     return save_figure(
         fig,
