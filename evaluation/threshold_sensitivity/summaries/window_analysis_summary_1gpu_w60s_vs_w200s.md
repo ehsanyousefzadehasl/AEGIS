@@ -56,8 +56,6 @@ This summary compares shorter TTFK-anchored monitoring windows against a 200s re
 | smact_risk | /home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/mobilenet_cifar100_bs64_50e_1gpu.yaml     |          0.11345 |           0.09806 |     0.0154  |          0.157   |                1082.99  |             8.12869 |
 | smocc_risk | /home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/efficientnet_imagenet_bs64_1gpu.yaml      |          0.3517  |           0.36562 |     0.01392 |          0.03808 |                1698.97  |             8.3562  |
 | smact_risk | /home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/efficientnet_cifar100_bs128_50e_1gpu.yaml |          0.22167 |           0.23321 |     0.01154 |          0.04946 |                 743.055 |             8.16614 |
-| smact_risk | /home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/gpt2_xl_wiki_bs2_1gpu.yaml                |          0.86645 |           0.87735 |     0.0109  |          0.01243 |               14544.8   |            37.91    |
-| smact_risk | /home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/inception_imagenet_bs64_1gpu.yaml         |          0.5177  |           0.52851 |     0.01081 |          0.02045 |                3072.56  |             8.89824 |
 
 
 ## Risk-component ablation
