@@ -388,7 +388,11 @@ def plot_window_stability_curve(
     if data.empty:
         return []
 
-    fig, ax = plt.subplots(figsize=(7.0, 3.8))
+    label_fontsize = 15
+    tick_fontsize = 13
+    legend_fontsize = 12
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
 
     for metric in RISK_METRICS:
         metric_data = data[data["metric"] == metric].sort_values("summary_window_seconds")
@@ -404,11 +408,11 @@ def plot_window_stability_curve(
         )
 
     ax.axvline(float(decision_window), linestyle="--", linewidth=1.2, label="decision window")
-    ax.set_xlabel("Post-first-GPU-activity summary window (s)")
-    ax.set_ylabel(f"Mean absolute error vs {reference_window:g}s")
-    ax.set_title("First-GPU-activity window stability")
+    ax.set_xlabel("Post-first-GPU-activity window (s)", fontsize=label_fontsize)
+    ax.set_ylabel(f"Mean absolute error vs {reference_window:g}s", fontsize=label_fontsize)
+    ax.tick_params(axis="both", labelsize=tick_fontsize)
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    ax.legend(fontsize=legend_fontsize)
 
     return save_figure(fig, output_dir, "threshold_window_stability_curve", formats)
 
@@ -449,7 +453,11 @@ def plot_risk_component_ablation(
     if data.empty:
         return []
 
-    fig, ax = plt.subplots(figsize=(7.0, 3.8))
+    label_fontsize = 15
+    tick_fontsize = 13
+    legend_fontsize = 12
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
 
     for component in RISK_COMPONENTS:
         component_data = data[data["risk_component"] == component].sort_values(
@@ -469,11 +477,11 @@ def plot_risk_component_ablation(
         )
 
     ax.axvline(float(decision_window), linestyle="--", linewidth=1.2, label="decision window")
-    ax.set_xlabel("Post-first-GPU-activity summary window (s)")
-    ax.set_ylabel(f"Weighted mean absolute error vs {reference_window:g}s")
-    ax.set_title("Risk-component ablation")
+    ax.set_xlabel("Post-first-GPU-activity window (s)", fontsize=label_fontsize)
+    ax.set_ylabel(f"Mean absolute error vs {reference_window:g}s", fontsize=label_fontsize)
+    ax.tick_params(axis="both", labelsize=tick_fontsize)
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    ax.legend(fontsize=legend_fontsize)
 
     return save_figure(fig, output_dir, "risk_component_ablation_curve", formats)
 
@@ -536,12 +544,17 @@ def plot_per_workload_error_heatmap(
     if pivot.empty:
         return []
 
+    label_fontsize = 15
+    tick_fontsize = 12
+    cell_fontsize = 10
+    colorbar_fontsize = 13
+
     values = pivot.astype(float).to_numpy()
     row_labels = [short_label(idx, 38) for idx in pivot.index]
     col_labels = [c.upper() for c in pivot.columns]
 
     fig_height = max(4.0, 0.35 * len(row_labels) + 1.5)
-    fig, ax = plt.subplots(figsize=(6.5, fig_height))
+    fig, ax = plt.subplots(figsize=(7.2, fig_height + 0.6))
     image = ax.imshow(values, aspect="auto")
 
     ax.set_xticks(range(len(col_labels)))
@@ -549,20 +562,26 @@ def plot_per_workload_error_heatmap(
     ax.set_yticks(range(len(row_labels)))
     ax.set_yticklabels(row_labels)
 
-    pretty_component = "EWMA" if component == "ewma" else component.upper()
-    ax.set_title(
-        f"Per-workload {pretty_component} error: "
-        f"{decision_window:g}s vs {reference_window:g}s"
-    )
-    ax.set_xlabel("Metric")
-    ax.set_ylabel("Workload")
+    ax.set_xlabel("Metric", fontsize=label_fontsize)
+    ax.set_ylabel("Workload", fontsize=label_fontsize)
+    ax.tick_params(axis="x", labelsize=tick_fontsize)
+    ax.tick_params(axis="y", labelsize=tick_fontsize)
 
     for i in range(values.shape[0]):
         for j in range(values.shape[1]):
             if pd.notna(values[i, j]):
-                ax.text(j, i, f"{values[i, j]:.3f}", ha="center", va="center", fontsize=8)
+                ax.text(
+                    j,
+                    i,
+                    f"{values[i, j]:.3f}",
+                    ha="center",
+                    va="center",
+                    fontsize=cell_fontsize,
+                )
 
-    fig.colorbar(image, ax=ax, label="Absolute error")
+    cbar = fig.colorbar(image, ax=ax)
+    cbar.set_label("Absolute error", fontsize=colorbar_fontsize)
+    cbar.ax.tick_params(labelsize=tick_fontsize)
 
     return save_figure(
         fig,
