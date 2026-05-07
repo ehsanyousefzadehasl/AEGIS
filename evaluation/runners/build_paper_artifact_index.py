@@ -630,9 +630,9 @@ def build_figure_gallery(figures_dir: Path, output_dir: Path) -> None:
     }
 
     solo_figures = [
-        ("profile_200s_vs_full_boxplot.png", "AEGIS risk 200s-vs-full boxplot"),
+        ("profile_200s_vs_full_boxplot.png", "Combined risk 200s-vs-full boxplot"),
         ("profile_200s_vs_full_component_boxplots.png", "Component 200s-vs-full boxplots"),
-        ("profile_top_mismatches.png", "Top AEGIS-risk profile mismatches"),
+        ("profile_top_mismatches.png", "Top combined-risk profile mismatches"),
         ("profile_top_mismatches_mean.png", "Top mean profile mismatches"),
         ("profile_top_mismatches_p95.png", "Top p95 profile mismatches"),
         ("profile_top_mismatches_ewma.png", "Top EWMA profile mismatches"),
@@ -649,7 +649,7 @@ def build_figure_gallery(figures_dir: Path, output_dir: Path) -> None:
     threshold_figures = [
         ("threshold_window_stability_curve.png", "Window stability curve"),
         ("risk_component_ablation_curve.png", "Risk component ablation curve"),
-        ("per_workload_risk_error_heatmap.png", "Per-workload AEGIS-risk error heatmap"),
+        ("per_workload_risk_error_heatmap.png", "Per-workload combined-risk error heatmap"),
         ("per_workload_mean_error_heatmap.png", "Per-workload mean error heatmap"),
         ("per_workload_p95_error_heatmap.png", "Per-workload p95 error heatmap"),
         ("per_workload_ewma_error_heatmap.png", "Per-workload EWMA error heatmap"),
@@ -871,7 +871,7 @@ def build_claims_and_evidence(
             max_rows=20,
         ))
 
-    lines.append("\n## Claim 3: AEGIS risk is a balanced score, not simply the lowest-error component\n")
+    lines.append("\n## Claim 3: Combined risk is a balanced score, not simply the lowest-error component\n")
     lines.append(
         "Evidence: `tables/risk_component_ablation_rollup.md` and `risk_component_ablation_curve.pdf`. "
         "The paper should explain that mean, median, p95, and EWMA capture complementary behavior.\n"
@@ -900,7 +900,7 @@ def build_claims_and_evidence(
 def build_readme(output_dir: Path, suite_dir: Path) -> None:
     path = output_dir / "README.md"
 
-    text = f"""# AEGIS Paper Artifacts
+    text = f"""# Paper Artifacts
 
 This folder is a curated index for paper-writing. It does not replace the raw experiment outputs; it points to the stable analysis tables and figures.
 

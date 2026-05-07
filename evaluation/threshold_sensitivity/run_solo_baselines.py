@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--summary-windows",
         default=DEFAULT_SUMMARY_WINDOWS,
-        help=f"Comma-separated post-TTFK summary windows. Default: {DEFAULT_SUMMARY_WINDOWS}",
+        help=f"Comma-separated post-first-GPU-activity summary windows. Default: {DEFAULT_SUMMARY_WINDOWS}",
     )
 
     p.add_argument("--ttfk-timeout", type=float, default=300.0)

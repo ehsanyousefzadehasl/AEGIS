@@ -70,7 +70,7 @@ INDEX_COLUMNS = [
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Launch one real workload, wait for TTFK + post-TTFK window, then wait for completion and log runtime."
+        description="Launch one real workload, wait for first observed GPU activity + post-activity window, then wait for completion and log runtime."
     )
     p.add_argument("--task", required=True, help="Path to workload file (.rad or .yaml/.yml).")
     p.add_argument("--workdir", required=True, help="Working directory used by AEGIS launch command.")
@@ -78,17 +78,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--gpu-uuid", default=None, help="GPU UUID to use.")
     p.add_argument("--gpu-id", default=None, help="GPU index/id to use (e.g., 0).")
     p.add_argument("--estimator", default="None", help="Estimator name for load_job_spec().")
-    p.add_argument("--window-seconds", type=float, default=30.0, help="Post-TTFK window length.")
+    p.add_argument("--window-seconds", type=float, default=30.0, help="Post-first-GPU-activity window length.")
     p.add_argument(
         "--summary-windows",
         default=None,
         help=(
-            "Optional comma-separated post-TTFK summary windows, e.g. 10,20,30,60. "
+            "Optional comma-separated post-first-GPU-activity summary windows, e.g. 10,20,30,60. "
             "The decision window from --window-seconds is always included."
         ),
     )
-    p.add_argument("--ttfk-timeout", type=float, default=300.0, help="Timeout waiting for first GPU sighting.")
-    p.add_argument("--window-timeout", type=float, default=600.0, help="Timeout waiting for post-TTFK window completion.")
+    p.add_argument("--ttfk-timeout", type=float, default=300.0, help="Timeout waiting for first observed GPU activity.")
+    p.add_argument("--window-timeout", type=float, default=600.0, help="Timeout waiting for post-first-GPU-activity window completion.")
     p.add_argument("--finish-timeout", type=float, default=0.0, help="Timeout waiting for workload finish. 0 means no timeout.")
     p.add_argument("--poll-seconds", type=float, default=0.5, help="Polling interval.")
     p.add_argument("--event-path", default=None, help="Optional explicit JSONL event path.")
@@ -138,7 +138,7 @@ def wait_for_ttfk(gpu_uuid: str, timeout_s: float, poll_s: float) -> tuple[float
 
         pid_val = row["CPU_task_PID"]
         if pd.isna(pid_val):
-            raise RuntimeError("Tracked PID disappeared before TTFK was observed.")
+            raise RuntimeError("Tracked PID disappeared before first GPU activity was observed.")
 
         seen_at = row["gpu_seen_at"]
         if not pd.isna(seen_at):
@@ -146,7 +146,7 @@ def wait_for_ttfk(gpu_uuid: str, timeout_s: float, poll_s: float) -> tuple[float
 
         time.sleep(poll_s)
 
-    raise TimeoutError(f"Timed out waiting for TTFK on GPU {gpu_uuid}.")
+    raise TimeoutError(f"Timed out waiting for first observed GPU activity on GPU {gpu_uuid}.")
 
 
 def wait_for_finish(tracked_pid: int, finish_timeout_s: float, poll_s: float) -> float:
