@@ -23,7 +23,7 @@ Evidence: `tables/first_gpu_activity_window_stability.md`, `threshold_window_sta
 |                      120 |       147 |                    0.0027 |                   0.0099 |                             0.0205 |
 
 
-## Claim 3: AEGIS risk is a balanced score, not simply the lowest-error component
+## Claim 3: Combined risk is a balanced score, not simply the lowest-error component
 
 Evidence: `tables/risk_component_ablation_rollup.md` and `risk_component_ablation_curve.pdf`. The paper should explain that mean, median, p95, and EWMA capture complementary behavior.
 

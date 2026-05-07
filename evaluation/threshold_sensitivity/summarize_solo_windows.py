@@ -412,7 +412,7 @@ def build_summary(
 
     lines.append("# Threshold Window Analysis Summary\n")
     lines.append(
-        "This summary compares shorter TTFK-anchored monitoring windows against "
+        "This summary compares shorter first-observed-GPU-activity monitoring windows against "
         f"a {reference_window:g}s reference window.\n"
     )
 
@@ -483,7 +483,7 @@ def build_summary(
 
     lines.append("\n## Risk-component ablation\n")
     lines.append(
-        "AEGIS risk is the equal-weight average of mean, median, p95, and EWMA. "
+        "Combined risk is the equal-weight average of mean, median, p95, and EWMA. "
         "This section compares each component against the same reference window to show "
         "what each statistic contributes and whether the combined risk behaves as a balanced signal.\n"
     )
@@ -562,6 +562,7 @@ def build_summary(
         "- Suffixed columns such as `smact_risk_w30s` and `smact_risk_w200s` correspond to explicit summary windows.\n"
         "- Large error at 30s means the 30s decision window does not match the 200s reference for that workload/metric.\n"
         "- This file is generated from `window_stability_summary.csv` and `window_metrics_long.csv`.\n"
+        "- `ttfk_wait_seconds` is a legacy/internal column name; it records the wait until first observed GPU activity, not exact CUDA kernel-launch timing.\n"
     )
 
     return "\n".join(lines)

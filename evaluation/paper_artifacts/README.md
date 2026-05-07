@@ -1,4 +1,4 @@
-# AEGIS Paper Artifacts
+# Paper Artifacts
 
 This folder is a curated index for paper-writing. It does not replace the raw experiment outputs; it points to the stable analysis tables and figures.
 

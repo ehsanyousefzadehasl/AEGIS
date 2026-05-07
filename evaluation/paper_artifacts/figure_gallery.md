@@ -10,17 +10,17 @@ This gallery embeds selected PNG figures for quick visual inspection. See `figur
 
 Folder: `evaluation/figures/solo_profile_launch_w200s_vs_full`
 
-**AEGIS risk 200s-vs-full boxplot**
+**Combined risk 200s-vs-full boxplot**
 
-![AEGIS risk 200s-vs-full boxplot](../figures/solo_profile_launch_w200s_vs_full/profile_200s_vs_full_boxplot.png)
+![Combined risk 200s-vs-full boxplot](../figures/solo_profile_launch_w200s_vs_full/profile_200s_vs_full_boxplot.png)
 
 **Component 200s-vs-full boxplots**
 
 ![Component 200s-vs-full boxplots](../figures/solo_profile_launch_w200s_vs_full/profile_200s_vs_full_component_boxplots.png)
 
-**Top AEGIS-risk profile mismatches**
+**Top combined-risk profile mismatches**
 
-![Top AEGIS-risk profile mismatches](../figures/solo_profile_launch_w200s_vs_full/profile_top_mismatches.png)
+![Top combined-risk profile mismatches](../figures/solo_profile_launch_w200s_vs_full/profile_top_mismatches.png)
 
 **Top mean profile mismatches**
 
@@ -39,17 +39,17 @@ Folder: `evaluation/figures/solo_profile_launch_w200s_vs_full`
 
 Folder: `evaluation/figures/solo_profile_first_memory_w200s_vs_full`
 
-**AEGIS risk 200s-vs-full boxplot**
+**Combined risk 200s-vs-full boxplot**
 
-![AEGIS risk 200s-vs-full boxplot](../figures/solo_profile_first_memory_w200s_vs_full/profile_200s_vs_full_boxplot.png)
+![Combined risk 200s-vs-full boxplot](../figures/solo_profile_first_memory_w200s_vs_full/profile_200s_vs_full_boxplot.png)
 
 **Component 200s-vs-full boxplots**
 
 ![Component 200s-vs-full boxplots](../figures/solo_profile_first_memory_w200s_vs_full/profile_200s_vs_full_component_boxplots.png)
 
-**Top AEGIS-risk profile mismatches**
+**Top combined-risk profile mismatches**
 
-![Top AEGIS-risk profile mismatches](../figures/solo_profile_first_memory_w200s_vs_full/profile_top_mismatches.png)
+![Top combined-risk profile mismatches](../figures/solo_profile_first_memory_w200s_vs_full/profile_top_mismatches.png)
 
 **Top mean profile mismatches**
 
@@ -68,17 +68,17 @@ Folder: `evaluation/figures/solo_profile_first_memory_w200s_vs_full`
 
 Folder: `evaluation/figures/solo_profile_activity_filtered_w200s_vs_full`
 
-**AEGIS risk 200s-vs-full boxplot**
+**Combined risk 200s-vs-full boxplot**
 
-![AEGIS risk 200s-vs-full boxplot](../figures/solo_profile_activity_filtered_w200s_vs_full/profile_200s_vs_full_boxplot.png)
+![Combined risk 200s-vs-full boxplot](../figures/solo_profile_activity_filtered_w200s_vs_full/profile_200s_vs_full_boxplot.png)
 
 **Component 200s-vs-full boxplots**
 
 ![Component 200s-vs-full boxplots](../figures/solo_profile_activity_filtered_w200s_vs_full/profile_200s_vs_full_component_boxplots.png)
 
-**Top AEGIS-risk profile mismatches**
+**Top combined-risk profile mismatches**
 
-![Top AEGIS-risk profile mismatches](../figures/solo_profile_activity_filtered_w200s_vs_full/profile_top_mismatches.png)
+![Top combined-risk profile mismatches](../figures/solo_profile_activity_filtered_w200s_vs_full/profile_top_mismatches.png)
 
 **Top mean profile mismatches**
 
@@ -122,9 +122,9 @@ Folder: `evaluation/figures/first_gpu_activity_windows_w30s_vs_w200s`
 
 ![Risk component ablation curve](../figures/first_gpu_activity_windows_w30s_vs_w200s/risk_component_ablation_curve.png)
 
-**Per-workload AEGIS-risk error heatmap**
+**Per-workload combined-risk error heatmap**
 
-![Per-workload AEGIS-risk error heatmap](../figures/first_gpu_activity_windows_w30s_vs_w200s/per_workload_risk_error_heatmap.png)
+![Per-workload combined-risk error heatmap](../figures/first_gpu_activity_windows_w30s_vs_w200s/per_workload_risk_error_heatmap.png)
 
 **Per-workload mean error heatmap**
 
@@ -151,9 +151,9 @@ Folder: `evaluation/figures/first_gpu_activity_windows_w40s_vs_w200s`
 
 ![Risk component ablation curve](../figures/first_gpu_activity_windows_w40s_vs_w200s/risk_component_ablation_curve.png)
 
-**Per-workload AEGIS-risk error heatmap**
+**Per-workload combined-risk error heatmap**
 
-![Per-workload AEGIS-risk error heatmap](../figures/first_gpu_activity_windows_w40s_vs_w200s/per_workload_risk_error_heatmap.png)
+![Per-workload combined-risk error heatmap](../figures/first_gpu_activity_windows_w40s_vs_w200s/per_workload_risk_error_heatmap.png)
 
 **Per-workload mean error heatmap**
 
@@ -180,9 +180,9 @@ Folder: `evaluation/figures/first_gpu_activity_windows_w60s_vs_w200s`
 
 ![Risk component ablation curve](../figures/first_gpu_activity_windows_w60s_vs_w200s/risk_component_ablation_curve.png)
 
-**Per-workload AEGIS-risk error heatmap**
+**Per-workload combined-risk error heatmap**
 
-![Per-workload AEGIS-risk error heatmap](../figures/first_gpu_activity_windows_w60s_vs_w200s/per_workload_risk_error_heatmap.png)
+![Per-workload combined-risk error heatmap](../figures/first_gpu_activity_windows_w60s_vs_w200s/per_workload_risk_error_heatmap.png)
 
 **Per-workload mean error heatmap**
 
@@ -209,9 +209,9 @@ Folder: `evaluation/figures/first_gpu_activity_windows_w120s_vs_w200s`
 
 ![Risk component ablation curve](../figures/first_gpu_activity_windows_w120s_vs_w200s/risk_component_ablation_curve.png)
 
-**Per-workload AEGIS-risk error heatmap**
+**Per-workload combined-risk error heatmap**
 
-![Per-workload AEGIS-risk error heatmap](../figures/first_gpu_activity_windows_w120s_vs_w200s/per_workload_risk_error_heatmap.png)
+![Per-workload combined-risk error heatmap](../figures/first_gpu_activity_windows_w120s_vs_w200s/per_workload_risk_error_heatmap.png)
 
 **Per-workload mean error heatmap**
 

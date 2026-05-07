@@ -1,6 +1,6 @@
 # Threshold Window Analysis Summary
 
-This summary compares shorter TTFK-anchored monitoring windows against a 200s reference window.
+This summary compares shorter first-observed-GPU-activity monitoring windows against a 200s reference window.
 
 ## Measurement coverage
 
@@ -60,7 +60,7 @@ This summary compares shorter TTFK-anchored monitoring windows against a 200s re
 
 ## Risk-component ablation
 
-AEGIS risk is the equal-weight average of mean, median, p95, and EWMA. This section compares each component against the same reference window to show what each statistic contributes and whether the combined risk behaves as a balanced signal.
+Combined risk is the equal-weight average of mean, median, p95, and EWMA. This section compares each component against the same reference window to show what each statistic contributes and whether the combined risk behaves as a balanced signal.
 
 
 ### Component stability rollup
@@ -396,3 +396,4 @@ The risk score is the equal-weight average of mean, median, p95, and EWMA. This 
 - Suffixed columns such as `smact_risk_w30s` and `smact_risk_w200s` correspond to explicit summary windows.
 - Large error at 30s means the 30s decision window does not match the 200s reference for that workload/metric.
 - This file is generated from `window_stability_summary.csv` and `window_metrics_long.csv`.
+- `ttfk_wait_seconds` is a legacy/internal column name; it records the wait until first observed GPU activity, not exact CUDA kernel-launch timing.

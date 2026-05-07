@@ -24,7 +24,7 @@ PROFILE_COMPONENT_STATS = [
     ("median", "Median"),
     ("p95", "P95"),
     ("ewma", "EWMA"),
-    ("aegis_profile_risk", "AEGIS risk"),
+    ("aegis_profile_risk", "combined risk"),
 ]
 
 PROFILE_COMPONENT_METRICS = [
@@ -35,7 +35,7 @@ PROFILE_COMPONENT_METRICS = [
 
 
 PROFILE_TOP_MISMATCH_STATS = [
-    ("aegis_profile_risk", "AEGIS risk", "profile_top_mismatches"),
+    ("aegis_profile_risk", "combined risk", "profile_top_mismatches"),
     ("mean", "Mean", "profile_top_mismatches_mean"),
     ("median", "Median", "profile_top_mismatches_median"),
     ("p95", "P95", "profile_top_mismatches_p95"),
@@ -329,7 +329,7 @@ def plot_profile_top_mismatches(
         formats,
         top_k,
         stat_name="aegis_profile_risk",
-        stat_label="AEGIS risk",
+        stat_label="Combined risk",
         stem="profile_top_mismatches",
     )
 
@@ -390,9 +390,9 @@ def plot_window_stability_curve(
         )
 
     ax.axvline(float(decision_window), linestyle="--", linewidth=1.2, label="decision window")
-    ax.set_xlabel("Post-TTFK summary window (s)")
+    ax.set_xlabel("Post-first-GPU-activity summary window (s)")
     ax.set_ylabel(f"Mean absolute error vs {reference_window:g}s")
-    ax.set_title("TTFK-window stability")
+    ax.set_title("First-GPU-activity window stability")
     ax.grid(True, alpha=0.3)
     ax.legend()
 
@@ -455,7 +455,7 @@ def plot_risk_component_ablation(
         )
 
     ax.axvline(float(decision_window), linestyle="--", linewidth=1.2, label="decision window")
-    ax.set_xlabel("Post-TTFK summary window (s)")
+    ax.set_xlabel("Post-first-GPU-activity summary window (s)")
     ax.set_ylabel(f"Weighted mean absolute error vs {reference_window:g}s")
     ax.set_title("Risk-component ablation")
     ax.grid(True, alpha=0.3)
