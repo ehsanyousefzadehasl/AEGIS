@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import os
 
 import pandas as pd
 
@@ -293,6 +294,67 @@ def build_figure_index(figures_dir: Path, output_dir: Path) -> None:
     print(f"wrote {figure_md}")
 
 
+def md_image(path: Path, output_dir: Path, title: str) -> str:
+    if not path.exists():
+        return f"_Missing: `{path.relative_to(REPO_ROOT)}`_\n"
+
+    rel = os.path.relpath(path, start=output_dir)
+    return f"**{title}**\n\n![{title}]({rel})\n"
+
+
+def build_figure_gallery(figures_dir: Path, output_dir: Path) -> None:
+    gallery_md = output_dir / "figure_gallery.md"
+
+    lines = ["# Figure Gallery\n"]
+    lines.append(
+        "This gallery embeds selected PNG figures for quick visual inspection. "
+        "See `figure_index.md` for the complete file list.\n"
+    )
+
+    solo_sections = {
+        "Launch anchored solo profile: 200s vs full": figures_dir / "solo_profile_launch_w200s_vs_full",
+        "First-memory anchored solo profile: 200s vs full": figures_dir / "solo_profile_first_memory_w200s_vs_full",
+        "Activity-filtered solo profile: 200s vs full": figures_dir / "solo_profile_activity_filtered_w200s_vs_full",
+    }
+
+    solo_figures = [
+        ("profile_200s_vs_full_boxplot.png", "AEGIS risk 200s-vs-full boxplot"),
+        ("profile_200s_vs_full_component_boxplots.png", "Component 200s-vs-full boxplots"),
+        ("profile_top_mismatches.png", "Top AEGIS-risk profile mismatches"),
+        ("profile_top_mismatches_mean.png", "Top mean profile mismatches"),
+        ("profile_top_mismatches_p95.png", "Top p95 profile mismatches"),
+        ("profile_top_mismatches_ewma.png", "Top EWMA profile mismatches"),
+    ]
+
+    lines.append("\n## Solo-profile anchor figures\n")
+    for section_title, folder in solo_sections.items():
+        lines.append(f"\n### {section_title}\n")
+        lines.append(f"Folder: `{folder.relative_to(REPO_ROOT)}`\n")
+
+        for filename, title in solo_figures:
+            lines.append(md_image(folder / filename, output_dir, title))
+
+    threshold_figures = [
+        ("threshold_window_stability_curve.png", "Window stability curve"),
+        ("risk_component_ablation_curve.png", "Risk component ablation curve"),
+        ("per_workload_risk_error_heatmap.png", "Per-workload AEGIS-risk error heatmap"),
+        ("per_workload_mean_error_heatmap.png", "Per-workload mean error heatmap"),
+        ("per_workload_p95_error_heatmap.png", "Per-workload p95 error heatmap"),
+        ("per_workload_ewma_error_heatmap.png", "Per-workload EWMA error heatmap"),
+    ]
+
+    lines.append("\n## First-observed-GPU-activity threshold-window figures\n")
+    for window in DECISION_WINDOWS:
+        folder = figures_dir / f"first_gpu_activity_windows_w{window}s_vs_w{REFERENCE_WINDOW}s"
+        lines.append(f"\n### {window}s vs {REFERENCE_WINDOW}s\n")
+        lines.append(f"Folder: `{folder.relative_to(REPO_ROOT)}`\n")
+
+        for filename, title in threshold_figures:
+            lines.append(md_image(folder / filename, output_dir, title))
+
+    gallery_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {gallery_md}")
+
 def build_memory_safety_summary(output_dir: Path) -> pd.DataFrame:
     sources = {
         "launch": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted_launch_anchor" / "solo_profile_results_1gpu.csv",
@@ -541,6 +603,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `tables/first_gpu_activity_window_stability.md`: stability of shorter windows vs 200s.
 - `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
 - `tables/memory_safety_summary.md`: 200s-window memory peak vs full-run peak and workload memory requirement.
+- `figure_gallery.md`: visual gallery of selected generated figures.
 
 ## Terminology note
 
@@ -567,6 +630,8 @@ def main() -> int:
     memory_summary = build_memory_safety_summary(output_dir)
 
     build_figure_index(figures_dir, output_dir)
+
+    build_figure_gallery(figures_dir, output_dir)
 
     build_claims_and_evidence(
         output_dir,

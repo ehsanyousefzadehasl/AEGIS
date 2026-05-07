@@ -25,6 +25,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `tables/first_gpu_activity_window_stability.md`: stability of shorter windows vs 200s.
 - `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
 - `tables/memory_safety_summary.md`: 200s-window memory peak vs full-run peak and workload memory requirement.
+- `figure_gallery.md`: visual gallery of selected generated figures.
 
 ## Terminology note
 
