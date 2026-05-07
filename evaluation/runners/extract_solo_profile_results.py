@@ -34,11 +34,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--window-sec", type=float, default=200.0)
     p.add_argument(
         "--anchor",
-        choices=["activity", "first-memory"],
+        choices=["activity", "first-memory", "launch"],
         default="activity",
         help=(
             "activity keeps the existing behavior. first-memory anchors all metrics "
-            "to the first assigned-GPU memory increase."
+            "to the first assigned-GPU memory increase. launch anchors each monitor "
+            "to the first assigned-GPU sample in that monitor log."
         ),
     )
     p.add_argument(
@@ -336,6 +337,41 @@ def active_start_from_nvidia(df: pd.DataFrame) -> pd.Timestamp | None:
         return None
     return active["timestamp"].min()
 
+def first_nvidia_sample_timestamp(
+    csv_path: Path,
+    target_uuids_in_order: list[str],
+) -> pd.Timestamp | None:
+    if not csv_path.exists() or not target_uuids_in_order:
+        return None
+
+    try:
+        df = pd.read_csv(csv_path, skipinitialspace=True)
+    except Exception:
+        return None
+
+    df = normalize_nvidia_smi_columns(df)
+    required = {"uuid", "timestamp"}
+    if not required.issubset(df.columns):
+        return None
+
+    df = df[df["uuid"].isin(target_uuids_in_order)].copy()
+    df = df.dropna(subset=["timestamp"])
+
+    if df.empty:
+        return None
+
+    return df["timestamp"].min()
+
+
+def first_dcgm_sample_timestamp_from_df(df: pd.DataFrame) -> pd.Timestamp | None:
+    if df.empty or "timestamp" not in df.columns:
+        return None
+
+    timestamps = pd.to_datetime(df["timestamp"], errors="coerce").dropna()
+    if timestamps.empty:
+        return None
+
+    return timestamps.min()
 
 def summarize_nvidia_memory(
     csv_path: Path,
@@ -711,6 +747,13 @@ def extract_rows(
             visible_devices,
         )
 
+        nvidia_log_start_ts = first_nvidia_sample_timestamp(
+            run_dir / "nvidia_smi.csv",
+            target_uuids,
+        )
+
+        dcgm_log_start_ts = first_dcgm_sample_timestamp_from_df(dcgm_df_for_anchor)
+
         dcgm_activity_ts = (
             dcgm_activity_anchor_from_df(dcgm_df_for_anchor)
             if not dcgm_df_for_anchor.empty
@@ -729,7 +772,15 @@ def extract_rows(
             else None
         )
 
-        profile_anchor_ts = memory_anchor_ts if anchor == "first-memory" else None
+        if anchor == "first-memory":
+            memory_profile_anchor_ts = memory_anchor_ts
+            dcgm_profile_anchor_ts = memory_anchor_ts
+        elif anchor == "launch":
+            memory_profile_anchor_ts = nvidia_log_start_ts
+            dcgm_profile_anchor_ts = dcgm_log_start_ts
+        else:
+            memory_profile_anchor_ts = None
+            dcgm_profile_anchor_ts = None
 
         stdout_text = read_text(run_dir / "stdout.log")
         time_json = read_json(run_dir / "time.json")
@@ -759,7 +810,6 @@ def extract_rows(
             "summary_path": str(run_dir / "artifacts" / "summary" / "summary.txt"),
             "faketensor_path": str(run_dir / "artifacts" / "faketensor" / "faketensor.txt"),
             "profile_anchor": anchor,
-            "profile_anchor_found": profile_anchor_ts is not None if anchor == "first-memory" else True,
             "first_memory_anchor_timestamp": timestamp_to_str(memory_anchor_ts),
             "first_dcgm_activity_timestamp": timestamp_to_str(dcgm_activity_ts),
             "first_dcgm_activity_after_memory_timestamp": timestamp_to_str(dcgm_activity_after_memory_ts),
@@ -772,6 +822,16 @@ def extract_rows(
                 dcgm_activity_after_memory_ts,
                 memory_anchor_ts,
             ),
+            "nvidia_log_start_timestamp": timestamp_to_str(nvidia_log_start_ts),
+            "dcgm_log_start_timestamp": timestamp_to_str(dcgm_log_start_ts),
+            "profile_anchor_found": (
+                True
+                if anchor == "activity"
+                else (
+                    memory_profile_anchor_ts is not None
+                    and dcgm_profile_anchor_ts is not None
+                )
+            ),
         }
 
         row.update(
@@ -779,7 +839,7 @@ def extract_rows(
                 run_dir / "nvidia_smi.csv",
                 target_uuids_in_order=target_uuids,
                 window_sec=window_sec,
-                anchor_ts=profile_anchor_ts,
+                anchor_ts=memory_profile_anchor_ts,
             )
         )
 
@@ -788,7 +848,7 @@ def extract_rows(
                 run_dir / "dcgm.log",
                 target_gpu_indices_in_order=visible_devices,
                 window_sec=window_sec,
-                anchor_ts=profile_anchor_ts,
+                anchor_ts=dcgm_profile_anchor_ts,
             )
         )
 
