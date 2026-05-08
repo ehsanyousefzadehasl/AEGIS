@@ -1,1 +1,1 @@
-evaluation/workloads/training/specs/yaml/maskrcnn_coco_bs8_1gpu.yaml
+evaluation/workloads/training/specs/yaml/llama3_width_8layer_wiki_bs1_1gpu.yaml

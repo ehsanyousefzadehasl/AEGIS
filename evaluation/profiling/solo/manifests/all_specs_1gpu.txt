@@ -47,3 +47,4 @@ evaluation/workloads/training/specs/yaml/vgg16_imagenet_bs64_1gpu.yaml
 evaluation/workloads/training/specs/yaml/xception_imagenet_bs128_1gpu.yaml
 evaluation/workloads/training/specs/yaml/xception_imagenet_bs32_1gpu.yaml
 evaluation/workloads/training/specs/yaml/xception_imagenet_bs64_1gpu.yaml
+evaluation/workloads/training/specs/yaml/llama3_width_8layer_wiki_bs1_1gpu.yaml
