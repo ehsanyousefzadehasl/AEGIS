@@ -43,6 +43,127 @@ def save_plot(fig, output_dir: Path, stem: str) -> list[Path]:
         print(f"wrote {path}")
     return paths
 
+
+def build_first_gpu_activity_delay_summary(
+    suite_dir: Path,
+    output_dir: Path,
+) -> pd.DataFrame:
+    measurements = read_csv(suite_dir / "live_threshold_measurements.csv")
+    if measurements.empty:
+        return pd.DataFrame()
+
+    required = {
+        "task_path",
+        "ttfk_wait_seconds",
+        "time_from_ttfk_to_window_ready_seconds",
+        "total_runtime_seconds",
+    }
+    if not required.issubset(measurements.columns):
+        return pd.DataFrame()
+
+    data = measurements.copy()
+    data["ttfk_wait_seconds"] = pd.to_numeric(
+        data["ttfk_wait_seconds"],
+        errors="coerce",
+    )
+    data["time_from_ttfk_to_window_ready_seconds"] = pd.to_numeric(
+        data["time_from_ttfk_to_window_ready_seconds"],
+        errors="coerce",
+    )
+    data["total_runtime_seconds"] = pd.to_numeric(
+        data["total_runtime_seconds"],
+        errors="coerce",
+    )
+
+    data = data.dropna(subset=["ttfk_wait_seconds"])
+    if data.empty:
+        return pd.DataFrame()
+
+    data["workload_id"] = data["task_path"].apply(lambda x: Path(str(x)).stem)
+
+    summary = pd.DataFrame(
+        [
+            {
+                "n": int(len(data)),
+                "median_first_gpu_activity_delay_s": float(data["ttfk_wait_seconds"].median()),
+                "p90_first_gpu_activity_delay_s": float(data["ttfk_wait_seconds"].quantile(0.90)),
+                "p95_first_gpu_activity_delay_s": float(data["ttfk_wait_seconds"].quantile(0.95)),
+                "max_first_gpu_activity_delay_s": float(data["ttfk_wait_seconds"].max()),
+            }
+        ]
+    )
+
+    top_delays = (
+        data.sort_values("ttfk_wait_seconds", ascending=False)
+        .loc[
+            :,
+            [
+                "workload_id",
+                "task_path",
+                "ttfk_wait_seconds",
+                "time_from_ttfk_to_window_ready_seconds",
+                "total_runtime_seconds",
+            ],
+        ]
+        .head(15)
+        .copy()
+    )
+
+    tables_dir = output_dir / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
+
+    summary_csv = tables_dir / "first_gpu_activity_delay_summary.csv"
+    summary_md = tables_dir / "first_gpu_activity_delay_summary.md"
+    top_csv = tables_dir / "first_gpu_activity_delay_top_workloads.csv"
+
+    summary.to_csv(summary_csv, index=False)
+    top_delays.to_csv(top_csv, index=False)
+
+    md = ["# First Observed GPU Activity Delay Summary\n"]
+    md.append(
+        "This table summarizes the delay from workload dispatch to first observed GPU activity. "
+        "The internal CSV column is `ttfk_wait_seconds`, but it should be interpreted as first observed GPU activity delay, "
+        "not exact CUDA-kernel-launch instrumentation.\n"
+    )
+
+    md.append("## Aggregate summary\n")
+    md.append(
+        markdown_table(
+            summary,
+            [
+                "n",
+                "median_first_gpu_activity_delay_s",
+                "p90_first_gpu_activity_delay_s",
+                "p95_first_gpu_activity_delay_s",
+                "max_first_gpu_activity_delay_s",
+            ],
+            max_rows=10,
+        )
+    )
+
+    md.append("\n## Largest first-observed-GPU-activity delays\n")
+    md.append(
+        markdown_table(
+            top_delays,
+            [
+                "workload_id",
+                "ttfk_wait_seconds",
+                "time_from_ttfk_to_window_ready_seconds",
+                "total_runtime_seconds",
+            ],
+            max_rows=15,
+        )
+    )
+
+    summary_md.write_text("\n".join(md) + "\n", encoding="utf-8")
+
+    print(f"wrote {summary_csv}")
+    print(f"wrote {summary_md}")
+    print(f"wrote {top_csv}")
+
+    return summary
+
+
 def build_solo_profile_memory_peak_summary(output_dir: Path) -> pd.DataFrame:
     sources = {
         "launch": REPO_ROOT / "evaluation" / "profiling" / "solo" / "extracted_launch_anchor" / "solo_profile_results_1gpu.csv",
@@ -959,6 +1080,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `figure_gallery.md`: visual gallery of selected generated figures.
 - `tables/solo_profile_memory_peak_summary.md`: 200s observed memory peak vs full-run observed memory peak from solo profiles.
 - `tables/first_gpu_activity_memory_stability.md`: first-GPU-activity memory usage windows vs the 200s reference.
+- `tables/first_gpu_activity_delay_summary.md`: delay from dispatch to first observed GPU activity.
 
 ## Terminology note
 
@@ -981,6 +1103,8 @@ def main() -> int:
     anchor_summary = build_anchor_comparison(output_dir)
     window_summary = build_first_gpu_activity_window_summary(suite_dir, output_dir)
     component_summary = build_risk_component_ablation_summary(suite_dir, output_dir)
+
+    build_first_gpu_activity_delay_summary(suite_dir, output_dir)
 
     # Memory summaries also write their Markdown/CSV tables and memory figures.
     build_solo_profile_memory_peak_summary(output_dir)
