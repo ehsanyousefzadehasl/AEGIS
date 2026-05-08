@@ -99,7 +99,7 @@ def summarize_threshold_tuple(
     )
     allow = ~reject
 
-    unsafe = (df["max_slowdown"] >= unsafe_slowdown) | df["oom"]
+    unsafe = df["max_slowdown"] >= unsafe_slowdown
 
     allowed = df[allow]
     rejected = df[reject]
@@ -121,7 +121,6 @@ def summarize_threshold_tuple(
         "unsafe_allowed_rate": float(len(unsafe_allowed) / len(allowed)) if len(allowed) else 0.0,
         "safe_rejected_count": int(len(safe_rejected)),
         "safe_rejected_rate": float(len(safe_rejected) / len(rejected)) if len(rejected) else 0.0,
-        "oom_allowed_count": int(allowed["oom"].sum()) if len(allowed) else 0,
         "mean_slowdown_allowed": float(allowed["max_slowdown"].mean()) if len(allowed) and allowed["max_slowdown"].notna().any() else None,
         "p95_slowdown_allowed": float(allowed["max_slowdown"].quantile(0.95)) if len(allowed) and allowed["max_slowdown"].notna().any() else None,
         "max_slowdown_allowed": float(allowed["max_slowdown"].max()) if len(allowed) and allowed["max_slowdown"].notna().any() else None,
@@ -176,8 +175,13 @@ def write_summary_md(results: pd.DataFrame, output_dir: Path, unsafe_slowdown: f
         "This sweep evaluates the rule: reject a GPU if "
         "`smact_risk >= tau_smact AND (smocc_risk >= tau_smocc OR drama_risk >= tau_drama)`.\n"
     )
-    lines.append(f"Unsafe slowdown threshold: `{unsafe_slowdown}`.\n")
 
+    lines.append(
+        f"Unsafe cases are defined only by slowdown: `max_slowdown >= {unsafe_slowdown}`. "
+        "OOM is intentionally excluded because this study assumes memory feasibility is handled separately "
+        "by the hard memory-admission constraint.\n"
+    )
+    
     lines.append("\n## Top conservative threshold tuples\n")
     lines.append(
         markdown_table(
