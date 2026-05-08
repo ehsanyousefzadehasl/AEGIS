@@ -1,3 +1,3 @@
 evaluation/workloads/training/specs/yaml/gpt2_large_wiki_bs8_2gpu.yaml
 evaluation/workloads/training/specs/yaml/xlnet_base_cased_wiki_bs8_2gpu.yaml
-evaluation/workloads/training/specs/yaml/xlnet_large_cased_wiki_bs8_2gpu.yaml
+evaluation/workloads/training/specs/yaml/xlnet_large_cased_wiki_bs4_2gpu.yaml

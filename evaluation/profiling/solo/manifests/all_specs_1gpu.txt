@@ -14,6 +14,7 @@ evaluation/workloads/training/specs/yaml/gpt2_xl_wiki_bs2_1gpu.yaml
 evaluation/workloads/training/specs/yaml/inception_imagenet_bs128_1gpu.yaml
 evaluation/workloads/training/specs/yaml/inception_imagenet_bs32_1gpu.yaml
 evaluation/workloads/training/specs/yaml/inception_imagenet_bs64_1gpu.yaml
+evaluation/workloads/training/specs/yaml/llama3_width_8layer_wiki_bs1_1gpu.yaml
 evaluation/workloads/training/specs/yaml/maskrcnn_coco_bs8_1gpu.yaml
 evaluation/workloads/training/specs/yaml/mnist_bs32_1gpu.yaml
 evaluation/workloads/training/specs/yaml/mobilenet_cifar100_bs128_20e_1gpu.yaml
@@ -47,4 +48,3 @@ evaluation/workloads/training/specs/yaml/vgg16_imagenet_bs64_1gpu.yaml
 evaluation/workloads/training/specs/yaml/xception_imagenet_bs128_1gpu.yaml
 evaluation/workloads/training/specs/yaml/xception_imagenet_bs32_1gpu.yaml
 evaluation/workloads/training/specs/yaml/xception_imagenet_bs64_1gpu.yaml
-evaluation/workloads/training/specs/yaml/llama3_width_8layer_wiki_bs1_1gpu.yaml
