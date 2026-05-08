@@ -131,6 +131,24 @@ python evaluation/threshold_sensitivity/run_solo_baselines.py \
   --summary-windows 10,20,30,60,120,200
 ```
 
+For two-gpu workloads:
+
+### Run 2-GPU threshold-window solo workloads
+
+For multi-GPU workloads, `--gpu-id` selects the GPU used for monitoring and first-GPU-activity detection, while `--cuda-visible-devices` controls which GPUs are exposed to the workload.
+
+```bash
+python evaluation/threshold_sensitivity/run_solo_baselines.py \
+  --spec-list evaluation/profiling/solo/manifests/all_specs_2gpu.txt \
+  --workdir . \
+  --gpu-id 0 \
+  --cuda-visible-devices 0,1 \
+  --window-seconds 30 \
+  --summary-windows 5,10,20,30,40,60,120,200 \
+  --suite-id solo_2gpu_threshold_windows_$(date +%Y%m%d_%H%M%S)
+```
+
+
 ## Output files
 
 Each suite writes:
