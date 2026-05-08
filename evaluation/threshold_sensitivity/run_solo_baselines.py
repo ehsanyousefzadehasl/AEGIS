@@ -35,6 +35,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--gpu-id", type=str, default=None)
     p.add_argument("--gpu-uuid", type=str, default=None)
 
+    p.add_argument(
+        "--cuda-visible-devices",
+        type=str,
+        default=None,
+        help="CUDA_VISIBLE_DEVICES value for launched workloads. Defaults to --gpu-id.",
+    )
+
     p.add_argument("--user", default="threshold-exp")
     p.add_argument("--estimator", default="None")
     p.add_argument("--window-seconds", type=float, default=30.0)
@@ -147,8 +154,12 @@ def build_live_runner_command(
 
     if args.gpu_uuid is not None:
         cmd.extend(["--gpu-uuid", args.gpu_uuid])
+        
     if args.gpu_id is not None:
         cmd.extend(["--gpu-id", args.gpu_id])
+
+    if args.cuda_visible_devices is not None:
+        cmd.extend(["--cuda-visible-devices", args.cuda_visible_devices])
 
     return cmd
 

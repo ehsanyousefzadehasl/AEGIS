@@ -77,7 +77,12 @@ def build_launch_command(
     task_obj,
     event_path,
     run_id,
+    cuda_visible_devices=None,
 ):
+    cuda_visible_devices = (
+        gpus_identifiers if cuda_visible_devices is None else cuda_visible_devices
+    )
+
     completed_event_cmd = build_event_cli_command(
         event_path,
         {
@@ -85,7 +90,7 @@ def build_launch_command(
             "task_id": str(task_obj.task_id),
             "task": task_obj.task,
             "workdir": dir,
-            "cuda_visible_devices": gpus_identifiers,
+            "cuda_visible_devices": cuda_visible_devices,
             "run_id": run_id,
         },
         return_code_var="rc",
@@ -98,7 +103,7 @@ def build_launch_command(
             "task_id": str(task_obj.task_id),
             "task": task_obj.task,
             "workdir": dir,
-            "cuda_visible_devices": gpus_identifiers,
+            "cuda_visible_devices": cuda_visible_devices,
             "run_id": run_id,
         },
         return_code_var="rc",
@@ -112,7 +117,7 @@ def build_launch_command(
 
     command = (
         f"cd {shlex.quote(dir)} ; "
-        f"export CUDA_VISIBLE_DEVICES={shlex.quote(str(gpus_identifiers))} ; "
+        f"export CUDA_VISIBLE_DEVICES={shlex.quote(str(cuda_visible_devices))} ; "
         f"exec 3>&1 ; "
         f"{{ time ( "
         f"{{ "

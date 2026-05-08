@@ -77,6 +77,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--user", default="threshold-exp", help="User label for the synthetic Task object.")
     p.add_argument("--gpu-uuid", default=None, help="GPU UUID to use.")
     p.add_argument("--gpu-id", default=None, help="GPU index/id to use (e.g., 0).")
+
+    p.add_argument(
+        "--cuda-visible-devices",
+        default=None,
+        help="CUDA_VISIBLE_DEVICES value for the launched workload. Defaults to --gpu-id.",
+    )
+
     p.add_argument("--estimator", default="None", help="Estimator name for load_job_spec().")
     p.add_argument("--window-seconds", type=float, default=30.0, help="Post-first-GPU-activity window length.")
     p.add_argument(
@@ -478,6 +485,7 @@ def main() -> int:
             task_obj,
             event_path,
             run_id,
+            cuda_visible_devices=args.cuda_visible_devices or str(gpu_id),
         )
 
         stage = "launch"
