@@ -90,3 +90,6 @@ evaluation/threshold_sensitivity/solo_runs/
 !evaluation/paper_artifacts/tables/
 !evaluation/paper_artifacts/tables/*.csv
 !evaluation/paper_artifacts/tables/*.md
+
+# keep threshold sensitivity trial manifests
+!evaluation/threshold_sensitivity/manifests/progressive_threshold_trials_template.csv

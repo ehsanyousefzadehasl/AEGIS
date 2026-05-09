@@ -1,0 +1,3 @@
+trial_id,gpu_id,cuda_visible_devices,job_sequence
+pilot_mixed_1,0,"0","evaluation/workloads/training/specs/yaml/bert_base_wiki_bs32_1gpu.yaml;evaluation/workloads/training/specs/yaml/resnet50_imagenet_bs64_1gpu.yaml;evaluation/workloads/training/specs/yaml/mobilenet_imagenet_bs64_1gpu.yaml"
+pilot_heavy_1,0,"0","evaluation/workloads/training/specs/yaml/bert_large_wiki_bs8_1gpu.yaml;evaluation/workloads/training/specs/yaml/maskrcnn_coco_bs8_1gpu.yaml"
