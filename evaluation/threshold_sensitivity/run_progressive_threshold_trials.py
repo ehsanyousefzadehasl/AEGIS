@@ -5,6 +5,11 @@ import argparse
 import json
 from pathlib import Path
 import csv
+import datetime as dt
+
+import subprocess
+
+import time
 
 DEFAULT_OUTPUT_DIR = Path("evaluation/threshold_sensitivity/progressive_threshold_trials")
 
@@ -61,6 +66,20 @@ def parse_args() -> argparse.Namespace:
         "--solo-runtime-csv",
         default=None,
         help="Optional CSV with solo runtimes used to compute slowdown.",
+    )
+
+    p.add_argument(
+        "--execute-initial-only",
+        action="store_true",
+        help="Launch only the first job of each trial and record runtime.",
+    )
+
+    p.add_argument("--workdir", default=".")
+    p.add_argument(
+        "--job-timeout-seconds",
+        type=float,
+        default=None,
+        help="Optional timeout for each launched job.",
     )
 
     return p.parse_args()
@@ -265,6 +284,80 @@ def lookup_solo_runtime(
             return lookup[key]
     return None
 
+def load_job_command(spec_path: str) -> str:
+    import yaml
+
+    with Path(spec_path).open("r", encoding="utf-8") as f:
+        spec = yaml.safe_load(f)
+
+    command = spec.get("job", {}).get("command")
+    if not command:
+        raise ValueError(f"No job.command found in {spec_path}")
+
+    return str(command)
+
+def execute_candidate_job(
+    *,
+    spec_path: str,
+    workdir: Path,
+    cuda_visible_devices: str,
+    timeout_seconds: float | None,
+    output_dir: Path,
+    trial_id: str,
+    stage: int,
+) -> dict:
+    command = load_job_command(spec_path)
+
+    logs_dir = output_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_name = Path(spec_path).stem
+    stdout_path = logs_dir / f"{trial_id}_stage{stage}_{safe_name}.out.log"
+    stderr_path = logs_dir / f"{trial_id}_stage{stage}_{safe_name}.err.log"
+
+    env = dict(**__import__("os").environ)
+    env["CUDA_VISIBLE_DEVICES"] = str(cuda_visible_devices)
+
+    started_at = dt.datetime.now().isoformat()
+    t0 = time.monotonic()
+
+    timed_out = False
+
+    with stdout_path.open("w", encoding="utf-8") as stdout_f, stderr_path.open(
+        "w",
+        encoding="utf-8",
+    ) as stderr_f:
+        try:
+            proc = subprocess.run(
+                command,
+                shell=True,
+                executable="/bin/bash",
+                cwd=str(workdir),
+                env=env,
+                stdout=stdout_f,
+                stderr=stderr_f,
+                timeout=timeout_seconds,
+            )
+            return_code = proc.returncode
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            return_code = 124
+            stderr_f.write(
+                f"\n[progressive-runner] job timed out after {timeout_seconds} seconds\n"
+            )
+
+    runtime_s = time.monotonic() - t0
+    finished_at = dt.datetime.now().isoformat()
+
+    return {
+        "return_code": return_code,
+        "runtime_seconds": runtime_s,
+        "timed_out": timed_out,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "stdout_path": str(stdout_path),
+        "stderr_path": str(stderr_path),
+    }
 
 def main() -> int:
     args = parse_args()
@@ -302,6 +395,64 @@ def main() -> int:
 
     observations_csv = output_dir / "admission_observations.csv"
     initialize_observations_csv(observations_csv)
+
+    if args.execute_initial_only:
+        rows = []
+        workdir = Path(args.workdir).resolve()
+
+        for stage in all_stages:
+            if not stage["is_initial_job"]:
+                continue
+
+            result = execute_candidate_job(
+                spec_path=stage["candidate_job"],
+                workdir=workdir,
+                cuda_visible_devices=stage["cuda_visible_devices"],
+                timeout_seconds=args.job_timeout_seconds,
+                output_dir=output_dir,
+                trial_id=stage["trial_id"],
+                stage=int(stage["stage"]),
+            )
+
+            running_jobs = stage["running_jobs_before_stage"]
+            candidate_solo_runtime = lookup_solo_runtime(
+                solo_runtime_lookup,
+                stage["candidate_job"],
+            )
+
+            rows.append(
+                {
+                    "trial_id": stage["trial_id"],
+                    "stage": stage["stage"],
+                    "gpu_id": stage["gpu_id"],
+                    "cuda_visible_devices": stage["cuda_visible_devices"],
+                    "running_jobs_before_stage": ";".join(running_jobs),
+                    "candidate_job": stage["candidate_job"],
+                    "is_initial_job": stage["is_initial_job"],
+                    "decision": "initial_only",
+                    "decision_reason": "initial_job_execution_test",
+                    "smact_risk": "",
+                    "smocc_risk": "",
+                    "drama_risk": "",
+                    "running_job_count_before": len(running_jobs),
+                    "running_job_count_after": 1,
+                    "candidate_started": True,
+                    "candidate_finished": result["return_code"] == 0 and not result["timed_out"],
+                    "candidate_return_code": result["return_code"],
+                    "candidate_runtime_seconds": result["runtime_seconds"],
+                    "candidate_solo_runtime_seconds": "" if candidate_solo_runtime is None else candidate_solo_runtime,
+                    "max_slowdown": "",
+                }
+            )
+
+            print(
+                f"[{stage['trial_id']}] initial job finished "
+                f"rc={result['return_code']} timed_out={result['timed_out']} "
+                f"runtime={result['runtime_seconds']:.2f}s"
+            )
+
+        append_observations(observations_csv, rows)
+        print(f"wrote {observations_csv}")
 
     if args.dry_run:
         append_observations(
