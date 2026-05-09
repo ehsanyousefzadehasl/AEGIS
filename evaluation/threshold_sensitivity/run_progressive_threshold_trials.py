@@ -4,10 +4,31 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-
+import csv
 
 DEFAULT_OUTPUT_DIR = Path("evaluation/threshold_sensitivity/progressive_threshold_trials")
 
+OBSERVATION_COLUMNS = [
+    "trial_id",
+    "stage",
+    "gpu_id",
+    "cuda_visible_devices",
+    "running_jobs_before_stage",
+    "candidate_job",
+    "is_initial_job",
+    "decision",
+    "decision_reason",
+    "smact_risk",
+    "smocc_risk",
+    "drama_risk",
+    "running_job_count_before",
+    "running_job_count_after",
+    "candidate_started",
+    "candidate_finished",
+    "candidate_return_code",
+    "candidate_runtime_seconds",
+    "max_slowdown",
+]
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -57,6 +78,44 @@ def describe_trial(trial: dict) -> list[dict]:
 
     return stages
 
+def initialize_observations_csv(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=OBSERVATION_COLUMNS)
+        writer.writeheader()
+
+
+def dry_run_observation(stage: dict) -> dict:
+    running_jobs = stage["running_jobs_before_stage"]
+    return {
+        "trial_id": stage["trial_id"],
+        "stage": stage["stage"],
+        "gpu_id": stage["gpu_id"],
+        "cuda_visible_devices": stage["cuda_visible_devices"],
+        "running_jobs_before_stage": ";".join(running_jobs),
+        "candidate_job": stage["candidate_job"],
+        "is_initial_job": stage["is_initial_job"],
+        "decision": "dry_run",
+        "decision_reason": "planned_only",
+        "smact_risk": "",
+        "smocc_risk": "",
+        "drama_risk": "",
+        "running_job_count_before": len(running_jobs),
+        "running_job_count_after": len(running_jobs),
+        "candidate_started": False,
+        "candidate_finished": False,
+        "candidate_return_code": "",
+        "candidate_runtime_seconds": "",
+        "max_slowdown": "",
+    }
+
+
+def append_observations(path: Path, rows: list[dict]) -> None:
+    with path.open("a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=OBSERVATION_COLUMNS)
+        for row in rows:
+            writer.writerow(row)
+
 
 def main() -> int:
     args = parse_args()
@@ -72,6 +131,17 @@ def main() -> int:
         all_stages.extend(describe_trial(trial))
 
     stage_plan_path = output_dir / "progressive_stage_plan.jsonl"
+
+    observations_csv = output_dir / "admission_observations.csv"
+    initialize_observations_csv(observations_csv)
+
+    if args.dry_run:
+        append_observations(
+            observations_csv,
+            [dry_run_observation(stage) for stage in all_stages],
+        )
+        print(f"wrote {observations_csv}")
+
     with stage_plan_path.open("w", encoding="utf-8") as f:
         for stage in all_stages:
             f.write(json.dumps(stage, sort_keys=True) + "\n")
