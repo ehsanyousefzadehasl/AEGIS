@@ -1,0 +1,2 @@
+n,median_first_gpu_activity_delay_s,p90_first_gpu_activity_delay_s,p95_first_gpu_activity_delay_s,max_first_gpu_activity_delay_s
+50,8.199700963501527,10.55107160630142,20.577489257196415,55.475079863972496

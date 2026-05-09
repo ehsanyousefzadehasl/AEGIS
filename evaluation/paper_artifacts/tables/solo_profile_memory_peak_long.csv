@@ -15,6 +15,7 @@ launch,gpt2_xl_wiki_bs2_1gpu,40182.0,40182.0,0.0,0.0
 launch,inception_imagenet_bs128_1gpu,17964.0,17964.0,0.0,0.0
 launch,inception_imagenet_bs32_1gpu,5246.0,5246.0,0.0,0.0
 launch,inception_imagenet_bs64_1gpu,9408.0,9408.0,0.0,0.0
+launch,llama3_width_8layer_wiki_bs1_1gpu,28712.0,28712.0,0.0,0.0
 launch,maskrcnn_coco_bs8_1gpu,29854.0,29936.0,82.0,82.0
 launch,mnist_bs32_1gpu,1098.0,1098.0,0.0,0.0
 launch,mobilenet_cifar100_bs128_20e_1gpu,634.0,634.0,0.0,0.0
@@ -64,6 +65,7 @@ first_memory,gpt2_xl_wiki_bs2_1gpu,40182.0,40182.0,0.0,0.0
 first_memory,inception_imagenet_bs128_1gpu,17964.0,17964.0,0.0,0.0
 first_memory,inception_imagenet_bs32_1gpu,5246.0,5246.0,0.0,0.0
 first_memory,inception_imagenet_bs64_1gpu,9408.0,9408.0,0.0,0.0
+first_memory,llama3_width_8layer_wiki_bs1_1gpu,28712.0,28712.0,0.0,0.0
 first_memory,maskrcnn_coco_bs8_1gpu,29854.0,29936.0,82.0,82.0
 first_memory,mnist_bs32_1gpu,1098.0,1098.0,0.0,0.0
 first_memory,mobilenet_cifar100_bs128_20e_1gpu,634.0,634.0,0.0,0.0
@@ -113,6 +115,7 @@ activity_filtered,gpt2_xl_wiki_bs2_1gpu,40182.0,40182.0,0.0,0.0
 activity_filtered,inception_imagenet_bs128_1gpu,17964.0,17964.0,0.0,0.0
 activity_filtered,inception_imagenet_bs32_1gpu,5246.0,5246.0,0.0,0.0
 activity_filtered,inception_imagenet_bs64_1gpu,9408.0,9408.0,0.0,0.0
+activity_filtered,llama3_width_8layer_wiki_bs1_1gpu,28712.0,28712.0,0.0,0.0
 activity_filtered,maskrcnn_coco_bs8_1gpu,29854.0,29936.0,82.0,82.0
 activity_filtered,mnist_bs32_1gpu,1098.0,1098.0,0.0,0.0
 activity_filtered,mobilenet_cifar100_bs128_20e_1gpu,634.0,634.0,0.0,0.0

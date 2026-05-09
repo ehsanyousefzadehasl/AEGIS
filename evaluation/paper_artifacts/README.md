@@ -12,8 +12,8 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 
 ### First-observed-GPU-activity threshold-window analysis
 
-- Suite directory: `evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217`
-- Window analysis: `evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217/window_analysis`
+- Suite directory: `evaluation/threshold_sensitivity/solo_runs/combined_1gpu_threshold_windows_with_llama_20260509_202117`
+- Window analysis: `evaluation/threshold_sensitivity/solo_runs/combined_1gpu_threshold_windows_with_llama_20260509_202117/window_analysis`
 - Summaries: `evaluation/threshold_sensitivity/summaries/`
 - Figures: `evaluation/figures/first_gpu_activity_windows_w(30, 40, 60, 120)s_vs_w200s/`
 
@@ -28,6 +28,7 @@ This folder is a curated index for paper-writing. It does not replace the raw ex
 - `figure_gallery.md`: visual gallery of selected generated figures.
 - `tables/solo_profile_memory_peak_summary.md`: 200s observed memory peak vs full-run observed memory peak from solo profiles.
 - `tables/first_gpu_activity_memory_stability.md`: first-GPU-activity memory usage windows vs the 200s reference.
+- `tables/first_gpu_activity_delay_summary.md`: delay from dispatch to first observed GPU activity.
 
 ## Terminology note
 

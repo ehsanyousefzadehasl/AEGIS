@@ -1,0 +1,16 @@
+workload_id,task_path,ttfk_wait_seconds,time_from_ttfk_to_window_ready_seconds,total_runtime_seconds
+llama3_width_8layer_wiki_bs1_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/llama3_width_8layer_wiki_bs1_1gpu.yaml,55.475079863972496,30.02273264701944,2366.6501908859937
+gpt2_xl_wiki_bs2_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/gpt2_xl_wiki_bs2_1gpu.yaml,37.90996389799693,30.025255828993977,14544.846102806989
+maskrcnn_coco_bs8_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/maskrcnn_coco_bs8_1gpu.yaml,23.161335501994472,30.04128554800991,6702.342215857992
+bert_large_wiki_bs8_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/bert_large_wiki_bs8_1gpu.yaml,17.419454957998823,30.29264117899584,2717.1886793039885
+bert_base_wiki_bs32_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/bert_base_wiki_bs32_1gpu.yaml,15.384848839996266,30.24547874700511,908.3378549049958
+vgg16_imagenet_bs64_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/vgg16_imagenet_bs64_1gpu.yaml,10.013985247001983,30.38251402400784,2819.895131361991
+vgg16_imagenet_bs128_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/vgg16_imagenet_bs128_1gpu.yaml,9.920411373022944,30.00596553698415,2699.7760615300213
+vgg16_imagenet_bs32_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/vgg16_imagenet_bs32_1gpu.yaml,9.899930458981544,30.520118793006983,3035.353127323993
+inception_imagenet_bs128_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/inception_imagenet_bs128_1gpu.yaml,9.267761677998353,30.521389660978457,3040.002379544981
+resnet50_imagenet_bs128_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/resnet50_imagenet_bs128_1gpu.yaml,9.120920926012332,30.124836711009262,1888.4860170830216
+xception_imagenet_bs128_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/xception_imagenet_bs128_1gpu.yaml,9.014980005013058,30.20940882398281,2866.8972205370083
+inception_imagenet_bs32_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/inception_imagenet_bs32_1gpu.yaml,8.982738408987643,30.60858982001082,3360.5701096279954
+resnet50_imagenet_bs32_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/resnet50_imagenet_bs32_1gpu.yaml,8.937296841992065,30.26405435698689,2098.914687914977
+xception_imagenet_bs64_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/xception_imagenet_bs64_1gpu.yaml,8.934156973002246,30.18038747299579,2955.527791539993
+resnet50_imagenet_bs64_1gpu,/home/ehyo/AEGIS/evaluation/workloads/training/specs/yaml/resnet50_imagenet_bs64_1gpu.yaml,8.908026405988494,30.3364534220018,1959.502102331986
