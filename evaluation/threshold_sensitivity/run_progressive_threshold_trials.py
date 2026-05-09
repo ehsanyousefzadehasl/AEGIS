@@ -45,6 +45,9 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print planned stages without launching workloads.",
     )
+    p.add_argument("--tau-smact", type=float, default=0.80)
+    p.add_argument("--tau-smocc", type=float, default=0.45)
+    p.add_argument("--tau-drama", type=float, default=0.40)
     return p.parse_args()
 
 
@@ -116,6 +119,22 @@ def append_observations(path: Path, rows: list[dict]) -> None:
         for row in rows:
             writer.writerow(row)
 
+def should_reject_gpu(
+    *,
+    smact_risk: float,
+    smocc_risk: float,
+    drama_risk: float,
+    tau_smact: float,
+    tau_smocc: float,
+    tau_drama: float,
+) -> bool:
+    return (
+        smact_risk >= tau_smact
+        and (
+            smocc_risk >= tau_smocc
+            or drama_risk >= tau_drama
+        )
+    )
 
 def main() -> int:
     args = parse_args()
@@ -125,6 +144,19 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     trials = read_plan(plan_path)
+
+    metadata = {
+        "plan_jsonl": str(plan_path),
+        "tau_smact": args.tau_smact,
+        "tau_smocc": args.tau_smocc,
+        "tau_drama": args.tau_drama,
+        "rule": "reject if smact_risk >= tau_smact and (smocc_risk >= tau_smocc or drama_risk >= tau_drama)",
+    }
+
+    metadata_path = output_dir / "metadata.json"
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    print(f"wrote {metadata_path}")
+
 
     all_stages = []
     for trial in trials:
