@@ -48,6 +48,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--tau-smact", type=float, default=0.80)
     p.add_argument("--tau-smocc", type=float, default=0.45)
     p.add_argument("--tau-drama", type=float, default=0.40)
+
+    p.add_argument("--window-seconds", type=float, default=30.0)
+    p.add_argument(
+        "--summary-windows",
+        default="5,10,20,30,40,60,120,200",
+        help="Comma-separated summary windows to collect for each admission point.",
+    )
+
     return p.parse_args()
 
 
@@ -136,6 +144,14 @@ def should_reject_gpu(
         )
     )
 
+def parse_summary_windows(text: str) -> list[float]:
+    windows = []
+    for item in str(text).split(","):
+        item = item.strip()
+        if item:
+            windows.append(float(item))
+    return windows
+
 def main() -> int:
     args = parse_args()
 
@@ -151,6 +167,8 @@ def main() -> int:
         "tau_smocc": args.tau_smocc,
         "tau_drama": args.tau_drama,
         "rule": "reject if smact_risk >= tau_smact and (smocc_risk >= tau_smocc or drama_risk >= tau_drama)",
+        "window_seconds": args.window_seconds,
+        "summary_windows": parse_summary_windows(args.summary_windows),
     }
 
     metadata_path = output_dir / "metadata.json"
