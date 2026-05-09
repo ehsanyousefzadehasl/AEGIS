@@ -82,6 +82,13 @@ def parse_args() -> argparse.Namespace:
         help="Optional timeout for each launched job.",
     )
 
+    p.add_argument(
+        "--limit-trials",
+        type=int,
+        default=None,
+        help="Limit number of trials to run/read from the plan.",
+    )
+
     return p.parse_args()
 
 
@@ -367,6 +374,9 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     trials = read_plan(plan_path)
+
+    if args.limit_trials is not None:
+        trials = trials[: args.limit_trials]
 
     solo_runtime_lookup = load_solo_runtime_lookup(args.solo_runtime_csv)
 
