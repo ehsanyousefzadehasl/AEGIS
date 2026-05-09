@@ -91,6 +91,9 @@ def describe_trial(trial: dict) -> list[dict]:
                 "running_jobs_before_stage": running_jobs,
                 "candidate_job": candidate,
                 "is_initial_job": stage_idx == 1,
+                "mock_smact_risk": trial.get("mock_smact_risk", ""),
+                "mock_smocc_risk": trial.get("mock_smocc_risk", ""),
+                "mock_drama_risk": trial.get("mock_drama_risk", ""),
             }
         )
 
@@ -103,8 +106,48 @@ def initialize_observations_csv(path: Path) -> None:
         writer.writeheader()
 
 
-def dry_run_observation(stage: dict) -> dict:
+def dry_run_observation(
+    stage: dict,
+    *,
+    tau_smact: float,
+    tau_smocc: float,
+    tau_drama: float,
+    solo_runtime_lookup: dict[str, float],
+) -> dict:
     running_jobs = stage["running_jobs_before_stage"]
+
+    smact = stage.get("mock_smact_risk", "")
+    smocc = stage.get("mock_smocc_risk", "")
+    drama = stage.get("mock_drama_risk", "")
+
+    decision = "dry_run"
+    reason = "planned_only"
+    smact_f = ""
+    smocc_f = ""
+    drama_f = ""
+
+    if smact != "" and smocc != "" and drama != "":
+        smact_f = float(smact)
+        smocc_f = float(smocc)
+        drama_f = float(drama)
+
+        reject = should_reject_gpu(
+            smact_risk=smact_f,
+            smocc_risk=smocc_f,
+            drama_risk=drama_f,
+            tau_smact=tau_smact,
+            tau_smocc=tau_smocc,
+            tau_drama=tau_drama,
+        )
+
+        decision = "reject" if reject else "admit"
+        reason = "mock_threshold_rule"
+
+    candidate_solo_runtime = lookup_solo_runtime(
+        solo_runtime_lookup,
+        stage["candidate_job"],
+    )
+
     return {
         "trial_id": stage["trial_id"],
         "stage": stage["stage"],
@@ -113,18 +156,18 @@ def dry_run_observation(stage: dict) -> dict:
         "running_jobs_before_stage": ";".join(running_jobs),
         "candidate_job": stage["candidate_job"],
         "is_initial_job": stage["is_initial_job"],
-        "decision": "dry_run",
-        "decision_reason": "planned_only",
-        "smact_risk": "",
-        "smocc_risk": "",
-        "drama_risk": "",
+        "decision": decision,
+        "decision_reason": reason,
+        "smact_risk": smact_f,
+        "smocc_risk": smocc_f,
+        "drama_risk": drama_f,
         "running_job_count_before": len(running_jobs),
         "running_job_count_after": len(running_jobs),
         "candidate_started": False,
         "candidate_finished": False,
         "candidate_return_code": "",
         "candidate_runtime_seconds": "",
-        "candidate_solo_runtime_seconds": "",
+        "candidate_solo_runtime_seconds": "" if candidate_solo_runtime is None else candidate_solo_runtime,
         "max_slowdown": "",
     }
 
@@ -263,7 +306,16 @@ def main() -> int:
     if args.dry_run:
         append_observations(
             observations_csv,
-            [dry_run_observation(stage) for stage in all_stages],
+            [
+                dry_run_observation(
+                    stage,
+                    tau_smact=args.tau_smact,
+                    tau_smocc=args.tau_smocc,
+                    tau_drama=args.tau_drama,
+                    solo_runtime_lookup=solo_runtime_lookup,
+                )
+                for stage in all_stages
+            ]
         )
         print(f"wrote {observations_csv}")
 

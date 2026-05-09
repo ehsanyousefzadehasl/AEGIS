@@ -64,6 +64,9 @@ def read_manifest(path: Path) -> list[dict]:
                     "cuda_visible_devices": cuda_visible_devices,
                     "job_sequence": jobs,
                     "num_stages": len(jobs),
+                    "mock_smact_risk": row.get("mock_smact_risk", ""),
+                    "mock_smocc_risk": row.get("mock_smocc_risk", ""),
+                    "mock_drama_risk": row.get("mock_drama_risk", ""),
                 }
             )
 
