@@ -27,6 +27,7 @@ OBSERVATION_COLUMNS = [
     "candidate_finished",
     "candidate_return_code",
     "candidate_runtime_seconds",
+    "candidate_solo_runtime_seconds",
     "max_slowdown",
 ]
 
@@ -54,6 +55,12 @@ def parse_args() -> argparse.Namespace:
         "--summary-windows",
         default="5,10,20,30,40,60,120,200",
         help="Comma-separated summary windows to collect for each admission point.",
+    )
+
+    p.add_argument(
+        "--solo-runtime-csv",
+        default=None,
+        help="Optional CSV with solo runtimes used to compute slowdown.",
     )
 
     return p.parse_args()
@@ -117,6 +124,7 @@ def dry_run_observation(stage: dict) -> dict:
         "candidate_finished": False,
         "candidate_return_code": "",
         "candidate_runtime_seconds": "",
+        "candidate_solo_runtime_seconds": "",
         "max_slowdown": "",
     }
 
@@ -152,6 +160,69 @@ def parse_summary_windows(text: str) -> list[float]:
             windows.append(float(item))
     return windows
 
+def normalize_spec_path(path: str) -> str:
+    return str(Path(path)).strip()
+
+
+def load_solo_runtime_lookup(path: str | None) -> dict[str, float]:
+    if path is None:
+        return {}
+
+    import pandas as pd
+
+    df = pd.read_csv(path)
+    candidates = [
+        "task_path",
+        "spec_path",
+        "job_spec",
+        "workload_spec",
+    ]
+    path_col = next((c for c in candidates if c in df.columns), None)
+
+    runtime_candidates = [
+        "total_runtime_seconds",
+        "end_to_end_time_s",
+        "end_to_end_time_seconds",
+        "training_loop_time_s",
+        "runtime_seconds",
+    ]
+    runtime_col = next((c for c in runtime_candidates if c in df.columns), None)
+
+    if path_col is None or runtime_col is None:
+        raise ValueError(
+            f"Could not find spec/runtime columns in {path}. "
+            f"Columns={list(df.columns)}"
+        )
+
+    lookup: dict[str, float] = {}
+    for _, row in df.iterrows():
+        spec = normalize_spec_path(str(row[path_col]))
+        try:
+            runtime = float(row[runtime_col])
+        except Exception:
+            continue
+        lookup[spec] = runtime
+        lookup[Path(spec).name] = runtime
+        lookup[Path(spec).stem] = runtime
+
+    return lookup
+
+
+def lookup_solo_runtime(
+    lookup: dict[str, float],
+    spec_path: str,
+) -> float | None:
+    keys = [
+        normalize_spec_path(spec_path),
+        Path(spec_path).name,
+        Path(spec_path).stem,
+    ]
+    for key in keys:
+        if key in lookup:
+            return lookup[key]
+    return None
+
+
 def main() -> int:
     args = parse_args()
 
@@ -161,6 +232,8 @@ def main() -> int:
 
     trials = read_plan(plan_path)
 
+    solo_runtime_lookup = load_solo_runtime_lookup(args.solo_runtime_csv)
+
     metadata = {
         "plan_jsonl": str(plan_path),
         "tau_smact": args.tau_smact,
@@ -169,6 +242,8 @@ def main() -> int:
         "rule": "reject if smact_risk >= tau_smact and (smocc_risk >= tau_smocc or drama_risk >= tau_drama)",
         "window_seconds": args.window_seconds,
         "summary_windows": parse_summary_windows(args.summary_windows),
+        "solo_runtime_csv": args.solo_runtime_csv,
+        "solo_runtime_entries": len(solo_runtime_lookup),
     }
 
     metadata_path = output_dir / "metadata.json"
