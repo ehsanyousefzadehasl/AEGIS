@@ -1171,6 +1171,47 @@ def build_trial_summary_from_rows(
         if r.get("decision") in {"launch_initial", "admit", "initial_only"}
     )
 
+    finished_rows = [
+        r for r in rows
+        if r.get("candidate_started") is True
+        and r.get("candidate_finished") is True
+    ]
+
+    solo_runtimes = []
+    collocated_runtimes = []
+    slowdowns = []
+
+    for r in finished_rows:
+        solo = r.get("candidate_solo_runtime_seconds", "")
+        runtime = r.get("candidate_runtime_seconds", "")
+
+        if solo == "" or runtime == "":
+            continue
+
+        solo = float(solo)
+        runtime = float(runtime)
+
+        solo_runtimes.append(solo)
+        collocated_runtimes.append(runtime)
+        slowdowns.append(runtime / solo)
+
+        r["max_slowdown"] = runtime / solo
+        
+    if len(finished_rows) == admitted_count and slowdowns:
+        solo_runtime_sum = sum(solo_runtimes)
+        collocated_wall_time = max(collocated_runtimes)
+        throughput_gain = solo_runtime_sum / collocated_wall_time
+        mean_slowdown = sum(slowdowns) / len(slowdowns)
+        max_slowdown = max(slowdowns)
+        p95_slowdown = sorted(slowdowns)[int(0.95 * (len(slowdowns) - 1))]
+    else:
+        solo_runtime_sum = ""
+        collocated_wall_time = ""
+        throughput_gain = ""
+        mean_slowdown = ""
+        max_slowdown = ""
+        p95_slowdown = ""
+
     return {
         "trial_id": trial["trial_id"],
         "gpu_id": trial["gpu_id"],
@@ -1183,12 +1224,12 @@ def build_trial_summary_from_rows(
         "admitted_workload_count": admitted_count,
         "rejected_stage": rejected_stage,
         "rejection_reason": "threshold_rule" if rejected_rows else "",
-        "solo_runtime_sum_seconds": "",
-        "collocated_wall_time_seconds": "",
-        "throughput_gain": "",
-        "mean_slowdown": "",
-        "max_slowdown": "",
-        "p95_slowdown": "",
+        "solo_runtime_sum_seconds": solo_runtime_sum,
+        "collocated_wall_time_seconds": collocated_wall_time,
+        "throughput_gain": throughput_gain,
+        "mean_slowdown": mean_slowdown,
+        "max_slowdown": max_slowdown,
+        "p95_slowdown": p95_slowdown,
     }
 
 
