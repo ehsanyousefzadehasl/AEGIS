@@ -600,6 +600,79 @@ def observe_initial_and_decide_next(
         }
     ]
 
+def launch_tracked_workload(
+    *,
+    spec_path: str,
+    trial_id: str,
+    stage: int,
+    output_dir: Path,
+    workdir: Path,
+    gpu_id: str,
+    cuda_visible_devices: str,
+    window_seconds: float,
+) -> dict:
+    run_id = f"{trial_id}_stage{stage}_{uuid.uuid4().hex[:8]}"
+
+    events_dir = output_dir / "events"
+    events_dir.mkdir(parents=True, exist_ok=True)
+    event_path = str(events_dir / f"{run_id}.jsonl")
+
+    job_spec = load_job_spec(spec_path, estimator_name=None)
+
+    task_obj = Task(
+        user="progressive-threshold",
+        dir=str(workdir),
+        task=spec_path,
+    )
+    task_obj.set_id(run_id)
+
+    uuid_to_id = monitor.gpu_uuids()
+    gpu_state.init_gpu_state(uuid_to_id)
+
+    selection_args = argparse.Namespace(gpu_id=str(gpu_id), gpu_uuid=None)
+    gpu_uuid, resolved_gpu_id = resolve_gpu_selection(selection_args, uuid_to_id)
+
+    now_str = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    command = build_launch_command(
+        str(workdir),
+        resolved_gpu_id,
+        job_spec.command_to_execute,
+        now_str,
+        task_obj,
+        event_path,
+        run_id,
+        cuda_visible_devices=cuda_visible_devices,
+    )
+
+    launcher_pid = launch_and_get_pid(command)
+    if launcher_pid is None:
+        raise RuntimeError(f"Failed to capture launcher PID for {spec_path}")
+
+    gpu_state.launch_task(
+        gpu_uuid,
+        launcher_pid,
+        task_id=str(task_obj.task_id),
+        event_path=event_path,
+        window_seconds=float(window_seconds),
+    )
+
+    Thread(
+        target=resolve_and_update_gpu_pid,
+        args=(launcher_pid, [gpu_uuid]),
+        daemon=True,
+    ).start()
+
+    return {
+        "run_id": run_id,
+        "spec_path": spec_path,
+        "gpu_uuid": gpu_uuid,
+        "gpu_id": resolved_gpu_id,
+        "cuda_visible_devices": cuda_visible_devices,
+        "launcher_pid": int(launcher_pid),
+        "event_path": event_path,
+        "num_gpus_requested": int(job_spec.num_gpus_requested),
+    }
 
 def execute_progressive_trial(
     *,
