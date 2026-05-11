@@ -159,6 +159,13 @@ def parse_args() -> argparse.Namespace:
         help="Execute the full progressive admission sequence for each trial.",
     )
 
+    p.add_argument(
+        "--trial-timeout-seconds",
+        type=float,
+        default=None,
+        help="Optional timeout for waiting for all admitted workloads in a progressive trial.",
+    )
+
     return p.parse_args()
 
 
@@ -671,6 +678,9 @@ def launch_tracked_workload(
         cuda_visible_devices=cuda_visible_devices,
     )
 
+    started_monotonic = time.monotonic()
+    started_wall_time = dt.datetime.now().isoformat()
+
     launcher_pid = launch_and_get_pid(command)
     if launcher_pid is None:
         raise RuntimeError(f"Failed to capture launcher PID for {spec_path}")
@@ -698,6 +708,9 @@ def launch_tracked_workload(
         "launcher_pid": int(launcher_pid),
         "event_path": event_path,
         "num_gpus_requested": int(job_spec.num_gpus_requested),
+        "stage": int(stage),
+        "started_monotonic": float(started_monotonic),
+        "started_wall_time": started_wall_time,
     }
 
 def execute_progressive_trial(
@@ -847,6 +860,85 @@ def terminate_workload_by_spec(spec_path: str) -> None:
             stderr=subprocess.DEVNULL,
         )
 
+def read_terminal_event_for_run(event_path: str, run_id: str) -> dict | None:
+    path = Path(event_path)
+    if not path.exists():
+        return None
+
+    terminal = None
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if record.get("run_id") != run_id:
+                continue
+            if record.get("event") in {"completed", "failed"}:
+                terminal = record
+
+    return terminal
+
+
+def wait_for_launched_workloads(
+    running_processes: list[dict],
+    *,
+    poll_seconds: float,
+    timeout_seconds: float | None,
+) -> dict[int, dict]:
+    deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
+    remaining = {int(proc["stage"]): proc for proc in running_processes}
+    results: dict[int, dict] = {}
+
+    while remaining:
+        now = time.monotonic()
+
+        if deadline is not None and now >= deadline:
+            for stage, proc in list(remaining.items()):
+                results[stage] = {
+                    "finished": False,
+                    "return_code": 124,
+                    "runtime_seconds": now - float(proc["started_monotonic"]),
+                    "finish_status": "timeout",
+                }
+            break
+
+        for stage, proc in list(remaining.items()):
+            launcher_pid = str(proc["launcher_pid"])
+
+            if monitor.pid_on_system(launcher_pid):
+                continue
+
+            terminal_event = read_terminal_event_for_run(
+                proc["event_path"],
+                proc["run_id"],
+            )
+
+            return_code = ""
+            finish_status = "unknown"
+
+            if terminal_event is not None:
+                finish_status = str(terminal_event.get("event", "unknown"))
+                if terminal_event.get("return_code") is not None:
+                    return_code = int(terminal_event["return_code"])
+
+            finished_at = time.monotonic()
+            results[stage] = {
+                "finished": return_code == 0 if return_code != "" else True,
+                "return_code": return_code,
+                "runtime_seconds": finished_at - float(proc["started_monotonic"]),
+                "finish_status": finish_status,
+            }
+            remaining.pop(stage)
+
+        if remaining:
+            time.sleep(poll_seconds)
+
+    return results
+
 def execute_progressive_trial_real(
     *,
     trial: dict,
@@ -861,6 +953,7 @@ def execute_progressive_trial_real(
     window_timeout: float,
     poll_seconds: float,
     cleanup_after_observation: bool,
+    trial_timeout_seconds: float | None,
 ) -> list[dict]:
     jobs = trial["job_sequence"]
     if not jobs:
@@ -991,6 +1084,22 @@ def execute_progressive_trial_real(
 
             if reject:
                 break
+
+        finish_results = wait_for_launched_workloads(
+            running_processes,
+            poll_seconds=poll_seconds,
+            timeout_seconds=trial_timeout_seconds,
+        )
+
+        for row in rows:
+            stage = int(row["stage"])
+            if stage not in finish_results:
+                continue
+
+            result = finish_results[stage]
+            row["candidate_finished"] = result["finished"]
+            row["candidate_return_code"] = result["return_code"]
+            row["candidate_runtime_seconds"] = result["runtime_seconds"]
 
     finally:
         if cleanup_after_observation:
@@ -1255,6 +1364,7 @@ def main() -> int:
                     window_timeout=float(args.window_timeout),
                     poll_seconds=float(args.poll_seconds),
                     cleanup_after_observation=args.cleanup_after_observation,
+                    trial_timeout_seconds=args.trial_timeout_seconds,
                 )
             )
 
