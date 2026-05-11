@@ -3,9 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 import csv
 import datetime as dt
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 import subprocess
 
@@ -18,12 +23,13 @@ from threading import Thread
 from queueing.task_queue import Task
 from runtime.launcher import build_launch_command, launch_and_get_pid
 from runtime.pid_resolution import resolve_and_update_gpu_pid
-from telemetry import gpu_state
+from telemetry import gpu_state, monitor
 from workload.job_spec import load_job_spec
 
 from evaluation.threshold_sensitivity.live_threshold_runner import (
     collect_summary_windows,
     parse_summary_windows,
+    resolve_gpu_selection,
     start_monitor_thread,
     wait_for_ttfk,
 )
@@ -104,6 +110,21 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="Limit number of trials to run/read from the plan.",
+    )
+
+    p.add_argument(
+        "--observe-initial-and-decide-next",
+        action="store_true",
+        help="Launch the first job, collect the risk window, and record the admission decision for the next job without launching it.",
+    )
+    p.add_argument("--ttfk-timeout", type=float, default=300.0)
+    p.add_argument("--window-timeout", type=float, default=900.0)
+    p.add_argument("--poll-seconds", type=float, default=0.5)
+
+    p.add_argument(
+        "--cleanup-after-observation",
+        action="store_true",
+        help="Terminate the initial job after recording the admission decision.",
     )
 
     return p.parse_args()
@@ -238,7 +259,7 @@ def should_reject_gpu(
         )
     )
 
-def parse_summary_windows(text: str) -> list[float]:
+def parse_summary_window_list(text: str) -> list[float]:
     windows = []
     for item in str(text).split(","):
         item = item.strip()
@@ -383,6 +404,195 @@ def execute_candidate_job(
         "stderr_path": str(stderr_path),
     }
 
+def terminate_process_tree(pid: int, *, grace_seconds: float = 10.0) -> None:
+    import os
+    import signal
+    import subprocess
+    import time
+
+    if pid <= 0:
+        return
+
+    try:
+        subprocess.run(
+            ["pkill", "-TERM", "-P", str(pid)],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    except Exception as exc:
+        print(f"[warning] failed to send SIGTERM to pid={pid}: {exc}")
+
+    deadline = time.time() + grace_seconds
+    while time.time() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.25)
+
+    try:
+        subprocess.run(
+            ["pkill", "-KILL", "-P", str(pid)],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+    except Exception as exc:
+        print(f"[warning] failed to send SIGKILL to pid={pid}: {exc}")
+
+
+def observe_initial_and_decide_next(
+    *,
+    trial: dict,
+    output_dir: Path,
+    workdir: Path,
+    window_seconds: float,
+    summary_windows_text: str,
+    tau_smact: float,
+    tau_smocc: float,
+    tau_drama: float,
+    ttfk_timeout: float,
+    window_timeout: float,
+    poll_seconds: float,
+    cleanup_after_observation: bool,
+) -> list[dict]:
+    jobs = trial["job_sequence"]
+    if len(jobs) < 2:
+        return []
+
+    initial_spec = jobs[0]
+    next_spec = jobs[1]
+    gpu_id = str(trial["gpu_id"])
+    cuda_visible_devices = str(trial["cuda_visible_devices"])
+
+    run_id = f"{trial['trial_id']}_stage1_{uuid.uuid4().hex[:8]}"
+    events_dir = output_dir / "events"
+    events_dir.mkdir(parents=True, exist_ok=True)
+    event_path = str(events_dir / f"{run_id}.jsonl")
+
+    job_spec = load_job_spec(initial_spec, estimator_name=None)
+    
+    task_obj = Task(
+        user="progressive-threshold",
+        dir=str(workdir),
+        task=initial_spec,
+    )
+    task_obj.set_id(run_id)
+
+    uuid_to_id = monitor.gpu_uuids()
+    gpu_state.init_gpu_state(uuid_to_id)
+
+    selection_args = argparse.Namespace(gpu_id=gpu_id, gpu_uuid=None)
+    gpu_uuid, gpu_id = resolve_gpu_selection(selection_args, uuid_to_id)
+
+    monitor_window_seconds = max(parse_summary_windows(summary_windows_text, window_seconds))
+    start_monitor_thread(monitor_window_seconds)
+
+    now_str = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    command = build_launch_command(
+        str(workdir),
+        gpu_id,
+        job_spec.command_to_execute,
+        now_str,
+        task_obj,
+        event_path,
+        run_id,
+        cuda_visible_devices=cuda_visible_devices,
+    )
+
+    t_launch = time.monotonic()
+    launcher_pid = launch_and_get_pid(command)
+    if launcher_pid is None:
+        raise RuntimeError("Failed to capture launcher PID")
+
+    gpu_state.launch_task(
+        gpu_uuid,
+        launcher_pid,
+        task_id=str(task_obj.task_id),
+        event_path=event_path,
+        window_seconds=float(window_seconds),
+    )
+
+    Thread(
+        target=resolve_and_update_gpu_pid,
+        args=(launcher_pid, [gpu_uuid]),
+        daemon=True,
+    ).start()
+
+    ttfk_seen_at, tracked_pid_after_ttfk = wait_for_ttfk(
+        gpu_uuid,
+        timeout_s=ttfk_timeout,
+        poll_s=poll_seconds,
+    )
+
+    summary_windows = parse_summary_windows(summary_windows_text, window_seconds)
+    summary_metrics_by_window, summary_ready_times, tracked_pid_after_window = collect_summary_windows(
+        gpu_uuid=gpu_uuid,
+        ttfk_seen_at=ttfk_seen_at,
+        tracked_pid=tracked_pid_after_ttfk,
+        windows=summary_windows,
+        timeout_s=window_timeout,
+        poll_s=poll_seconds,
+    )
+
+    decision_window = float(window_seconds)
+    if decision_window not in summary_metrics_by_window:
+        raise RuntimeError(f"Decision window not collected: {decision_window}s")
+
+    metrics = summary_metrics_by_window[decision_window]
+
+    smact_risk = float(metrics.get("smact_risk"))
+    smocc_risk = float(metrics.get("smocc_risk"))
+    drama_risk = float(metrics.get("drama_risk"))
+
+    reject = should_reject_gpu(
+        smact_risk=smact_risk,
+        smocc_risk=smocc_risk,
+        drama_risk=drama_risk,
+        tau_smact=tau_smact,
+        tau_smocc=tau_smocc,
+        tau_drama=tau_drama,
+    )
+
+    decision = "reject" if reject else "admit"
+    reason = "threshold_rule"
+
+    if cleanup_after_observation:
+        terminate_process_tree(int(tracked_pid_after_window))
+        terminate_process_tree(int(launcher_pid))
+        gpu_state.clear_tracking(gpu_uuid)
+
+    return [
+        {
+            "trial_id": trial["trial_id"],
+            "stage": 2,
+            "gpu_id": gpu_id,
+            "cuda_visible_devices": cuda_visible_devices,
+            "running_jobs_before_stage": initial_spec,
+            "candidate_job": next_spec,
+            "is_initial_job": False,
+            "decision": decision,
+            "decision_reason": reason,
+            "smact_risk": smact_risk,
+            "smocc_risk": smocc_risk,
+            "drama_risk": drama_risk,
+            "running_job_count_before": 1,
+            "running_job_count_after": 1 if reject else 2,
+            "candidate_started": False,
+            "candidate_finished": False,
+            "candidate_return_code": "",
+            "candidate_runtime_seconds": "",
+            "candidate_solo_runtime_seconds": "",
+            "max_slowdown": "",
+        }
+    ]
 def main() -> int:
     args = parse_args()
 
@@ -404,7 +614,7 @@ def main() -> int:
         "tau_drama": args.tau_drama,
         "rule": "reject if smact_risk >= tau_smact and (smocc_risk >= tau_smocc or drama_risk >= tau_drama)",
         "window_seconds": args.window_seconds,
-        "summary_windows": parse_summary_windows(args.summary_windows),
+        "summary_windows": parse_summary_window_list(args.summary_windows),
         "solo_runtime_csv": args.solo_runtime_csv,
         "solo_runtime_entries": len(solo_runtime_lookup),
     }
@@ -413,6 +623,7 @@ def main() -> int:
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     print(f"wrote {metadata_path}")
 
+    
 
     all_stages = []
     for trial in trials:
@@ -476,6 +687,31 @@ def main() -> int:
                 f"[{stage['trial_id']}] initial job finished "
                 f"rc={result['return_code']} timed_out={result['timed_out']} "
                 f"runtime={result['runtime_seconds']:.2f}s"
+            )
+
+        append_observations(observations_csv, rows)
+        print(f"wrote {observations_csv}")
+
+    if args.observe_initial_and_decide_next:
+        rows = []
+        workdir = Path(args.workdir).resolve()
+
+        for trial in trials:
+            rows.extend(
+                observe_initial_and_decide_next(
+                    trial=trial,
+                    output_dir=output_dir,
+                    workdir=workdir,
+                    window_seconds=float(args.window_seconds),
+                    summary_windows_text=args.summary_windows,
+                    tau_smact=float(args.tau_smact),
+                    tau_smocc=float(args.tau_smocc),
+                    tau_drama=float(args.tau_drama),
+                    ttfk_timeout=float(args.ttfk_timeout),
+                    window_timeout=float(args.window_timeout),
+                    poll_seconds=float(args.poll_seconds),
+                    cleanup_after_observation=args.cleanup_after_observation,
+                )
             )
 
         append_observations(observations_csv, rows)
