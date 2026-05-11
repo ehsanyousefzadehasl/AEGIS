@@ -896,6 +896,12 @@ def wait_for_launched_workloads(
     while remaining:
         now = time.monotonic()
 
+        print(
+            f"[progressive-runner] waiting for {len(remaining)} workload(s): "
+            f"{sorted(remaining.keys())}",
+            flush=True,
+        )
+
         if deadline is not None and now >= deadline:
             for stage, proc in list(remaining.items()):
                 results[stage] = {
@@ -935,7 +941,7 @@ def wait_for_launched_workloads(
             remaining.pop(stage)
 
         if remaining:
-            time.sleep(poll_seconds)
+            time.sleep(max(float(poll_seconds), 5.0))
 
     return results
 
@@ -954,6 +960,7 @@ def execute_progressive_trial_real(
     poll_seconds: float,
     cleanup_after_observation: bool,
     trial_timeout_seconds: float | None,
+    solo_runtime_lookup: dict[str, float],
 ) -> list[dict]:
     jobs = trial["job_sequence"]
     if not jobs:
@@ -983,6 +990,8 @@ def execute_progressive_trial_real(
                 running_processes.append(launched)
                 running_workloads.append(next_workload)
 
+                solo_runtime = lookup_solo_runtime(solo_runtime_lookup, next_workload)
+
                 rows.append(
                     {
                         "trial_id": trial["trial_id"],
@@ -1003,7 +1012,7 @@ def execute_progressive_trial_real(
                         "candidate_finished": False,
                         "candidate_return_code": "",
                         "candidate_runtime_seconds": "",
-                        "candidate_solo_runtime_seconds": "",
+                        "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
                         "max_slowdown": "",
                     }
                 )
@@ -1049,6 +1058,8 @@ def execute_progressive_trial_real(
                 running_workloads.append(next_workload)
                 started = True
 
+            solo_runtime = lookup_solo_runtime(solo_runtime_lookup, next_workload)
+            
             rows.append(
                 {
                     "trial_id": trial["trial_id"],
@@ -1069,7 +1080,7 @@ def execute_progressive_trial_real(
                     "candidate_finished": False,
                     "candidate_return_code": "",
                     "candidate_runtime_seconds": "",
-                    "candidate_solo_runtime_seconds": "",
+                    "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
                     "max_slowdown": "",
                 }
             )
@@ -1099,7 +1110,18 @@ def execute_progressive_trial_real(
             result = finish_results[stage]
             row["candidate_finished"] = result["finished"]
             row["candidate_return_code"] = result["return_code"]
+
             row["candidate_runtime_seconds"] = result["runtime_seconds"]
+
+            solo_runtime = row.get("candidate_solo_runtime_seconds", "")
+            if (
+                row.get("candidate_finished") is True
+                and solo_runtime != ""
+                and result["runtime_seconds"] != ""
+            ):
+                row["max_slowdown"] = float(result["runtime_seconds"]) / float(solo_runtime)
+            else:
+                row["max_slowdown"] = ""
 
     finally:
         if cleanup_after_observation:
@@ -1340,37 +1362,48 @@ def main() -> int:
         for stage in all_stages:
             f.write(json.dumps(stage, sort_keys=True) + "\n")
 
-    print(f"trials={len(trials)}")
-    print(f"stages={len(all_stages)}")
-    print(f"wrote {stage_plan_path}")
-
-
     if args.execute_progressive_trial:
         rows = []
+        summaries = []
         workdir = Path(args.workdir).resolve()
 
         for trial in trials:
-            rows.extend(
-                execute_progressive_trial_real(
+            trial_rows = execute_progressive_trial_real(
+                trial=trial,
+                output_dir=output_dir,
+                workdir=workdir,
+                window_seconds=float(args.window_seconds),
+                summary_windows_text=args.summary_windows,
+                tau_smact=float(args.tau_smact),
+                tau_smocc=float(args.tau_smocc),
+                tau_drama=float(args.tau_drama),
+                ttfk_timeout=float(args.ttfk_timeout),
+                window_timeout=float(args.window_timeout),
+                poll_seconds=float(args.poll_seconds),
+                cleanup_after_observation=args.cleanup_after_observation,
+                trial_timeout_seconds=args.trial_timeout_seconds,
+                solo_runtime_lookup=solo_runtime_lookup,
+            )
+            rows.extend(trial_rows)
+            summaries.append(
+                build_trial_summary_from_rows(
                     trial=trial,
-                    output_dir=output_dir,
-                    workdir=workdir,
-                    window_seconds=float(args.window_seconds),
-                    summary_windows_text=args.summary_windows,
+                    rows=trial_rows,
                     tau_smact=float(args.tau_smact),
                     tau_smocc=float(args.tau_smocc),
                     tau_drama=float(args.tau_drama),
-                    ttfk_timeout=float(args.ttfk_timeout),
-                    window_timeout=float(args.window_timeout),
-                    poll_seconds=float(args.poll_seconds),
-                    cleanup_after_observation=args.cleanup_after_observation,
-                    trial_timeout_seconds=args.trial_timeout_seconds,
+                    window_seconds=float(args.window_seconds),
                 )
             )
 
         append_observations(observations_csv, rows)
+        append_trial_summaries(trial_summary_csv, summaries)
         print(f"wrote {observations_csv}")
+        print(f"wrote {trial_summary_csv}")
 
+    print(f"trials={len(trials)}")
+    print(f"stages={len(all_stages)}")
+    print(f"wrote {stage_plan_path}")
 
     if args.dry_run:
         print("\nDRY RUN: planned stages")
