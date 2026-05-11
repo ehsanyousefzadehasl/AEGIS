@@ -1021,6 +1021,46 @@ def append_trial_summaries(path: Path, rows: list[dict]) -> None:
         for row in rows:
             writer.writerow(row)
 
+
+def build_trial_summary_from_rows(
+    *,
+    trial: dict,
+    rows: list[dict],
+    tau_smact: float,
+    tau_smocc: float,
+    tau_drama: float,
+    window_seconds: float,
+) -> dict:
+    rejected_rows = [r for r in rows if r.get("decision") == "reject"]
+    rejected_stage = rejected_rows[0]["stage"] if rejected_rows else ""
+
+    admitted_count = sum(
+        1
+        for r in rows
+        if r.get("decision") in {"launch_initial", "admit", "initial_only"}
+    )
+
+    return {
+        "trial_id": trial["trial_id"],
+        "gpu_id": trial["gpu_id"],
+        "cuda_visible_devices": trial["cuda_visible_devices"],
+        "tau_smact": tau_smact,
+        "tau_smocc": tau_smocc,
+        "tau_drama": tau_drama,
+        "window_seconds": window_seconds,
+        "planned_workload_count": len(trial["job_sequence"]),
+        "admitted_workload_count": admitted_count,
+        "rejected_stage": rejected_stage,
+        "rejection_reason": "threshold_rule" if rejected_rows else "",
+        "solo_runtime_sum_seconds": "",
+        "collocated_wall_time_seconds": "",
+        "throughput_gain": "",
+        "mean_slowdown": "",
+        "max_slowdown": "",
+        "p95_slowdown": "",
+    }
+
+
 def main() -> int:
     args = parse_args()
 
@@ -1150,16 +1190,26 @@ def main() -> int:
 
     if args.execute_progressive_skeleton:
         rows = []
+        summaries = []
 
         for trial in trials:
-            rows.extend(
-                execute_progressive_trial(
+            trial_rows = execute_progressive_trial(trial=trial)
+            rows.extend(trial_rows)
+            summaries.append(
+                build_trial_summary_from_rows(
                     trial=trial,
+                    rows=trial_rows,
+                    tau_smact=float(args.tau_smact),
+                    tau_smocc=float(args.tau_smocc),
+                    tau_drama=float(args.tau_drama),
+                    window_seconds=float(args.window_seconds),
                 )
             )
 
         append_observations(observations_csv, rows)
+        append_trial_summaries(trial_summary_csv, summaries)
         print(f"wrote {observations_csv}")
+        print(f"wrote {trial_summary_csv}")
 
     if args.dry_run:
         append_observations(
