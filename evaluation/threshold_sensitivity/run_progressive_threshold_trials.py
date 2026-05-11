@@ -983,6 +983,8 @@ def execute_progressive_trial_real(
     uuid_to_id = monitor.gpu_uuids()
     gpu_state.init_gpu_state(uuid_to_id)
 
+    start_monitor_thread(float(window_seconds))
+    
     try:
         for stage_idx, next_workload in enumerate(jobs, start=1):
             if stage_idx == 1:
