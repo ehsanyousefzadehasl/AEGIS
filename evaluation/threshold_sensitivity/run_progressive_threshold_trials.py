@@ -958,6 +958,7 @@ def read_latest_valid_risk_window(
     gpu_uuid: str,
     window_timeout: float,
     poll_seconds: float,
+    after_sample_time: float | None = None,
 ) -> dict:
     deadline = time.monotonic() + float(window_timeout)
 
@@ -965,7 +966,25 @@ def read_latest_valid_risk_window(
         gpu_state.update()
 
         if bool(gpu_state.gpus_state.loc[gpu_uuid, "validity"]):
-            analyzed = monitor.summarize_Gmetrics_snapshot()
+            with monitor.G_LOCK:
+                snapshot = monitor.Gmetrics.copy(deep=False)
+
+            if snapshot is None or snapshot.empty:
+                time.sleep(float(poll_seconds))
+                continue
+
+            gpu_rows = snapshot[snapshot["gpu_uuid"] == gpu_uuid]
+            if gpu_rows.empty:
+                time.sleep(float(poll_seconds))
+                continue
+
+            latest_sample_time = float(gpu_rows["sample_monotonic_time"].max())
+
+            if after_sample_time is not None and latest_sample_time <= after_sample_time:
+                time.sleep(float(poll_seconds))
+                continue
+
+            analyzed = monitor.summarize_Gmetrics_snapshot(snapshot)
             row = analyzed.loc[gpu_uuid]
 
             return {
@@ -973,6 +992,7 @@ def read_latest_valid_risk_window(
                 "smocc_risk": float(row["smocc_risk"]),
                 "drama_risk": float(row["drama_risk"]),
                 "window_samples": int(row["window_samples"]),
+                "latest_sample_time": latest_sample_time,
             }
 
         time.sleep(float(poll_seconds))
@@ -1004,84 +1024,129 @@ def execute_progressive_trial_real(
     rows = []
     running_workloads: list[str] = []
     running_processes: list[dict] = []
+    admission_attempts: dict[int, int] = {}
 
     gpu_id = str(trial["gpu_id"])
     cuda_visible_devices = str(trial["cuda_visible_devices"])
 
     uuid_to_id = monitor.gpu_uuids()
     gpu_state.init_gpu_state(uuid_to_id)
-
     start_monitor_thread(float(window_seconds))
 
+    trial_deadline = (
+        None
+        if trial_timeout_seconds is None
+        else time.monotonic() + float(trial_timeout_seconds)
+    )
+
     try:
-        for stage_idx, next_workload in enumerate(jobs, start=1):
-            if stage_idx == 1:
-                launched = launch_tracked_workload(
-                    spec_path=next_workload,
-                    trial_id=trial["trial_id"],
-                    stage=stage_idx,
-                    output_dir=output_dir,
-                    workdir=workdir,
-                    gpu_id=gpu_id,
-                    cuda_visible_devices=cuda_visible_devices,
-                    window_seconds=window_seconds,
+        # Stage 1: launch the first workload immediately.
+        stage_idx = 1
+        first_workload = jobs[0]
+
+        launched = launch_tracked_workload(
+            spec_path=first_workload,
+            trial_id=trial["trial_id"],
+            stage=stage_idx,
+            output_dir=output_dir,
+            workdir=workdir,
+            gpu_id=gpu_id,
+            cuda_visible_devices=cuda_visible_devices,
+            window_seconds=window_seconds,
+        )
+
+        running_processes.append(launched)
+        running_workloads.append(first_workload)
+
+        solo_runtime = lookup_solo_runtime(solo_runtime_lookup, first_workload)
+
+        rows.append(
+            {
+                "trial_id": trial["trial_id"],
+                "stage": stage_idx,
+                "admission_attempt": 1,
+                "gpu_id": launched["gpu_id"],
+                "cuda_visible_devices": cuda_visible_devices,
+                "running_jobs_before_stage": "",
+                "next_workload": first_workload,
+                "is_initial_job": True,
+                "decision": "launch_initial",
+                "decision_reason": "first_workload_in_sequence",
+                "smact_risk": "",
+                "smocc_risk": "",
+                "drama_risk": "",
+                "running_job_count_before": 0,
+                "running_job_count_after": 1,
+                "candidate_started": True,
+                "candidate_finished": False,
+                "candidate_return_code": "",
+                "candidate_runtime_seconds": "",
+                "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
+                "max_slowdown": "",
+            }
+        )
+
+        next_stage_idx = 2
+
+        last_decision_sample_time = None
+
+        while next_stage_idx <= len(jobs):
+            if trial_deadline is not None and time.monotonic() >= trial_deadline:
+                print(
+                    f"[{trial['trial_id']}] trial timeout reached before admitting stage={next_stage_idx}",
+                    flush=True,
+                )
+                break
+
+            next_workload = jobs[next_stage_idx - 1]
+            admission_attempts[next_stage_idx] = admission_attempts.get(next_stage_idx, 0) + 1
+            attempt = admission_attempts[next_stage_idx]
+
+            # If all currently launched workloads have finished, the GPU is effectively free.
+            active_processes = [
+                proc for proc in running_processes
+                if monitor.pid_on_system(str(proc["launcher_pid"]))
+            ]
+
+            if not active_processes:
+                decision = "admit"
+                observed = {
+                    "smact_risk": "",
+                    "smocc_risk": "",
+                    "drama_risk": "",
+                }
+                decision_reason = "gpu_idle_after_running_workloads_finished"
+                reject = False
+            else:
+                observed = read_latest_valid_risk_window(
+                    gpu_uuid=running_processes[-1]["gpu_uuid"],
+                    window_timeout=window_timeout,
+                    poll_seconds=poll_seconds,
+                    after_sample_time=last_decision_sample_time,
+                )
+                last_decision_sample_time = observed["latest_sample_time"]
+
+                reject = should_reject_gpu(
+                    smact_risk=observed["smact_risk"],
+                    smocc_risk=observed["smocc_risk"],
+                    drama_risk=observed["drama_risk"],
+                    tau_smact=tau_smact,
+                    tau_smocc=tau_smocc,
+                    tau_drama=tau_drama,
                 )
 
-                running_processes.append(launched)
-                running_workloads.append(next_workload)
+                decision = "reject_retry_later" if reject else "admit"
+                decision_reason = "threshold_rule"
 
-                solo_runtime = lookup_solo_runtime(solo_runtime_lookup, next_workload)
-
-                rows.append(
-                    {
-                        "trial_id": trial["trial_id"],
-                        "stage": stage_idx,
-                        "admission_attempt": 1,
-                        "gpu_id": launched["gpu_id"],
-                        "cuda_visible_devices": cuda_visible_devices,
-                        "running_jobs_before_stage": "",
-                        "next_workload": next_workload,
-                        "is_initial_job": True,
-                        "decision": "launch_initial",
-                        "decision_reason": "first_workload_in_sequence",
-                        "smact_risk": "",
-                        "smocc_risk": "",
-                        "drama_risk": "",
-                        "running_job_count_before": 0,
-                        "running_job_count_after": 1,
-                        "candidate_started": True,
-                        "candidate_finished": False,
-                        "candidate_return_code": "",
-                        "candidate_runtime_seconds": "",
-                        "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
-                        "max_slowdown": "",
-                    }
-                )
-                continue
-
-            observed = read_latest_valid_risk_window(
-                gpu_uuid=running_processes[-1]["gpu_uuid"],
-                window_timeout=window_timeout,
-                poll_seconds=poll_seconds,
-            )
-
-            reject = should_reject_gpu(
-                smact_risk=observed["smact_risk"],
-                smocc_risk=observed["smocc_risk"],
-                drama_risk=observed["drama_risk"],
-                tau_smact=tau_smact,
-                tau_smocc=tau_smocc,
-                tau_drama=tau_drama,
-            )
-
-            decision = "reject" if reject else "admit"
+            running_before = list(running_workloads)
+            solo_runtime = lookup_solo_runtime(solo_runtime_lookup, next_workload)
 
             started = False
             if not reject:
                 launched = launch_tracked_workload(
                     spec_path=next_workload,
                     trial_id=trial["trial_id"],
-                    stage=stage_idx,
+                    stage=next_stage_idx,
                     output_dir=output_dir,
                     workdir=workdir,
                     gpu_id=gpu_id,
@@ -1092,24 +1157,22 @@ def execute_progressive_trial_real(
                 running_workloads.append(next_workload)
                 started = True
 
-            solo_runtime = lookup_solo_runtime(solo_runtime_lookup, next_workload)
-            
             rows.append(
                 {
                     "trial_id": trial["trial_id"],
-                    "stage": stage_idx,
-                    "admission_attempt": 1,
+                    "stage": next_stage_idx,
+                    "admission_attempt": attempt,
                     "gpu_id": gpu_id,
                     "cuda_visible_devices": cuda_visible_devices,
-                    "running_jobs_before_stage": ";".join(running_workloads[:-1] if started else running_workloads),
+                    "running_jobs_before_stage": ";".join(running_before),
                     "next_workload": next_workload,
                     "is_initial_job": False,
                     "decision": decision,
-                    "decision_reason": "threshold_rule",
+                    "decision_reason": decision_reason,
                     "smact_risk": observed["smact_risk"],
                     "smocc_risk": observed["smocc_risk"],
                     "drama_risk": observed["drama_risk"],
-                    "running_job_count_before": len(running_workloads) - 1 if started else len(running_workloads),
+                    "running_job_count_before": len(running_before),
                     "running_job_count_after": len(running_workloads),
                     "candidate_started": started,
                     "candidate_finished": False,
@@ -1121,23 +1184,35 @@ def execute_progressive_trial_real(
             )
 
             print(
-                f"[{trial['trial_id']} stage={stage_idx}] "
+                f"[{trial['trial_id']} stage={next_stage_idx} attempt={attempt}] "
                 f"decision={decision} "
-                f"smact={observed['smact_risk']:.3f} "
-                f"smocc={observed['smocc_risk']:.3f} "
-                f"drama={observed['drama_risk']:.3f}"
+                f"smact={observed['smact_risk']} "
+                f"smocc={observed['smocc_risk']} "
+                f"drama={observed['drama_risk']}",
+                flush=True,
             )
 
-            if reject:
-                break
+            if started:
+                last_decision_sample_time = None
+                next_stage_idx += 1
+            else:
+                # Rejection is non-terminal. The next loop reads the latest sliding window again.
+                time.sleep(max(float(poll_seconds), 1.0))
+
+        remaining_timeout = None
+        if trial_deadline is not None:
+            remaining_timeout = max(0.0, trial_deadline - time.monotonic())
 
         finish_results = wait_for_launched_workloads(
             running_processes,
             poll_seconds=poll_seconds,
-            timeout_seconds=trial_timeout_seconds,
+            timeout_seconds=remaining_timeout,
         )
 
         for row in rows:
+            if row.get("candidate_started") is not True:
+                continue
+
             stage = int(row["stage"])
             if stage not in finish_results:
                 continue
@@ -1145,7 +1220,6 @@ def execute_progressive_trial_real(
             result = finish_results[stage]
             row["candidate_finished"] = result["finished"]
             row["candidate_return_code"] = result["return_code"]
-
             row["candidate_runtime_seconds"] = result["runtime_seconds"]
 
             solo_runtime = row.get("candidate_solo_runtime_seconds", "")
@@ -1161,11 +1235,6 @@ def execute_progressive_trial_real(
     finally:
         if cleanup_after_observation:
             for proc in reversed(running_processes):
-                if proc.get("tracked_pid_after_window") is not None:
-                    terminate_process_tree(int(proc["tracked_pid_after_window"]))
-                if proc.get("tracked_pid_after_ttfk") is not None:
-                    terminate_process_tree(int(proc["tracked_pid_after_ttfk"]))
-
                 terminate_process_tree(int(proc["launcher_pid"]))
                 terminate_workload_by_spec(proc["spec_path"])
 
