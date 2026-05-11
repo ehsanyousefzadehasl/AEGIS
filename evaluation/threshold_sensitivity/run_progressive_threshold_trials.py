@@ -59,6 +59,26 @@ OBSERVATION_COLUMNS = [
     "max_slowdown",
 ]
 
+TRIAL_SUMMARY_COLUMNS = [
+    "trial_id",
+    "gpu_id",
+    "cuda_visible_devices",
+    "tau_smact",
+    "tau_smocc",
+    "tau_drama",
+    "window_seconds",
+    "planned_workload_count",
+    "admitted_workload_count",
+    "rejected_stage",
+    "rejection_reason",
+    "solo_runtime_sum_seconds",
+    "collocated_wall_time_seconds",
+    "throughput_gain",
+    "mean_slowdown",
+    "max_slowdown",
+    "p95_slowdown",
+]
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Run progressive collocation threshold trials."
@@ -988,6 +1008,19 @@ def execute_progressive_trial_real(
 
     return rows
 
+def initialize_trial_summary_csv(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=TRIAL_SUMMARY_COLUMNS)
+        writer.writeheader()
+
+
+def append_trial_summaries(path: Path, rows: list[dict]) -> None:
+    with path.open("a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=TRIAL_SUMMARY_COLUMNS)
+        for row in rows:
+            writer.writerow(row)
+
 def main() -> int:
     args = parse_args()
 
@@ -1028,6 +1061,9 @@ def main() -> int:
 
     observations_csv = output_dir / "admission_observations.csv"
     initialize_observations_csv(observations_csv)
+
+    trial_summary_csv = output_dir / "progressive_trial_summary.csv"
+    initialize_trial_summary_csv(trial_summary_csv)
 
     if args.execute_initial_only:
         rows = []
