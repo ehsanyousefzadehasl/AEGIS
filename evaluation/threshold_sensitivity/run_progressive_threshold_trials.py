@@ -1059,18 +1059,11 @@ def execute_progressive_trial_real(
                 )
                 continue
 
-            observed = observe_risk_window_for_running_set(
+            observed = read_latest_valid_risk_window(
                 gpu_uuid=running_processes[-1]["gpu_uuid"],
-                tracked_pid=running_processes[-1]["launcher_pid"],
-                window_seconds=window_seconds,
-                summary_windows_text=summary_windows_text,
-                ttfk_timeout=ttfk_timeout,
                 window_timeout=window_timeout,
                 poll_seconds=poll_seconds,
             )
-
-            running_processes[-1]["tracked_pid_after_window"] = observed["tracked_pid_after_window"]
-            running_processes[-1]["tracked_pid_after_ttfk"] = observed["tracked_pid_after_ttfk"]
 
             reject = should_reject_gpu(
                 smact_risk=observed["smact_risk"],
