@@ -1307,7 +1307,12 @@ def build_trial_summary_from_rows(
         throughput_gain = solo_runtime_sum / collocated_wall_time
         mean_slowdown = sum(slowdowns) / len(slowdowns)
         max_slowdown = max(slowdowns)
-        p95_slowdown = sorted(slowdowns)[int(0.95 * (len(slowdowns) - 1))]
+
+        import math
+
+        sorted_slowdowns = sorted(slowdowns)
+        p95_index = max(0, math.ceil(0.95 * len(sorted_slowdowns)) - 1)
+        p95_slowdown = sorted_slowdowns[p95_index]
     else:
         solo_runtime_sum = ""
         collocated_wall_time = ""
