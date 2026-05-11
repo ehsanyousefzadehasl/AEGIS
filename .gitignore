@@ -93,3 +93,4 @@ evaluation/threshold_sensitivity/solo_runs/
 
 # keep threshold sensitivity trial manifests
 !evaluation/threshold_sensitivity/manifests/progressive_threshold_trials_template.csv
+!evaluation/threshold_sensitivity/manifests/progressive_threshold_trials_v1.csv
