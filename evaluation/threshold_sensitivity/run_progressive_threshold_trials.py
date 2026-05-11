@@ -42,7 +42,7 @@ OBSERVATION_COLUMNS = [
     "gpu_id",
     "cuda_visible_devices",
     "running_jobs_before_stage",
-    "candidate_job",
+    "next_workload",
     "is_initial_job",
     "decision",
     "decision_reason",
@@ -153,7 +153,7 @@ def describe_trial(trial: dict) -> list[dict]:
                 "gpu_id": trial["gpu_id"],
                 "cuda_visible_devices": trial["cuda_visible_devices"],
                 "running_jobs_before_stage": running_jobs,
-                "candidate_job": candidate,
+                "next_workload": candidate,
                 "is_initial_job": stage_idx == 1,
                 "mock_smact_risk": trial.get("mock_smact_risk", ""),
                 "mock_smocc_risk": trial.get("mock_smocc_risk", ""),
@@ -209,7 +209,7 @@ def dry_run_observation(
 
     candidate_solo_runtime = lookup_solo_runtime(
         solo_runtime_lookup,
-        stage["candidate_job"],
+        stage["next_workload"],
     )
 
     return {
@@ -218,7 +218,7 @@ def dry_run_observation(
         "gpu_id": stage["gpu_id"],
         "cuda_visible_devices": stage["cuda_visible_devices"],
         "running_jobs_before_stage": ";".join(running_jobs),
-        "candidate_job": stage["candidate_job"],
+        "next_workload": stage["next_workload"],
         "is_initial_job": stage["is_initial_job"],
         "decision": decision,
         "decision_reason": reason,
@@ -576,7 +576,7 @@ def observe_initial_and_decide_next(
             "gpu_id": gpu_id,
             "cuda_visible_devices": cuda_visible_devices,
             "running_jobs_before_stage": initial_spec,
-            "candidate_job": next_spec,
+            "next_workload": next_spec,
             "is_initial_job": False,
             "decision": decision,
             "decision_reason": reason,
@@ -643,7 +643,7 @@ def main() -> int:
                 continue
 
             result = execute_candidate_job(
-                spec_path=stage["candidate_job"],
+                spec_path=stage["next_workload"],
                 workdir=workdir,
                 cuda_visible_devices=stage["cuda_visible_devices"],
                 timeout_seconds=args.job_timeout_seconds,
@@ -655,7 +655,7 @@ def main() -> int:
             running_jobs = stage["running_jobs_before_stage"]
             candidate_solo_runtime = lookup_solo_runtime(
                 solo_runtime_lookup,
-                stage["candidate_job"],
+                stage["next_workload"],
             )
 
             rows.append(
@@ -665,7 +665,7 @@ def main() -> int:
                     "gpu_id": stage["gpu_id"],
                     "cuda_visible_devices": stage["cuda_visible_devices"],
                     "running_jobs_before_stage": ";".join(running_jobs),
-                    "candidate_job": stage["candidate_job"],
+                    "next_workload": stage["next_workload"],
                     "is_initial_job": stage["is_initial_job"],
                     "decision": "initial_only",
                     "decision_reason": "initial_job_execution_test",
@@ -746,10 +746,10 @@ def main() -> int:
         for stage in all_stages:
             running = stage["running_jobs_before_stage"]
             running_text = ", ".join(Path(x).stem for x in running) if running else "<none>"
-            candidate = Path(stage["candidate_job"]).stem
+            next_workload = Path(stage["next_workload"]).stem
             print(
                 f"[{stage['trial_id']} stage={stage['stage']}] "
-                f"running={running_text} -> candidate={candidate} "
+                f"running={running_text} -> next_workload={next_workload} "
                 f"gpu_id={stage['gpu_id']} visible={stage['cuda_visible_devices']}"
             )
 
