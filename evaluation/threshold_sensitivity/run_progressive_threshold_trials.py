@@ -127,6 +127,12 @@ def parse_args() -> argparse.Namespace:
         help="Terminate the initial job after recording the admission decision.",
     )
 
+    p.add_argument(
+        "--execute-progressive-skeleton",
+        action="store_true",
+        help="Materialize the progressive admission sequence without launching workloads.",
+    )
+
     return p.parse_args()
 
 
@@ -593,6 +599,78 @@ def observe_initial_and_decide_next(
             "max_slowdown": "",
         }
     ]
+
+
+def execute_progressive_trial(
+    *,
+    trial: dict,
+) -> list[dict]:
+    jobs = trial["job_sequence"]
+    if not jobs:
+        return []
+
+    rows = []
+    running_workloads: list[str] = []
+
+    for stage_idx, next_workload in enumerate(jobs, start=1):
+        if stage_idx == 1:
+            rows.append(
+                {
+                    "trial_id": trial["trial_id"],
+                    "stage": stage_idx,
+                    "gpu_id": trial["gpu_id"],
+                    "cuda_visible_devices": trial["cuda_visible_devices"],
+                    "running_jobs_before_stage": "",
+                    "next_workload": next_workload,
+                    "is_initial_job": True,
+                    "decision": "launch_initial",
+                    "decision_reason": "first_workload_in_sequence",
+                    "smact_risk": "",
+                    "smocc_risk": "",
+                    "drama_risk": "",
+                    "running_job_count_before": 0,
+                    "running_job_count_after": 1,
+                    "candidate_started": False,
+                    "candidate_finished": False,
+                    "candidate_return_code": "",
+                    "candidate_runtime_seconds": "",
+                    "candidate_solo_runtime_seconds": "",
+                    "max_slowdown": "",
+                }
+            )
+            running_workloads.append(next_workload)
+            continue
+
+        rows.append(
+            {
+                "trial_id": trial["trial_id"],
+                "stage": stage_idx,
+                "gpu_id": trial["gpu_id"],
+                "cuda_visible_devices": trial["cuda_visible_devices"],
+                "running_jobs_before_stage": ";".join(running_workloads),
+                "next_workload": next_workload,
+                "is_initial_job": False,
+                "decision": "planned_progressive_stage",
+                "decision_reason": "skeleton_only",
+                "smact_risk": "",
+                "smocc_risk": "",
+                "drama_risk": "",
+                "running_job_count_before": len(running_workloads),
+                "running_job_count_after": len(running_workloads) + 1,
+                "candidate_started": False,
+                "candidate_finished": False,
+                "candidate_return_code": "",
+                "candidate_runtime_seconds": "",
+                "candidate_solo_runtime_seconds": "",
+                "max_slowdown": "",
+            }
+        )
+
+        running_workloads.append(next_workload)
+
+    return rows
+
+
 def main() -> int:
     args = parse_args()
 
@@ -711,6 +789,19 @@ def main() -> int:
                     window_timeout=float(args.window_timeout),
                     poll_seconds=float(args.poll_seconds),
                     cleanup_after_observation=args.cleanup_after_observation,
+                )
+            )
+
+        append_observations(observations_csv, rows)
+        print(f"wrote {observations_csv}")
+
+    if args.execute_progressive_skeleton:
+        rows = []
+
+        for trial in trials:
+            rows.extend(
+                execute_progressive_trial(
+                    trial=trial,
                 )
             )
 
