@@ -663,11 +663,11 @@ def launch_tracked_workload(
     )
     task_obj.set_id(run_id)
 
-    uuid_to_id = monitor.gpu_uuids()
-    gpu_state.init_gpu_state(uuid_to_id)
-
     selection_args = argparse.Namespace(gpu_id=str(gpu_id), gpu_uuid=None)
-    gpu_uuid, resolved_gpu_id = resolve_gpu_selection(selection_args, uuid_to_id)
+    gpu_uuid, resolved_gpu_id = resolve_gpu_selection(
+        selection_args,
+        monitor.gpu_uuids(),
+    )
 
     now_str = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -979,6 +979,9 @@ def execute_progressive_trial_real(
 
     gpu_id = str(trial["gpu_id"])
     cuda_visible_devices = str(trial["cuda_visible_devices"])
+
+    uuid_to_id = monitor.gpu_uuids()
+    gpu_state.init_gpu_state(uuid_to_id)
 
     try:
         for stage_idx, next_workload in enumerate(jobs, start=1):
