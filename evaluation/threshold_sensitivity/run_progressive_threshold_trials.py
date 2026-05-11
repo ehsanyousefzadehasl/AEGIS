@@ -133,6 +133,12 @@ def parse_args() -> argparse.Namespace:
         help="Materialize the progressive admission sequence without launching workloads.",
     )
 
+    p.add_argument(
+        "--execute-progressive-trial",
+        action="store_true",
+        help="Execute the full progressive admission sequence for each trial.",
+    )
+
     return p.parse_args()
 
 
@@ -743,6 +749,244 @@ def execute_progressive_trial(
 
     return rows
 
+def observe_risk_window_for_running_set(
+    *,
+    gpu_uuid: str,
+    tracked_pid: int,
+    window_seconds: float,
+    summary_windows_text: str,
+    ttfk_timeout: float,
+    window_timeout: float,
+    poll_seconds: float,
+) -> dict:
+    summary_windows = parse_summary_windows(summary_windows_text, window_seconds)
+    monitor_window_seconds = max(summary_windows)
+
+    start_monitor_thread(monitor_window_seconds)
+
+    ttfk_seen_at, tracked_pid_after_ttfk = wait_for_ttfk(
+        gpu_uuid,
+        timeout_s=ttfk_timeout,
+        poll_s=poll_seconds,
+    )
+
+    summary_metrics_by_window, summary_ready_times, tracked_pid_after_window = collect_summary_windows(
+        gpu_uuid=gpu_uuid,
+        ttfk_seen_at=ttfk_seen_at,
+        tracked_pid=tracked_pid_after_ttfk,
+        windows=summary_windows,
+        timeout_s=window_timeout,
+        poll_s=poll_seconds,
+    )
+
+    decision_window = float(window_seconds)
+    if decision_window not in summary_metrics_by_window:
+        raise RuntimeError(f"Decision window not collected: {decision_window}s")
+
+    metrics = summary_metrics_by_window[decision_window]
+
+    return {
+        "smact_risk": float(metrics["smact_risk"]),
+        "smocc_risk": float(metrics["smocc_risk"]),
+        "drama_risk": float(metrics["drama_risk"]),
+        "ttfk_seen_at": float(ttfk_seen_at),
+        "tracked_pid_after_ttfk": int(tracked_pid_after_ttfk),
+        "tracked_pid_after_window": int(tracked_pid_after_window),
+        "summary_ready_seconds": float(summary_ready_times[decision_window]),
+    }
+
+def terminate_workload_by_spec(spec_path: str) -> None:
+    command = load_job_command(spec_path)
+    parts = command.split()
+
+    patterns = [command]
+
+    for part in parts:
+        if part.endswith(".py"):
+            patterns.append(part)
+            patterns.append(Path(part).name)
+
+    # Also use the workload spec stem as a fallback.
+    patterns.append(Path(spec_path).stem)
+
+    for pattern in dict.fromkeys(patterns):
+        subprocess.run(
+            ["pkill", "-TERM", "-f", pattern],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    time.sleep(2.0)
+
+    for pattern in dict.fromkeys(patterns):
+        subprocess.run(
+            ["pkill", "-KILL", "-f", pattern],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+def execute_progressive_trial_real(
+    *,
+    trial: dict,
+    output_dir: Path,
+    workdir: Path,
+    window_seconds: float,
+    summary_windows_text: str,
+    tau_smact: float,
+    tau_smocc: float,
+    tau_drama: float,
+    ttfk_timeout: float,
+    window_timeout: float,
+    poll_seconds: float,
+    cleanup_after_observation: bool,
+) -> list[dict]:
+    jobs = trial["job_sequence"]
+    if not jobs:
+        return []
+
+    rows = []
+    running_workloads: list[str] = []
+    running_processes: list[dict] = []
+
+    gpu_id = str(trial["gpu_id"])
+    cuda_visible_devices = str(trial["cuda_visible_devices"])
+
+    try:
+        for stage_idx, next_workload in enumerate(jobs, start=1):
+            if stage_idx == 1:
+                launched = launch_tracked_workload(
+                    spec_path=next_workload,
+                    trial_id=trial["trial_id"],
+                    stage=stage_idx,
+                    output_dir=output_dir,
+                    workdir=workdir,
+                    gpu_id=gpu_id,
+                    cuda_visible_devices=cuda_visible_devices,
+                    window_seconds=window_seconds,
+                )
+
+                running_processes.append(launched)
+                running_workloads.append(next_workload)
+
+                rows.append(
+                    {
+                        "trial_id": trial["trial_id"],
+                        "stage": stage_idx,
+                        "gpu_id": launched["gpu_id"],
+                        "cuda_visible_devices": cuda_visible_devices,
+                        "running_jobs_before_stage": "",
+                        "next_workload": next_workload,
+                        "is_initial_job": True,
+                        "decision": "launch_initial",
+                        "decision_reason": "first_workload_in_sequence",
+                        "smact_risk": "",
+                        "smocc_risk": "",
+                        "drama_risk": "",
+                        "running_job_count_before": 0,
+                        "running_job_count_after": 1,
+                        "candidate_started": True,
+                        "candidate_finished": False,
+                        "candidate_return_code": "",
+                        "candidate_runtime_seconds": "",
+                        "candidate_solo_runtime_seconds": "",
+                        "max_slowdown": "",
+                    }
+                )
+                continue
+
+            observed = observe_risk_window_for_running_set(
+                gpu_uuid=running_processes[-1]["gpu_uuid"],
+                tracked_pid=running_processes[-1]["launcher_pid"],
+                window_seconds=window_seconds,
+                summary_windows_text=summary_windows_text,
+                ttfk_timeout=ttfk_timeout,
+                window_timeout=window_timeout,
+                poll_seconds=poll_seconds,
+            )
+
+            running_processes[-1]["tracked_pid_after_window"] = observed["tracked_pid_after_window"]
+            running_processes[-1]["tracked_pid_after_ttfk"] = observed["tracked_pid_after_ttfk"]
+
+            reject = should_reject_gpu(
+                smact_risk=observed["smact_risk"],
+                smocc_risk=observed["smocc_risk"],
+                drama_risk=observed["drama_risk"],
+                tau_smact=tau_smact,
+                tau_smocc=tau_smocc,
+                tau_drama=tau_drama,
+            )
+
+            decision = "reject" if reject else "admit"
+
+            started = False
+            if not reject:
+                launched = launch_tracked_workload(
+                    spec_path=next_workload,
+                    trial_id=trial["trial_id"],
+                    stage=stage_idx,
+                    output_dir=output_dir,
+                    workdir=workdir,
+                    gpu_id=gpu_id,
+                    cuda_visible_devices=cuda_visible_devices,
+                    window_seconds=window_seconds,
+                )
+                running_processes.append(launched)
+                running_workloads.append(next_workload)
+                started = True
+
+            rows.append(
+                {
+                    "trial_id": trial["trial_id"],
+                    "stage": stage_idx,
+                    "gpu_id": gpu_id,
+                    "cuda_visible_devices": cuda_visible_devices,
+                    "running_jobs_before_stage": ";".join(running_workloads[:-1] if started else running_workloads),
+                    "next_workload": next_workload,
+                    "is_initial_job": False,
+                    "decision": decision,
+                    "decision_reason": "threshold_rule",
+                    "smact_risk": observed["smact_risk"],
+                    "smocc_risk": observed["smocc_risk"],
+                    "drama_risk": observed["drama_risk"],
+                    "running_job_count_before": len(running_workloads) - 1 if started else len(running_workloads),
+                    "running_job_count_after": len(running_workloads),
+                    "candidate_started": started,
+                    "candidate_finished": False,
+                    "candidate_return_code": "",
+                    "candidate_runtime_seconds": "",
+                    "candidate_solo_runtime_seconds": "",
+                    "max_slowdown": "",
+                }
+            )
+
+            print(
+                f"[{trial['trial_id']} stage={stage_idx}] "
+                f"decision={decision} "
+                f"smact={observed['smact_risk']:.3f} "
+                f"smocc={observed['smocc_risk']:.3f} "
+                f"drama={observed['drama_risk']:.3f}"
+            )
+
+            if reject:
+                break
+
+    finally:
+        if cleanup_after_observation:
+            for proc in reversed(running_processes):
+                if proc.get("tracked_pid_after_window") is not None:
+                    terminate_process_tree(int(proc["tracked_pid_after_window"]))
+                if proc.get("tracked_pid_after_ttfk") is not None:
+                    terminate_process_tree(int(proc["tracked_pid_after_ttfk"]))
+
+                terminate_process_tree(int(proc["launcher_pid"]))
+                terminate_workload_by_spec(proc["spec_path"])
+
+            for proc in running_processes:
+                gpu_state.clear_tracking(proc["gpu_uuid"])
+
+    return rows
 
 def main() -> int:
     args = parse_args()
@@ -904,6 +1148,33 @@ def main() -> int:
     print(f"trials={len(trials)}")
     print(f"stages={len(all_stages)}")
     print(f"wrote {stage_plan_path}")
+
+
+    if args.execute_progressive_trial:
+        rows = []
+        workdir = Path(args.workdir).resolve()
+
+        for trial in trials:
+            rows.extend(
+                execute_progressive_trial_real(
+                    trial=trial,
+                    output_dir=output_dir,
+                    workdir=workdir,
+                    window_seconds=float(args.window_seconds),
+                    summary_windows_text=args.summary_windows,
+                    tau_smact=float(args.tau_smact),
+                    tau_smocc=float(args.tau_smocc),
+                    tau_drama=float(args.tau_drama),
+                    ttfk_timeout=float(args.ttfk_timeout),
+                    window_timeout=float(args.window_timeout),
+                    poll_seconds=float(args.poll_seconds),
+                    cleanup_after_observation=args.cleanup_after_observation,
+                )
+            )
+
+        append_observations(observations_csv, rows)
+        print(f"wrote {observations_csv}")
+
 
     if args.dry_run:
         print("\nDRY RUN: planned stages")
