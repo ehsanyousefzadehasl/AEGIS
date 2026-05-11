@@ -39,6 +39,7 @@ DEFAULT_OUTPUT_DIR = Path("evaluation/threshold_sensitivity/progressive_threshol
 OBSERVATION_COLUMNS = [
     "trial_id",
     "stage",
+    "admission_attempt",
     "gpu_id",
     "cuda_visible_devices",
     "running_jobs_before_stage",
@@ -189,6 +190,7 @@ def describe_trial(trial: dict) -> list[dict]:
             {
                 "trial_id": trial["trial_id"],
                 "stage": stage_idx,
+                "admission_attempt": 1,
                 "gpu_id": trial["gpu_id"],
                 "cuda_visible_devices": trial["cuda_visible_devices"],
                 "running_jobs_before_stage": running_jobs,
@@ -254,6 +256,7 @@ def dry_run_observation(
     return {
         "trial_id": stage["trial_id"],
         "stage": stage["stage"],
+        "admission_attempt": 1,
         "gpu_id": stage["gpu_id"],
         "cuda_visible_devices": stage["cuda_visible_devices"],
         "running_jobs_before_stage": ";".join(running_jobs),
@@ -612,6 +615,7 @@ def observe_initial_and_decide_next(
         {
             "trial_id": trial["trial_id"],
             "stage": 2,
+            "admission_attempt": 1,
             "gpu_id": gpu_id,
             "cuda_visible_devices": cuda_visible_devices,
             "running_jobs_before_stage": initial_spec,
@@ -709,6 +713,7 @@ def launch_tracked_workload(
         "event_path": event_path,
         "num_gpus_requested": int(job_spec.num_gpus_requested),
         "stage": int(stage),
+        "admission_attempt": 1,
         "started_monotonic": float(started_monotonic),
         "started_wall_time": started_wall_time,
     }
@@ -730,6 +735,7 @@ def execute_progressive_trial(
                 {
                     "trial_id": trial["trial_id"],
                     "stage": stage_idx,
+                    "admission_attempt": 1,
                     "gpu_id": trial["gpu_id"],
                     "cuda_visible_devices": trial["cuda_visible_devices"],
                     "running_jobs_before_stage": "",
@@ -757,6 +763,7 @@ def execute_progressive_trial(
             {
                 "trial_id": trial["trial_id"],
                 "stage": stage_idx,
+                "admission_attempt": 1,
                 "gpu_id": trial["gpu_id"],
                 "cuda_visible_devices": trial["cuda_visible_devices"],
                 "running_jobs_before_stage": ";".join(running_workloads),
@@ -996,6 +1003,7 @@ def execute_progressive_trial_real(
                     {
                         "trial_id": trial["trial_id"],
                         "stage": stage_idx,
+                        "admission_attempt": 1,
                         "gpu_id": launched["gpu_id"],
                         "cuda_visible_devices": cuda_visible_devices,
                         "running_jobs_before_stage": "",
@@ -1064,6 +1072,7 @@ def execute_progressive_trial_real(
                 {
                     "trial_id": trial["trial_id"],
                     "stage": stage_idx,
+                    "admission_attempt": 1,
                     "gpu_id": gpu_id,
                     "cuda_visible_devices": cuda_visible_devices,
                     "running_jobs_before_stage": ";".join(running_workloads[:-1] if started else running_workloads),
@@ -1196,7 +1205,7 @@ def build_trial_summary_from_rows(
         slowdowns.append(runtime / solo)
 
         r["max_slowdown"] = runtime / solo
-        
+
     if len(finished_rows) == admitted_count and slowdowns:
         solo_runtime_sum = sum(solo_runtimes)
         collocated_wall_time = max(collocated_runtimes)
@@ -1305,6 +1314,7 @@ def main() -> int:
                 {
                     "trial_id": stage["trial_id"],
                     "stage": stage["stage"],
+                    "admission_attempt": 1,
                     "gpu_id": stage["gpu_id"],
                     "cuda_visible_devices": stage["cuda_visible_devices"],
                     "running_jobs_before_stage": ";".join(running_jobs),
