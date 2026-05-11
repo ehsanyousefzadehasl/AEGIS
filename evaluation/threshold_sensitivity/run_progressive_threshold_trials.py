@@ -952,6 +952,34 @@ def wait_for_launched_workloads(
 
     return results
 
+
+def read_latest_valid_risk_window(
+    *,
+    gpu_uuid: str,
+    window_timeout: float,
+    poll_seconds: float,
+) -> dict:
+    deadline = time.monotonic() + float(window_timeout)
+
+    while time.monotonic() < deadline:
+        gpu_state.update()
+
+        if bool(gpu_state.gpus_state.loc[gpu_uuid, "validity"]):
+            analyzed = monitor.summarize_Gmetrics_snapshot()
+            row = analyzed.loc[gpu_uuid]
+
+            return {
+                "smact_risk": float(row["smact_risk"]),
+                "smocc_risk": float(row["smocc_risk"]),
+                "drama_risk": float(row["drama_risk"]),
+                "window_samples": int(row["window_samples"]),
+            }
+
+        time.sleep(float(poll_seconds))
+
+    raise TimeoutError(f"Timed out waiting for valid risk window on {gpu_uuid}")
+
+
 def execute_progressive_trial_real(
     *,
     trial: dict,
@@ -984,7 +1012,7 @@ def execute_progressive_trial_real(
     gpu_state.init_gpu_state(uuid_to_id)
 
     start_monitor_thread(float(window_seconds))
-    
+
     try:
         for stage_idx, next_workload in enumerate(jobs, start=1):
             if stage_idx == 1:
