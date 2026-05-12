@@ -136,6 +136,14 @@ POLICY_PROFILES = {
         placement_strategy="est_lug",
         required_profile_metrics=("peak_memory_mib",)
     ),
+    "HORUS": PolicyProfile(
+        name="HORUS",
+        estimate_source="horus_estimate",
+        exclusive_first=True,
+        uses_dispatcher=True,
+        placement_strategy="horus",
+        required_profile_metrics=("peak_memory_mib", "horus_gpu_util_mean"),
+    ),
 }
 
 
@@ -152,6 +160,7 @@ def policy_requires_estimator(policy: str) -> bool:
     return get_policy_profile(policy).estimate_source in {
         "task_file_estimate",
         "online_estimate",
+        "horus_estimate",
     }
 
 def policy_estimate_source(policy: str) -> str:

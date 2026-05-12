@@ -68,6 +68,26 @@ def resolve_placement_estimate(
             resource_profile=spec.resource_profile,
         )
 
+    if estimate_source == "horus_estimate":
+        horus_memory_mib = spec.gpu_memory_estimate_mib
+        profiled = spec.resource_profile
+
+        if horus_memory_mib is None or profiled is None:
+            return PlacementEstimate(
+                source="horus_estimate",
+                resource_profile=None,
+            )
+
+        return PlacementEstimate(
+            source="horus_estimate",
+            resource_profile=ResourceProfile(
+                peak_memory_mib=horus_memory_mib,
+                horus_gpu_util_mean=profiled.horus_gpu_util_mean,
+                horus_gpu_util_p95=profiled.horus_gpu_util_p95,
+                horus_gpu_util_max=profiled.horus_gpu_util_max,
+                source="horus_estimate",
+            ),
+        )
 
 def resolve_required_policy_profile_metrics(
     *,
@@ -103,7 +123,7 @@ def resolve_peak_memory_estimation_from_estimate(
     if placement_estimate is None:
         return None
 
-    if placement_estimate.source in {"task_file_estimate", "online_estimate"}:
+    if placement_estimate.source in {"task_file_estimate", "online_estimate", "horus_estimate"}:
         if placement_estimate.resource_profile is None:
             return None
         return placement_estimate.resource_profile.peak_memory_mib
@@ -157,4 +177,16 @@ def get_missing_policy_input_message(
         if required_metrics is None:
             return f"Could not resolve required profiled metrics for task {task}"
 
+    if estimate_source == "horus_estimate":
+        if placement_estimate is None or placement_estimate.resource_profile is None:
+            return f"Could not resolve Horus estimate/profile inputs for task {task}"
+
+        required_metrics = resolve_required_policy_profile_metrics(
+            policy=policy,
+            placement_estimate=placement_estimate,
+        )
+
+        if required_metrics is None:
+            return f"Could not resolve Horus estimate/profile inputs for task {task}"
+        
     return None

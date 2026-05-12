@@ -16,7 +16,19 @@ from placement.policies import (
     select_est_bf,
     select_est_magm,
     select_est_lug,
+    select_horus,
 )
+
+def _resolve_required_metric(request, metric_name: str):
+    if request.placement_estimate is None or request.placement_estimate.resource_profile is None:
+        return None
+
+    from workload.resource_profile import get_resource_profile_metric
+
+    return get_resource_profile_metric(
+        request.placement_estimate.resource_profile,
+        metric_name,
+    )
 
 def _resolve_gpu_memory_requirement(request):
     return resolve_peak_memory_requirement_from_estimate(
@@ -74,6 +86,25 @@ def _execute_or_rr_selector(selector, request):
         gpu_ids=request.gpu_ids,
     )
 
+def _execute_horus_selector(selector, request):
+    gpu_memory_estimation = _resolve_gpu_memory_estimation(request)
+    if gpu_memory_estimation is None:
+        return None
+
+    candidate_horus_gpu_util = _resolve_required_metric(
+        request,
+        "horus_gpu_util_mean",
+    )
+    if candidate_horus_gpu_util is None:
+        return None
+
+    return selector(
+        gpus_with_metrics=request.gpus_with_metrics,
+        gpu_memory_estimation=gpu_memory_estimation,
+        candidate_horus_gpu_util=float(candidate_horus_gpu_util),
+        available_gpu_ids=request.available_gpu_ids,
+        number_of_gpus_requested=request.number_of_gpus_requested,
+    )
 
 _STRATEGY_REGISTRY = {
     "oracle_ff": (_execute_oracle_selector, select_oracle_ff),
@@ -86,6 +117,7 @@ _STRATEGY_REGISTRY = {
     "est_bf": (_execute_est_selector, select_est_bf),
     "est_magm": (_execute_est_selector, select_est_magm),
     "est_lug": (_execute_est_selector, select_est_lug),
+    "horus": (_execute_horus_selector, select_horus),
 }
 
 
