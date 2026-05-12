@@ -16,7 +16,12 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Update workload YAML specs with solo profiling metadata."
     )
-    p.add_argument("--profile-csv", default=DEFAULT_PROFILE_CSV)
+    p.add_argument(
+        "--profile-csv",
+        action="append",
+        default=None,
+        help="Profiling CSV. Can be passed multiple times.",
+    )
     p.add_argument(
         "--spec-root",
         default="evaluation/workloads/training/specs/yaml",
@@ -42,14 +47,27 @@ def spec_name(path: str) -> str:
 def load_profile_rows(profile_csv: str) -> dict[str, dict]:
     df = pd.read_csv(profile_csv)
 
-    required = {
-        "spec_path",
-        "gpu_memory_peak_200s_mib",
-        "gpu_memory_peak_full_mib",
-    }
+    required = {"spec_path"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"{profile_csv} missing required columns: {sorted(missing)}")
+
+    has_1gpu_memory = {
+        "gpu_memory_peak_200s_mib",
+        "gpu_memory_peak_full_mib",
+    }.issubset(df.columns)
+
+    has_2gpu_memory = {
+        "gpu_memory_peak_200s_mib_gpu_a",
+        "gpu_memory_peak_200s_mib_gpu_b",
+        "gpu_memory_peak_full_mib_gpu_a",
+        "gpu_memory_peak_full_mib_gpu_b",
+    }.issubset(df.columns)
+
+    if not has_1gpu_memory and not has_2gpu_memory:
+        raise ValueError(
+            f"{profile_csv} does not look like a supported 1-GPU or 2-GPU profile CSV"
+        )
 
     rows = {}
     for _, row in df.iterrows():
@@ -73,9 +91,63 @@ def maybe_float(value):
     return float(value)
 
 
+def max_available(row: dict, keys: list[str]) -> float | None:
+    values = []
+    for key in keys:
+        value = row.get(key)
+        if value is None or pd.isna(value):
+            continue
+        values.append(float(value))
+    if not values:
+        return None
+    return max(values)
+
+
+def extract_profile_values(row: dict) -> dict:
+    gpu_count = int(row.get("gpu_count", 1) or 1)
+
+    if gpu_count > 1:
+        peak_200s = max_available(
+            row,
+            [
+                "gpu_memory_peak_200s_mib_gpu_a",
+                "gpu_memory_peak_200s_mib_gpu_b",
+            ],
+        )
+        peak_full = max_available(
+            row,
+            [
+                "gpu_memory_peak_full_mib_gpu_a",
+                "gpu_memory_peak_full_mib_gpu_b",
+            ],
+        )
+        avg_smact = max_available(row, ["smact_mean_200s_gpu_a", "smact_mean_200s_gpu_b"])
+        avg_smocc = max_available(row, ["smocc_mean_200s_gpu_a", "smocc_mean_200s_gpu_b"])
+        avg_drama = max_available(row, ["drama_mean_200s_gpu_a", "drama_mean_200s_gpu_b"])
+    else:
+        peak_200s = maybe_float(row.get("gpu_memory_peak_200s_mib"))
+        peak_full = maybe_float(row.get("gpu_memory_peak_full_mib"))
+        avg_smact = maybe_float(row.get("smact_mean_200s"))
+        avg_smocc = maybe_float(row.get("smocc_mean_200s"))
+        avg_drama = maybe_float(row.get("drama_mean_200s"))
+
+    return {
+        "gpu_count": gpu_count,
+        "peak_200s": peak_200s,
+        "peak_full": peak_full,
+        "avg_smact": avg_smact,
+        "avg_smocc": avg_smocc,
+        "avg_drama": avg_drama,
+    }
+
 def update_spec_data(data: dict, row: dict) -> dict:
-    peak_200s = maybe_float(row.get("gpu_memory_peak_200s_mib"))
-    peak_full = maybe_float(row.get("gpu_memory_peak_full_mib"))
+    values = extract_profile_values(row)
+
+    peak_200s = values["peak_200s"]
+    peak_full = values["peak_full"]
+    avg_smact = values["avg_smact"]
+    avg_smocc = values["avg_smocc"]
+    avg_drama = values["avg_drama"]
     requirement = maybe_float(row.get("gpu_memory_requirement_mib"))
 
     if peak_full is not None:
@@ -86,6 +158,13 @@ def update_spec_data(data: dict, row: dict) -> dict:
 
     set_nested(data, ["profile", "profiling_duration_s"], 200)
     set_nested(data, ["profile", "source"], "solo_profile_200s")
+
+    if avg_smact is not None:
+        set_nested(data, ["profile", "avg_smact"], float(avg_smact))
+    if avg_smocc is not None:
+        set_nested(data, ["profile", "avg_smocc"], float(avg_smocc))
+    if avg_drama is not None:
+        set_nested(data, ["profile", "avg_drama"], float(avg_drama))
 
     # Keep the original requirement if present for traceability.
     if requirement is not None:
@@ -108,7 +187,12 @@ def update_spec_data(data: dict, row: dict) -> dict:
 def main() -> int:
     args = parse_args()
 
-    profile_rows = load_profile_rows(args.profile_csv)
+    profile_csvs = args.profile_csv or [DEFAULT_PROFILE_CSV]
+
+    profile_rows = {}
+    for profile_csv in profile_csvs:
+        profile_rows.update(load_profile_rows(profile_csv))
+
     spec_root = Path(args.spec_root)
 
     updated = 0
