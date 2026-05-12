@@ -1,30 +1,30 @@
 version: 1
-
 job:
   conda_env: tf
-  command: >
-    python evaluation/workloads/training/scripts/clean/efficientnet_cifar100_train.py
-    --batch_size 32
-    --epochs 20
+  command: 'python evaluation/workloads/training/scripts/clean/efficientnet_cifar100_train.py
+    --batch_size 32 --epochs 20
 
+    '
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 666
-
+  gpu_memory_requirement_mib: 668
 estimates:
   horus_mib: 1348.8069
   faketensor_mib: 64.12
   gpumemnet_mib: 8000
-
 profile:
-  peak_memory_mib: null
-  avg_smact: null
-  avg_smocc: null
-  avg_drama: null
-  profiling_duration_s: null
-  source: null
-  extra_metrics: {}
-
+  peak_memory_mib: 668
+  avg_smact: 0.159576923076923
+  avg_smocc: 0.0876538461538461
+  avg_drama: 0.0082461538461538
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 666
+    full_run_peak_memory_mib: 668
+  horus_gpu_util_mean: 36.83076923076923
+  horus_gpu_util_p95: 40.0
+  horus_gpu_util_max: 42.0
 online_estimation:
   summary_path: efficientNet_cifar100.model
   parser_arg_1: cifar100

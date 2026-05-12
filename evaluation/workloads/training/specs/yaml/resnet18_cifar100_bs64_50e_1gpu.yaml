@@ -1,28 +1,28 @@
 version: 1
-
 job:
   conda_env: tf
   command: python evaluation/workloads/training/scripts/clean/resnet18_cifar100_train.py
     --batch_size 64 --epochs 50
-
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 796
-
+  gpu_memory_requirement_mib: 798
 estimates:
   horus_mib: 3620.3953
   faketensor_mib: 66.75673676
   gpumemnet_mib: 8000.0
-
 profile:
-  peak_memory_mib: null
-  avg_smact: null
-  avg_smocc: null
-  avg_drama: null
-  profiling_duration_s: null
-  source: null
-  extra_metrics: {}
-
+  peak_memory_mib: 798
+  avg_smact: 0.1682857142857143
+  avg_smocc: 0.0631203007518797
+  avg_drama: 0.0518345864661654
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 796
+    full_run_peak_memory_mib: 798
+  horus_gpu_util_mean: 34.6015037593985
+  horus_gpu_util_p95: 42.39999999999999
+  horus_gpu_util_max: 46.0
 online_estimation:
   summary_path: resnet18_cifar100.model
   parser_arg_1: cifar100

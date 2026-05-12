@@ -1,28 +1,28 @@
 version: 1
-
 job:
   conda_env: tf
   command: python evaluation/workloads/training/scripts/clean/inception_imagenet_train.py
     --batch_size 64
-
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 9332
-
+  gpu_memory_requirement_mib: 9408
 estimates:
   horus_mib: 11089.8086
   faketensor_mib: 3158.379311
   gpumemnet_mib: 16000.0
-
 profile:
-  peak_memory_mib: null
-  avg_smact: null
-  avg_smocc: null
-  avg_drama: null
-  profiling_duration_s: null
-  source: null
-  extra_metrics: {}
-  
+  peak_memory_mib: 9408
+  avg_smact: 0.6333358208955224
+  avg_smocc: 0.2858432835820895
+  avg_drama: 0.3287611940298507
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 9332
+    full_run_peak_memory_mib: 9408
+  horus_gpu_util_mean: 78.96268656716418
+  horus_gpu_util_p95: 86.0
+  horus_gpu_util_max: 86.0
 online_estimation:
   summary_path: Inception_64.model
   parser_arg_1: /raid/datasets/imagenet

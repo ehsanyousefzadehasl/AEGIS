@@ -1,34 +1,31 @@
 version: 1
-
 job:
   conda_env: tf
-  command: >
-    python evaluation/workloads/training/scripts/clean/run_maskrcnn_coco.py
-    --data_path /raid/datasets/coco
-    --epochs 1
-    --batch_size 8
-    --lr 0.0025
-    --model maskrcnn_resnet50_fpn
-    --output_dir runs
+  command: 'python evaluation/workloads/training/scripts/clean/run_maskrcnn_coco.py
+    --data_path /raid/datasets/coco --epochs 1 --batch_size 8 --lr 0.0025 --model
+    maskrcnn_resnet50_fpn --output_dir runs
 
+    '
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 28606
-
+  gpu_memory_requirement_mib: 29936
 estimates:
   horus_mib: 7902.3
   faketensor_mib: 40000
   gpumemnet_mib: 8000
-
 profile:
-  peak_memory_mib: null
-  avg_smact: null
-  avg_smocc: null
-  avg_drama: null
-  profiling_duration_s: null
-  source: null
-  extra_metrics: {}
-
+  peak_memory_mib: 29854
+  avg_smact: 0.6878636363636363
+  avg_smocc: 0.3341515151515152
+  avg_drama: 0.3971969696969697
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 28606
+    full_run_peak_memory_mib: 29936
+  horus_gpu_util_mean: 84.67424242424242
+  horus_gpu_util_p95: 97.0
+  horus_gpu_util_max: 100.0
 online_estimation:
   summary_path: maskrcnn.model
   parser_arg_1: coco

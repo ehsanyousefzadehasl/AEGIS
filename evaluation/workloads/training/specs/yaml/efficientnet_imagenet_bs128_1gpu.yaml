@@ -1,28 +1,28 @@
 version: 1
-
 job:
   conda_env: tf
   command: python evaluation/workloads/training/scripts/clean/efficientnet_imagenet_train.py
     --batch_size 128
-
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 12666
-
+  gpu_memory_requirement_mib: 12732
 estimates:
   horus_mib: 12999.0977
   faketensor_mib: 10904.91068
   gpumemnet_mib: 16000.0
-
 profile:
-  peak_memory_mib: null
-  avg_smact: null
-  avg_smocc: null
-  avg_drama: null
-  profiling_duration_s: null
-  source: null
-  extra_metrics: {}
-
+  peak_memory_mib: 12732
+  avg_smact: 0.6055746268656715
+  avg_smocc: 0.3744029850746269
+  avg_drama: 0.3452686567164178
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 12666
+    full_run_peak_memory_mib: 12732
+  horus_gpu_util_mean: 75.63432835820896
+  horus_gpu_util_p95: 85.0
+  horus_gpu_util_max: 86.0
 online_estimation:
   summary_path: efficientNet_128.model
   parser_arg_1: /raid/datasets/imagenet

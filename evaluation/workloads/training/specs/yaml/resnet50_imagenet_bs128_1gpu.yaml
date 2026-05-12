@@ -1,28 +1,28 @@
 version: 1
-
 job:
   conda_env: tf
   command: python evaluation/workloads/training/scripts/clean/resnet50_imagenet_train.py
     --batch_size 128
-
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 13236
-
+  gpu_memory_requirement_mib: 13238
 estimates:
   horus_mib: 28923.25
   faketensor_mib: 10666.00724
   gpumemnet_mib: 24000.0
-
 profile:
-  peak_memory_mib: null
-  avg_smact: null
-  avg_smocc: null
-  avg_drama: null
-  profiling_duration_s: null
-  source: null
-  extra_metrics: {}
-
+  peak_memory_mib: 13238
+  avg_smact: 0.7251052631578947
+  avg_smocc: 0.3758345864661654
+  avg_drama: 0.5129473684210527
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 13236
+    full_run_peak_memory_mib: 13238
+  horus_gpu_util_mean: 82.97744360902256
+  horus_gpu_util_p95: 86.0
+  horus_gpu_util_max: 86.0
 online_estimation:
   summary_path: resnet50_128.model
   parser_arg_1: /raid/datasets/imagenet
