@@ -7,6 +7,7 @@ from telemetry.gpu_state import launch_task, update, all_available_GPUs
 from queueing.task_queue import Task
 from queueing.selection import peek_next_job
 from workload.job_spec import load_job_spec
+from workload.resource_profile import get_resource_profile_metric
 from runtime import gpu_allocations
 from runtime.state import lock, recover_lock, main_queue, recovery_queue
 from runtime.dispatch import dispatch_selected_job
@@ -22,6 +23,20 @@ from placement.profiles import policy_requires_gpu_metrics, policy_uses_dispatch
 from placement.admission import should_dispatch_exclusive_first
 from recovery.manager import recovery
 
+
+def profiled_dispatch_metadata(placement_estimate):
+    if placement_estimate is None or placement_estimate.resource_profile is None:
+        return 0.0, 0
+
+    rp = placement_estimate.resource_profile
+
+    util = get_resource_profile_metric(rp, "horus_gpu_util_mean")
+    memory = get_resource_profile_metric(rp, "peak_memory_mib")
+
+    return (
+        0.0 if util is None else float(util),
+        0 if memory is None else int(float(memory)),
+    )
 
 def load_job_spec_safe(task_path: str, estimator_name: str):
     try:
@@ -141,6 +156,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                 number_of_gpus_requested=number_of_GPUs_requested,
             ):
                 assigned_gpus = idle_and_available[:number_of_GPUs_requested]
+                
+                profiled_gpu_util, profiled_memory_mib = profiled_dispatch_metadata(placement_estimate)
 
                 dispatch_selected_job(
                     selected=selected,
@@ -165,6 +182,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                     event_path=event_path,
                     run_id=run_id,
                     failed_host_free_mib_at_dispatch=None,
+                    profiled_gpu_util=profiled_gpu_util,
+                    profiled_memory_mib=profiled_memory_mib,
                 )
 
                 print(gpus_state)
@@ -214,6 +233,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                         gpus_with_metrics.loc[list(assigned_gpu_ids), "GPU_mem_available"].min()
                     )
 
+                profiled_gpu_util, profiled_memory_mib = profiled_dispatch_metadata(placement_estimate)
+
                 dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
@@ -237,6 +258,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                     event_path=event_path,
                     run_id=run_id,
                     failed_host_free_mib_at_dispatch=failed_host_free_mib_at_dispatch,
+                    profiled_gpu_util=profiled_gpu_util,
+                    profiled_memory_mib=profiled_memory_mib,
                 )
 
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")

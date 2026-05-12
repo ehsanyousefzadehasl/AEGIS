@@ -4,6 +4,7 @@ from threading import Thread
 from collections.abc import Iterable
 
 from queueing.selection import dequeue_selected_job
+from runtime import gpu_allocations
 from runtime.dispatch_utils import format_gpu_identifiers, build_recovery_header
 from runtime.events import append_jsonl_event
 
@@ -31,6 +32,8 @@ def dispatch_selected_job(
     event_path: str,
     run_id: str,
     failed_host_free_mib_at_dispatch: int | None,
+    profiled_gpu_util: float = 0.0,
+    profiled_memory_mib: int = 0,
 ) -> int | None:
     gpu_ids_list = list(assigned_gpu_ids)
 
@@ -128,7 +131,24 @@ def dispatch_selected_job(
             task_id=str(task_obj.task_id),
             event_path=event_path,
         )
-    
+
+    gpu_allocations.register_allocation(
+        task_id=str(task_obj.task_id),
+        task_path=task,
+        launcher_pid=int(pid),
+        assigned_gpu_ids=gpu_ids_list,
+        profiled_gpu_util=float(profiled_gpu_util or 0.0),
+        profiled_memory_mib=int(profiled_memory_mib or 0),
+        metadata={
+            "run_id": run_id,
+            "user": user,
+            "workdir": dir,
+            "recovered": bool(task_obj.recovered),
+            "recovery_count": int(task_obj.recovery_count),
+        },
+    )
+
+
     append_jsonl_event(
         event_path=event_path,
         record={
@@ -143,6 +163,8 @@ def dispatch_selected_job(
             "cuda_visible_devices": gpus_identifiers,
             "workdir": dir,
             "run_id": run_id,
+            "profiled_gpu_util": float(profiled_gpu_util or 0.0),
+            "profiled_memory_mib": int(profiled_memory_mib or 0),
         },
     )
 
