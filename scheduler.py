@@ -7,6 +7,7 @@ from telemetry.gpu_state import launch_task, update, all_available_GPUs
 from queueing.task_queue import Task
 from queueing.selection import peek_next_job
 from workload.job_spec import load_job_spec
+from runtime import gpu_allocations
 from runtime.state import lock, recover_lock, main_queue, recovery_queue
 from runtime.dispatch import dispatch_selected_job
 from runtime.pid_resolution import resolve_and_update_gpu_pid
@@ -83,6 +84,9 @@ def run_scheduler(policy=policy, estimator=estimator):
         )
         
         update()
+
+        gpu_allocations.reconcile_allocations()
+        print("GPU allocation snapshot:", gpu_allocations.snapshot())
 
         print("updated the table: ", gpus_state)
         print(command_executor("nvidia-smi pmon -c 1"))
