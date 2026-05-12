@@ -124,12 +124,20 @@ def extract_profile_values(row: dict) -> dict:
         avg_smact = max_available(row, ["smact_mean_200s_gpu_a", "smact_mean_200s_gpu_b"])
         avg_smocc = max_available(row, ["smocc_mean_200s_gpu_a", "smocc_mean_200s_gpu_b"])
         avg_drama = max_available(row, ["drama_mean_200s_gpu_a", "drama_mean_200s_gpu_b"])
+
+        horus_gpu_util_mean = max_available(row, ["gputl_mean_200s_gpu_a", "gputl_mean_200s_gpu_b"])
+        horus_gpu_util_p95 = max_available(row, ["gputl_p95_200s_gpu_a", "gputl_p95_200s_gpu_b"])
+        horus_gpu_util_max = max_available(row, ["gputl_max_200s_gpu_a", "gputl_max_200s_gpu_b"])
     else:
         peak_200s = maybe_float(row.get("gpu_memory_peak_200s_mib"))
         peak_full = maybe_float(row.get("gpu_memory_peak_full_mib"))
         avg_smact = maybe_float(row.get("smact_mean_200s"))
         avg_smocc = maybe_float(row.get("smocc_mean_200s"))
         avg_drama = maybe_float(row.get("drama_mean_200s"))
+
+        horus_gpu_util_mean = maybe_float(row.get("gputl_mean_200s"))
+        horus_gpu_util_p95 = maybe_float(row.get("gputl_p95_200s"))
+        horus_gpu_util_max = maybe_float(row.get("gputl_max_200s"))
 
     return {
         "gpu_count": gpu_count,
@@ -138,6 +146,9 @@ def extract_profile_values(row: dict) -> dict:
         "avg_smact": avg_smact,
         "avg_smocc": avg_smocc,
         "avg_drama": avg_drama,
+        "horus_gpu_util_mean": horus_gpu_util_mean,
+        "horus_gpu_util_p95": horus_gpu_util_p95,
+        "horus_gpu_util_max": horus_gpu_util_max,
     }
 
 def update_spec_data(data: dict, row: dict) -> dict:
@@ -148,6 +159,9 @@ def update_spec_data(data: dict, row: dict) -> dict:
     avg_smact = values["avg_smact"]
     avg_smocc = values["avg_smocc"]
     avg_drama = values["avg_drama"]
+    horus_gpu_util_mean = values["horus_gpu_util_mean"]
+    horus_gpu_util_p95 = values["horus_gpu_util_p95"]
+    horus_gpu_util_max = values["horus_gpu_util_max"]
     requirement = maybe_float(row.get("gpu_memory_requirement_mib"))
 
     if peak_full is not None:
@@ -166,6 +180,13 @@ def update_spec_data(data: dict, row: dict) -> dict:
     if avg_drama is not None:
         set_nested(data, ["profile", "avg_drama"], float(avg_drama))
 
+    if horus_gpu_util_mean is not None:
+        set_nested(data, ["profile", "horus_gpu_util_mean"], float(horus_gpu_util_mean))
+    if horus_gpu_util_p95 is not None:
+        set_nested(data, ["profile", "horus_gpu_util_p95"], float(horus_gpu_util_p95))
+    if horus_gpu_util_max is not None:
+        set_nested(data, ["profile", "horus_gpu_util_max"], float(horus_gpu_util_max))
+        
     # Keep the original requirement if present for traceability.
     if requirement is not None:
         set_nested(
@@ -210,10 +231,14 @@ def main() -> int:
 
         new_data = update_spec_data(data, row)
 
+        profile = new_data.get("profile", {})
+
         print(
             f"[update] {spec_path.name}: "
             f"resources.gpu_memory_requirement_mib={new_data.get('resources', {}).get('gpu_memory_requirement_mib')} "
-            f"profile.peak_memory_mib={new_data.get('profile', {}).get('peak_memory_mib')}"
+            f"profile.peak_memory_mib={profile.get('peak_memory_mib')} "
+            f"profile.avg_smact={profile.get('avg_smact')} "
+            f"profile.horus_gpu_util_mean={profile.get('horus_gpu_util_mean')}"
         )
 
         if args.write:
