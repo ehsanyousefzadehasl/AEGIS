@@ -122,7 +122,43 @@ def main() -> int:
         if args.dry_run:
             continue
 
-        subprocess.run(cmd, check=True)
+        try:
+            completed = subprocess.run(cmd, check=True)
+            status = {
+                "run_name": run_name,
+                "tau_smact": tau_smact,
+                "tau_smocc": tau_smocc,
+                "tau_drama": tau_drama,
+                "status": "completed",
+                "return_code": completed.returncode,
+            }
+        except subprocess.CalledProcessError as e:
+            status = {
+                "run_name": run_name,
+                "tau_smact": tau_smact,
+                "tau_smocc": tau_smocc,
+                "tau_drama": tau_drama,
+                "status": "failed",
+                "return_code": e.returncode,
+                "cmd": e.cmd,
+            }
+
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / "sweep_failure.json").write_text(
+                json.dumps(status, indent=2, default=str),
+                encoding="utf-8",
+            )
+
+            print(
+                f"[warning] threshold setting failed, continuing: {run_name}",
+                flush=True,
+            )
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "sweep_status.json").write_text(
+            json.dumps(status, indent=2, default=str),
+            encoding="utf-8",
+        )
 
     print(f"\nwrote sweep outputs under {output_root}")
     return 0
