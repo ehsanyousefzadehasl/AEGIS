@@ -1118,13 +1118,49 @@ def execute_progressive_trial_real(
                 decision_reason = "gpu_idle_after_running_workloads_finished"
                 reject = False
             else:
-                observed = read_latest_valid_risk_window(
-                    gpu_uuid=running_processes[-1]["gpu_uuid"],
-                    window_timeout=window_timeout,
-                    poll_seconds=poll_seconds,
-                    after_sample_time=last_decision_sample_time,
-                )
-                last_decision_sample_time = observed["latest_sample_time"]
+                try:
+                    observed = read_latest_valid_risk_window(
+                        gpu_uuid=running_processes[-1]["gpu_uuid"],
+                        window_timeout=window_timeout,
+                        poll_seconds=poll_seconds,
+                        after_sample_time=last_decision_sample_time,
+                    )
+                    last_decision_sample_time = observed["latest_sample_time"]
+
+                except TimeoutError as e:
+                    print(
+                        f"[{trial['trial_id']} stage={next_stage_idx}] "
+                        f"valid risk window timeout: {e}",
+                        flush=True,
+                    )
+
+                    solo_runtime = lookup_solo_runtime(solo_runtime_lookup, next_workload)
+                    rows.append(
+                        {
+                            "trial_id": trial["trial_id"],
+                            "stage": next_stage_idx,
+                            "admission_attempt": attempt,
+                            "gpu_id": gpu_id,
+                            "cuda_visible_devices": cuda_visible_devices,
+                            "running_jobs_before_stage": ";".join(running_workloads),
+                            "next_workload": next_workload,
+                            "is_initial_job": False,
+                            "decision": "window_timeout",
+                            "decision_reason": "valid_risk_window_timeout",
+                            "smact_risk": "",
+                            "smocc_risk": "",
+                            "drama_risk": "",
+                            "running_job_count_before": len(running_workloads),
+                            "running_job_count_after": len(running_workloads),
+                            "candidate_started": False,
+                            "candidate_finished": False,
+                            "candidate_return_code": "",
+                            "candidate_runtime_seconds": "",
+                            "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
+                            "max_slowdown": "",
+                        }
+                    )
+                    break
 
                 reject = should_reject_gpu(
                     smact_risk=observed["smact_risk"],
