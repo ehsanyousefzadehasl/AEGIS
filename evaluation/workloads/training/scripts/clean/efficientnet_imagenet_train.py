@@ -61,6 +61,12 @@ def parse_args() -> argparse.Namespace:
         default=100,
         help="Report training progress every N batches",
     )
+    parser.add_argument(
+        "--max_batches",
+        type=int,
+        default=None,
+        help="Optional maximum number of training batches / optimizer steps across all epochs",
+    )
     return parser.parse_args()
 
 
@@ -135,7 +141,9 @@ def train_one_epoch(
     optimizer: optim.Optimizer,
     device: torch.device,
     report_every: int,
-) -> float:
+    max_batches: int | None = None,
+    completed_batches: int = 0,
+) -> tuple[float, int, bool]:
     model.train()
     running_loss = 0.0
 
@@ -152,12 +160,20 @@ def train_one_epoch(
 
         running_loss += loss.item()
 
+        completed_batches += 1
+
         if report_every > 0 and batch_idx % report_every == 0:
             progress_bar.set_postfix({"loss": running_loss / batch_idx})
 
+        if max_batches is not None and completed_batches >= max_batches:
+            epoch_loss = running_loss / batch_idx
+            print(f"Epoch [{epoch}] Train Loss: {epoch_loss:.4f}")
+            print(f"Reached max_batches={max_batches}; stopping training.")
+            return epoch_loss, completed_batches, True
+
     epoch_loss = running_loss / len(train_loader)
     print(f"Epoch [{epoch}] Train Loss: {epoch_loss:.4f}")
-    return epoch_loss
+    return epoch_loss, completed_batches, False
 
 
 def evaluate(
@@ -222,8 +238,9 @@ def main() -> None:
         )
 
         with timed_run() as train_timer:
+            completed_batches = 0
             for epoch in range(1, args.epochs + 1):
-                train_one_epoch(
+                _, completed_batches, reached_max_batches = train_one_epoch(
                     epoch=epoch,
                     model=model,
                     train_loader=train_loader,
@@ -231,6 +248,8 @@ def main() -> None:
                     optimizer=optimizer,
                     device=device,
                     report_every=args.report_every,
+                    max_batches=args.max_batches,
+                    completed_batches=completed_batches,
                 )
                 evaluate(
                     model=model,
@@ -238,6 +257,9 @@ def main() -> None:
                     criterion=criterion,
                     device=device,
                 )
+
+                if reached_max_batches:
+                    break
 
     print(f"training_loop_time_s: {train_timer.elapsed_seconds:.2f}")
     print(f"end_to_end_time_s: {total_timer.elapsed_seconds:.2f}")
