@@ -63,7 +63,7 @@ def main() -> int:
 
         cmd = [
             sys.executable,
-            "evaluation/threshold_sensitivity/run_progressive_threshold_trials.py",
+            "evaluation/threshold_sensitivity/runners/run_progressive_threshold_trials.py",
             "--plan-jsonl", PLAN_JSONL,
             "--output-dir", str(output_dir),
             "--workdir", ".",

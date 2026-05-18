@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_RUNS_ROOT = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "solo_runs"
-LIVE_RUNNER = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "live_threshold_runner.py"
+LIVE_RUNNER = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "runners" / "live_threshold_runner.py"
 DEFAULT_SUMMARY_WINDOWS = "5,10,20,30,40,60,120,200"
 
 

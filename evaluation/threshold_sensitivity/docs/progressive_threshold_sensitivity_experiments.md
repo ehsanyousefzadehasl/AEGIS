@@ -86,7 +86,7 @@ Inside tmux:
 ```bash
 cd /home/ehyo/AEGIS
 
-python evaluation/threshold_sensitivity/run_progressive_threshold_sweep.py \
+python evaluation/threshold_sensitivity/runners/run_progressive_threshold_sweep.py \
   --plan-jsonl /tmp/progressive_threshold_trials_phase1_short/progressive_trial_plan.jsonl \
   --output-root /tmp/progressive_threshold_phase1_short_grid \
   --workdir . \
@@ -131,10 +131,10 @@ Expected at completion:
 ### 4. Aggregate results
 
 ```bash
-python evaluation/threshold_sensitivity/aggregate_progressive_threshold_sweep.py \
+python evaluation/threshold_sensitivity/analysis/aggregate_progressive_threshold_sweep.py \
   --sweep-root /tmp/progressive_threshold_phase1_short_grid
 
-python evaluation/threshold_sensitivity/analyze_progressive_threshold_sweep.py \
+python evaluation/threshold_sensitivity/analysis/analyze_progressive_threshold_sweep.py \
   --summary-csv /tmp/progressive_threshold_phase1_short_grid/threshold_sweep_summary.csv \
   --output-dir /tmp/progressive_threshold_phase1_short_grid/analysis \
   --max-slowdown-budget 1.5

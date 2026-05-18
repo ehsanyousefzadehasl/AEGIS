@@ -33,7 +33,7 @@ Each workload is executed once, and the output row includes metrics for all requ
 Use dry-run first to check the generated commands without launching workloads:
 
 ```bash
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0 \
@@ -61,7 +61,7 @@ No workload is launched in dry-run mode.
 Use this as the first real smoke test when a GPU is free:
 
 ```bash
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0 \
@@ -71,7 +71,7 @@ python evaluation/threshold_sensitivity/run_solo_baselines.py \
 ## Run all 1-GPU solo workloads
 
 ```bash
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0
@@ -90,7 +90,7 @@ Inside the screen session:
 ```bash
 cd /home/ehyo/AEGIS
 
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0 \
@@ -113,7 +113,7 @@ screen -r solo-1gpu
 ## Override summary windows
 
 ```bash
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0 \
@@ -123,7 +123,7 @@ python evaluation/threshold_sensitivity/run_solo_baselines.py \
 The decision window can also be changed:
 
 ```bash
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_1gpu.txt \
   --workdir . \
   --gpu-id 0 \
@@ -138,7 +138,7 @@ For two-gpu workloads:
 For multi-GPU workloads, `--gpu-id` selects the GPU used for monitoring and first-GPU-activity detection, while `--cuda-visible-devices` controls which GPUs are exposed to the workload.
 
 ```bash
-python evaluation/threshold_sensitivity/run_solo_baselines.py \
+python evaluation/threshold_sensitivity/runners/run_solo_baselines.py \
   --spec-list evaluation/profiling/solo/manifests/all_specs_2gpu.txt \
   --workdir . \
   --gpu-id 0 \

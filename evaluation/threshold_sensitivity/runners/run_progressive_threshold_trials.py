@@ -8,7 +8,7 @@ from pathlib import Path
 import csv
 import datetime as dt
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -26,7 +26,7 @@ from runtime.pid_resolution import resolve_and_update_gpu_pid
 from telemetry import gpu_state, monitor
 from workload.job_spec import load_job_spec
 
-from evaluation.threshold_sensitivity.live_threshold_runner import (
+from evaluation.threshold_sensitivity.runners.live_threshold_runner import (
     collect_summary_windows,
     parse_summary_windows,
     resolve_gpu_selection,
