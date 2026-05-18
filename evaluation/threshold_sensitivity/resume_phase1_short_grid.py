@@ -15,9 +15,9 @@ SOLO_RUNTIME_CSV = (
     "live_threshold_measurements.csv"
 )
 
-TAU_SMACT_VALUES = [0.70, 0.75, 0.80, 0.85, 0.90]
-TAU_SMOCC_VALUES = [0.35, 0.40, 0.45, 0.50]
-TAU_DRAMA_VALUES = [0.30, 0.35, 0.40, 0.45]
+TAU_SMACT_VALUES = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90]
+TAU_SMOCC_VALUES = [0.20, 0.25, 0.30,0.35, 0.40, 0.45, 0.50]
+TAU_DRAMA_VALUES = [0.20, 0.25, 0.30, 0.35, 0.40, 0.45]
 
 
 def fmt(x: float) -> str:
