@@ -65,10 +65,6 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def safe_name(value: str) -> str:
-    return "".join(c if c.isalnum() or c in "._-+" else "_" for c in value)
-
-
 def resolve_maybe_relative(path: Path, base: Path) -> Path:
     if path.is_absolute():
         return path.resolve()
