@@ -54,6 +54,8 @@ OBSERVATION_COLUMNS = [
     "running_job_count_after",
     "candidate_started",
     "candidate_finished",
+    "candidate_started_at_monotonic",
+    "candidate_finished_at_monotonic",
     "candidate_return_code",
     "candidate_runtime_seconds",
     "candidate_solo_runtime_seconds",
@@ -72,8 +74,10 @@ TRIAL_SUMMARY_COLUMNS = [
     "admitted_workload_count",
     "rejected_stage",
     "rejection_reason",
+    "reject_retry_count",
     "solo_runtime_sum_seconds",
     "collocated_wall_time_seconds",
+    "sequence_wall_time_seconds",
     "throughput_gain",
     "mean_slowdown",
     "max_slowdown",
@@ -271,6 +275,8 @@ def dry_run_observation(
         "running_job_count_after": len(running_jobs),
         "candidate_started": False,
         "candidate_finished": False,
+        "candidate_started_at_monotonic": "",
+        "candidate_finished_at_monotonic": "",
         "candidate_return_code": "",
         "candidate_runtime_seconds": "",
         "candidate_solo_runtime_seconds": "" if candidate_solo_runtime is None else candidate_solo_runtime,
@@ -630,6 +636,8 @@ def observe_initial_and_decide_next(
             "running_job_count_after": 1 if reject else 2,
             "candidate_started": False,
             "candidate_finished": False,
+            "candidate_started_at_monotonic": "",
+            "candidate_finished_at_monotonic": "",
             "candidate_return_code": "",
             "candidate_runtime_seconds": "",
             "candidate_solo_runtime_seconds": "",
@@ -750,6 +758,8 @@ def execute_progressive_trial(
                     "running_job_count_after": 1,
                     "candidate_started": False,
                     "candidate_finished": False,
+                    "candidate_started_at_monotonic": "",
+                    "candidate_finished_at_monotonic": "",
                     "candidate_return_code": "",
                     "candidate_runtime_seconds": "",
                     "candidate_solo_runtime_seconds": "",
@@ -778,6 +788,8 @@ def execute_progressive_trial(
                 "running_job_count_after": len(running_workloads) + 1,
                 "candidate_started": False,
                 "candidate_finished": False,
+                "candidate_started_at_monotonic": "",
+                "candidate_finished_at_monotonic": "",
                 "candidate_return_code": "",
                 "candidate_runtime_seconds": "",
                 "candidate_solo_runtime_seconds": "",
@@ -943,6 +955,8 @@ def wait_for_launched_workloads(
                 "finished": return_code == 0 if return_code != "" else True,
                 "return_code": return_code,
                 "runtime_seconds": finished_at - float(proc["started_monotonic"]),
+                "started_at_monotonic": float(proc["started_monotonic"]),
+                "finished_at_monotonic": finished_at,
                 "finish_status": finish_status,
             }
             remaining.pop(stage)
@@ -1079,6 +1093,8 @@ def execute_progressive_trial_real(
                 "running_job_count_after": 1,
                 "candidate_started": True,
                 "candidate_finished": False,
+                "candidate_started_at_monotonic": launched["started_monotonic"],
+                "candidate_finished_at_monotonic": "",
                 "candidate_return_code": "",
                 "candidate_runtime_seconds": "",
                 "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
@@ -1154,6 +1170,8 @@ def execute_progressive_trial_real(
                             "running_job_count_after": len(running_workloads),
                             "candidate_started": False,
                             "candidate_finished": False,
+                            "candidate_started_at_monotonic": "",
+                            "candidate_finished_at_monotonic": "",
                             "candidate_return_code": "",
                             "candidate_runtime_seconds": "",
                             "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
@@ -1212,6 +1230,10 @@ def execute_progressive_trial_real(
                     "running_job_count_after": len(running_workloads),
                     "candidate_started": started,
                     "candidate_finished": False,
+                    "candidate_started_at_monotonic": (
+                        launched["started_monotonic"] if started else ""
+                    ),
+                    "candidate_finished_at_monotonic": "",
                     "candidate_return_code": "",
                     "candidate_runtime_seconds": "",
                     "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
@@ -1255,6 +1277,7 @@ def execute_progressive_trial_real(
 
             result = finish_results[stage]
             row["candidate_finished"] = result["finished"]
+            row["candidate_finished_at_monotonic"] = result.get("finished_at_monotonic", "")
             row["candidate_return_code"] = result["return_code"]
             row["candidate_runtime_seconds"] = result["runtime_seconds"]
 
@@ -1302,28 +1325,39 @@ def build_trial_summary_from_rows(
     tau_drama: float,
     window_seconds: float,
 ) -> dict:
-    rejected_rows = [r for r in rows if r.get("decision") == "reject"]
+    rejected_rows = [
+        r for r in rows
+        if str(r.get("decision", "")).startswith("reject")
+    ]
+
     rejected_stage = rejected_rows[0]["stage"] if rejected_rows else ""
+    reject_retry_count = len(rejected_rows)
 
-    admitted_count = sum(
-        1
-        for r in rows
-        if r.get("decision") in {"launch_initial", "admit", "initial_only"}
-    )
-
-    finished_rows = [
+    admitted_rows = [
         r for r in rows
         if r.get("candidate_started") is True
-        and r.get("candidate_finished") is True
+    ]
+
+    admitted_count = len(admitted_rows)
+
+    finished_rows = [
+        r for r in admitted_rows
+        if r.get("candidate_finished") is True
     ]
 
     solo_runtimes = []
     collocated_runtimes = []
     slowdowns = []
 
+    sequence_start_times = []
+    sequence_finish_times = []
+
     for r in finished_rows:
         solo = r.get("candidate_solo_runtime_seconds", "")
         runtime = r.get("candidate_runtime_seconds", "")
+
+        started_at = r.get("candidate_started_at_monotonic", "")
+        finished_at = r.get("candidate_finished_at_monotonic", "")
 
         if solo == "" or runtime == "":
             continue
@@ -1333,14 +1367,39 @@ def build_trial_summary_from_rows(
 
         solo_runtimes.append(solo)
         collocated_runtimes.append(runtime)
-        slowdowns.append(runtime / solo)
 
-        r["max_slowdown"] = runtime / solo
+        slowdown = runtime / solo
+        slowdowns.append(slowdown)
+
+        r["max_slowdown"] = slowdown
+
+        if started_at != "":
+            sequence_start_times.append(float(started_at))
+
+        if finished_at != "":
+            sequence_finish_times.append(float(finished_at))
 
     if len(finished_rows) == admitted_count and slowdowns:
         solo_runtime_sum = sum(solo_runtimes)
+
+        # legacy metric
         collocated_wall_time = max(collocated_runtimes)
-        throughput_gain = solo_runtime_sum / collocated_wall_time
+
+        # REAL sequence-level metric
+        if sequence_start_times and sequence_finish_times:
+            sequence_wall_time = (
+                max(sequence_finish_times)
+                - min(sequence_start_times)
+            )
+        else:
+            sequence_wall_time = collocated_wall_time
+
+        throughput_gain = (
+            solo_runtime_sum / sequence_wall_time
+            if sequence_wall_time > 0
+            else ""
+        )
+
         mean_slowdown = sum(slowdowns) / len(slowdowns)
         max_slowdown = max(slowdowns)
 
@@ -1349,9 +1408,11 @@ def build_trial_summary_from_rows(
         sorted_slowdowns = sorted(slowdowns)
         p95_index = max(0, math.ceil(0.95 * len(sorted_slowdowns)) - 1)
         p95_slowdown = sorted_slowdowns[p95_index]
+
     else:
         solo_runtime_sum = ""
         collocated_wall_time = ""
+        sequence_wall_time = ""
         throughput_gain = ""
         mean_slowdown = ""
         max_slowdown = ""
@@ -1369,14 +1430,15 @@ def build_trial_summary_from_rows(
         "admitted_workload_count": admitted_count,
         "rejected_stage": rejected_stage,
         "rejection_reason": "threshold_rule" if rejected_rows else "",
+        "reject_retry_count": reject_retry_count,
         "solo_runtime_sum_seconds": solo_runtime_sum,
         "collocated_wall_time_seconds": collocated_wall_time,
+        "sequence_wall_time_seconds": sequence_wall_time,
         "throughput_gain": throughput_gain,
         "mean_slowdown": mean_slowdown,
         "max_slowdown": max_slowdown,
         "p95_slowdown": p95_slowdown,
     }
-
 
 def main() -> int:
     args = parse_args()
