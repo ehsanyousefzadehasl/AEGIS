@@ -1,0 +1,22 @@
+{
+  "commands_jsonl": "/home/ehyo/AEGIS/evaluation/threshold_sensitivity/solo_runs/solo_2gpu_threshold_windows_20260509_013745/commands.jsonl",
+  "created_at": "2026-05-09T01:37:45.996615",
+  "dry_run": false,
+  "finish_timeout": 0.0,
+  "gpu_id": "0",
+  "gpu_uuid": null,
+  "index_csv": "/home/ehyo/AEGIS/evaluation/threshold_sensitivity/solo_runs/solo_2gpu_threshold_windows_20260509_013745/index.csv",
+  "limit": null,
+  "num_specs": 3,
+  "output_csv": "/home/ehyo/AEGIS/evaluation/threshold_sensitivity/solo_runs/solo_2gpu_threshold_windows_20260509_013745/live_threshold_measurements.csv",
+  "poll_seconds": 0.5,
+  "repo_root": "/home/ehyo/AEGIS",
+  "runs_root": "/home/ehyo/AEGIS/evaluation/threshold_sensitivity/solo_runs",
+  "suite_dir": "/home/ehyo/AEGIS/evaluation/threshold_sensitivity/solo_runs/solo_2gpu_threshold_windows_20260509_013745",
+  "suite_id": "solo_2gpu_threshold_windows_20260509_013745",
+  "summary_windows": "5,10,20,30,40,60,120,200",
+  "ttfk_timeout": 300.0,
+  "window_seconds": 30.0,
+  "window_timeout": 900.0,
+  "workdir": "/home/ehyo/AEGIS"
+}

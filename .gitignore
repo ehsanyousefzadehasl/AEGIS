@@ -104,3 +104,19 @@ evaluation/threshold_sensitivity/results/*/analysis/
 evaluation/threshold_sensitivity/results/*/figures/
 evaluation/threshold_sensitivity/**/__pycache__/
 evaluation/threshold_sensitivity/*.log
+
+
+# Track threshold-sensitivity solo baseline artifacts.
+!evaluation/threshold_sensitivity/solo_runs/
+!evaluation/threshold_sensitivity/solo_runs/**/
+!evaluation/threshold_sensitivity/solo_runs/**/metadata.json
+!evaluation/threshold_sensitivity/solo_runs/**/index.csv
+!evaluation/threshold_sensitivity/solo_runs/**/live_threshold_measurements.csv
+!evaluation/threshold_sensitivity/solo_runs/**/commands.jsonl
+!evaluation/threshold_sensitivity/solo_runs/**/window_analysis/
+!evaluation/threshold_sensitivity/solo_runs/**/window_analysis/*.csv
+!evaluation/threshold_sensitivity/solo_runs/**/window_analysis/*.md
+
+# Keep raw per-run event logs ignored unless explicitly needed.
+evaluation/threshold_sensitivity/solo_runs/**/events/
+evaluation/threshold_sensitivity/solo_runs/**/*.log

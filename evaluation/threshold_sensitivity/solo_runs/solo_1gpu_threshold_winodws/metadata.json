@@ -1,0 +1,7 @@
+{
+  "combined_from": [
+    "evaluation/threshold_sensitivity/solo_runs/solo_1gpu_threshold_windows_20260505_022217",
+    "evaluation/threshold_sensitivity/solo_runs/llama3_width_8layer_wiki_threshold_20260508_153627"
+  ],
+  "description": "Combined 1-GPU first-GPU-activity threshold-window suite including Llama."
+}
