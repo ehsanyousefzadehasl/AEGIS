@@ -462,3 +462,38 @@ evaluation/paper_artifacts/
 - Use `--dry-run` before long campaigns.
 - Failed runs are kept in `index.csv`; do not delete them from the dataset.
 - The final paper should choose the decision window based on the collected latency/stability tradeoff, not by assumption.
+
+## Script inventory
+
+### Canonical execution scripts
+
+- `live_threshold_runner.py`: launches one workload, observes the post-launch GPU-activity window, records runtime and metric summaries.
+- `run_solo_baselines.py`: runs solo baselines for one spec or a spec list using `live_threshold_runner.py`.
+- `plan_progressive_threshold_trials.py`: converts a CSV/manifest of progressive job sequences into JSONL trial plans.
+- `run_progressive_threshold_trials.py`: executes progressive collocation trials for one threshold setting.
+- `run_progressive_threshold_sweep.py`: runs `run_progressive_threshold_trials.py` across a threshold grid.
+- `aggregate_progressive_threshold_sweep.py`: aggregates per-setting progressive trial summaries.
+- `analyze_progressive_threshold_sweep.py`: ranks aggregated threshold settings by throughput/slowdown constraints.
+- `analyze_threshold_sweep_report.py`: generates Markdown reports, tables, and figures from one or more sweep result directories.
+
+### Solo-window analysis scripts
+
+- `analyze_solo_windows.py`: analyzes solo-window measurements from `live_threshold_measurements.csv`.
+- `summarize_solo_windows.py`: creates summary files comparing shorter windows against longer reference windows.
+
+### Validation/helper scripts
+
+- `validate_progressive_manifest_memory.py`: checks whether progressive manifest entries fit memory constraints.
+- `analyze_admission_thresholds.py`: legacy/ad-hoc threshold analysis helper; review before reuse.
+- `generate_analysis_artifacts.py`: legacy/ad-hoc artifact generator; review before reuse.
+- `resume_phase1_short_grid.py`: phase1-specific resume helper; candidate for removal after generic resume support is added.
+
+## Output directory conventions
+
+- `manifests/`: input manifests and planned trial JSONL files.
+- `solo_runs/`: measured solo-baseline runs.
+- `results/`: progressive sweep outputs.
+- `summaries/`: solo-window summary Markdown files.
+- `reports/`: generated Markdown reports and figures. This directory is ignored and can be regenerated.
+- `docs/`: human-written experiment documentation.
+
