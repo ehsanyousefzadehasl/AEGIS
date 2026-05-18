@@ -98,3 +98,9 @@ evaluation/threshold_sensitivity/solo_runs/
 
 
 evaluation/threshold_sensitivity/results/
+# Threshold sensitivity generated artifacts
+evaluation/threshold_sensitivity/reports/
+evaluation/threshold_sensitivity/results/*/analysis/
+evaluation/threshold_sensitivity/results/*/figures/
+evaluation/threshold_sensitivity/**/__pycache__/
+evaluation/threshold_sensitivity/*.log
