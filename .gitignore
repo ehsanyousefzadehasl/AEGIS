@@ -123,3 +123,4 @@ evaluation/threshold_sensitivity/solo_runs/**/*.log
 
 
 !evaluation/threshold_sensitivity/manifests/threshold_sweep_v1.csv
+!evaluation/threshold_sensitivity/manifests/threshold_sweep_v1_fixed.csv
