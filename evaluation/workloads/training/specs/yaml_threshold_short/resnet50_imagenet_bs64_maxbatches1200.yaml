@@ -1,0 +1,30 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/resnet50_imagenet_train.py
+    --batch_size 64
+    --max_batches 1200
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 7118
+estimates:
+  horus_mib: 14910.3711
+  faketensor_mib: 5337.0131
+  gpumemnet_mib: 16000.0
+profile:
+  peak_memory_mib: 7118
+  avg_smact: 0.6755563909774436
+  avg_smocc: 0.3418421052631579
+  avg_drama: 0.4643684210526315
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 7106
+    full_run_peak_memory_mib: 7118
+  horus_gpu_util_mean: 77.74436090225564
+  horus_gpu_util_p95: 84.0
+  horus_gpu_util_max: 84.0
+online_estimation:
+  summary_path: resnet50_64.model
+  parser_arg_1: /raid/datasets/imagenet
+  parser_arg_2: 64
