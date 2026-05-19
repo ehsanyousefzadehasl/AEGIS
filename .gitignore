@@ -120,3 +120,6 @@ evaluation/threshold_sensitivity/*.log
 # Keep raw per-run event logs ignored unless explicitly needed.
 evaluation/threshold_sensitivity/solo_runs/**/events/
 evaluation/threshold_sensitivity/solo_runs/**/*.log
+
+
+!evaluation/threshold_sensitivity/manifests/threshold_sweep_v1.csv
