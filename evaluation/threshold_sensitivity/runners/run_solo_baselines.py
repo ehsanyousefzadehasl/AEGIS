@@ -8,6 +8,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+
 from typing import Any
 
 
@@ -15,6 +16,13 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_RUNS_ROOT = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "solo_runs"
 LIVE_RUNNER = REPO_ROOT / "evaluation" / "threshold_sensitivity" / "runners" / "live_threshold_runner.py"
 DEFAULT_SUMMARY_WINDOWS = "5,10,20,30,40,60,120,200"
+
+if str(REPO_ROOT) not in sys.path:
+
+    sys.path.insert(0, str(REPO_ROOT))
+
+
+from evaluation.threshold_sensitivity.utils import safe_name
 
 
 def parse_args() -> argparse.Namespace:
