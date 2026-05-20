@@ -12,12 +12,12 @@ def select_oracle_bf(
     available_gpu_ids,
     number_of_gpus_requested: int,
 ):
-    candidate_gpus = gpus_with_metrics.loc[
-        gpus_with_metrics["GPU_mem_available"] >= (gpu_memory_requirement + 2048)
-    ].copy()
-
-    avail = set(available_gpu_ids)
-    candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+    candidate_gpus = build_candidate_gpus(
+        gpus_with_metrics=gpus_with_metrics,
+        min_free_mib=gpu_memory_requirement + 2048,
+        available_gpu_ids=available_gpu_ids,
+        use_utilization_gate=True,
+    )
 
     if candidate_gpus.empty or len(candidate_gpus) < number_of_gpus_requested:
         return None
@@ -37,12 +37,12 @@ def select_oracle_magm(
     available_gpu_ids,
     number_of_gpus_requested: int,
 ):
-    candidate_gpus = gpus_with_metrics.loc[
-        gpus_with_metrics["GPU_mem_available"] >= (gpu_memory_requirement + 2048)
-    ].copy()
-
-    avail = set(available_gpu_ids)
-    candidate_gpus = candidate_gpus.loc[candidate_gpus.index.isin(avail)].copy()
+    candidate_gpus = build_candidate_gpus(
+        gpus_with_metrics=gpus_with_metrics,
+        min_free_mib=gpu_memory_requirement + 2048,
+        available_gpu_ids=available_gpu_ids,
+        use_utilization_gate=True,
+    )
 
     if candidate_gpus.empty or len(candidate_gpus) < number_of_gpus_requested:
         return None
