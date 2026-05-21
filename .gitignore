@@ -125,3 +125,7 @@ evaluation/threshold_sensitivity/solo_runs/**/*.log
 !evaluation/threshold_sensitivity/manifests/threshold_sweep_v1.csv
 !evaluation/threshold_sensitivity/manifests/threshold_sweep_v1_fixed.csv
 !evaluation/threshold_sensitivity/manifests/threshold_sweep_v1_solo_runtimes.csv
+
+
+evaluation/threshold_sensitivity/solo_runs/threshold_sweep_calibration_imagenet_1200/
+evaluation/threshold_sensitivity/solo_runs/threshold_sweep_calibration_v1/
