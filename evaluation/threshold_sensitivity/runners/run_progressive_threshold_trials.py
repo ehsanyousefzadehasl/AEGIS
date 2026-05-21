@@ -56,6 +56,12 @@ OBSERVATION_COLUMNS = [
     "candidate_finished",
     "candidate_started_at_monotonic",
     "candidate_finished_at_monotonic",
+    "candidate_started_at_wall_time",
+    "candidate_finished_at_wall_time",
+    "candidate_waiting_time_seconds",
+    "candidate_execution_time_seconds",
+    "candidate_completion_time_seconds",
+    "candidate_execution_slowdown",
     "candidate_return_code",
     "candidate_runtime_seconds",
     "candidate_solo_runtime_seconds",
@@ -82,6 +88,9 @@ TRIAL_SUMMARY_COLUMNS = [
     "mean_slowdown",
     "max_slowdown",
     "p95_slowdown",
+    "mean_execution_slowdown",
+    "max_execution_slowdown",
+    "p95_execution_slowdown",
 ]
 
 def parse_args() -> argparse.Namespace:
@@ -691,7 +700,7 @@ def launch_tracked_workload(
     )
 
     started_monotonic = time.monotonic()
-    started_wall_time = dt.datetime.now().isoformat()
+    started_wall_time = dt.datetime.now(dt.timezone.utc).isoformat()
 
     launcher_pid = launch_and_get_pid(command)
     if launcher_pid is None:
@@ -902,6 +911,36 @@ def read_terminal_event_for_run(event_path: str, run_id: str) -> dict | None:
     return terminal
 
 
+def parse_iso_datetime(value: str):
+    if value is None or value == "":
+        return None
+
+    text = str(value)
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+
+    try:
+        return dt.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def seconds_between_iso(start: str, end: str) -> float | None:
+    start_dt = parse_iso_datetime(start)
+    end_dt = parse_iso_datetime(end)
+
+    if start_dt is None or end_dt is None:
+        return None
+
+    if start_dt.tzinfo is None and end_dt.tzinfo is not None:
+        start_dt = start_dt.replace(tzinfo=end_dt.tzinfo)
+
+    if end_dt.tzinfo is None and start_dt.tzinfo is not None:
+        end_dt = end_dt.replace(tzinfo=start_dt.tzinfo)
+
+    return (end_dt - start_dt).total_seconds()
+
+
 def wait_for_launched_workloads(
     running_processes: list[dict],
     *,
@@ -923,10 +962,15 @@ def wait_for_launched_workloads(
 
         if deadline is not None and now >= deadline:
             for stage, proc in list(remaining.items()):
+                runtime_seconds = now - float(proc["started_monotonic"])
                 results[stage] = {
                     "finished": False,
                     "return_code": 124,
-                    "runtime_seconds": now - float(proc["started_monotonic"]),
+                    "runtime_seconds": runtime_seconds,
+                    "started_at_monotonic": float(proc["started_monotonic"]),
+                    "finished_at_monotonic": now,
+                    "started_at_wall_time": str(proc.get("started_wall_time", "")),
+                    "finished_at_wall_time": "",
                     "finish_status": "timeout",
                 }
             break
@@ -944,19 +988,39 @@ def wait_for_launched_workloads(
 
             return_code = ""
             finish_status = "unknown"
+            finished_at_wall_time = ""
 
             if terminal_event is not None:
                 finish_status = str(terminal_event.get("event", "unknown"))
+                finished_at_wall_time = str(terminal_event.get("emitted_at", ""))
                 if terminal_event.get("return_code") is not None:
                     return_code = int(terminal_event["return_code"])
 
-            finished_at = time.monotonic()
+            detected_finished_at_monotonic = time.monotonic()
+            runtime_seconds = None
+
+            if finished_at_wall_time:
+                runtime_seconds = seconds_between_iso(
+                    str(proc.get("started_wall_time", "")),
+                    finished_at_wall_time,
+                )
+
+            if runtime_seconds is None:
+                runtime_seconds = detected_finished_at_monotonic - float(proc["started_monotonic"])
+
+            # Align monotonic finish time to the event-derived runtime when possible.
+            # This avoids inflating job runtime because the wait loop noticed process
+            # termination later than the workload terminal event.
+            finished_at_monotonic = float(proc["started_monotonic"]) + float(runtime_seconds)
+
             results[stage] = {
                 "finished": return_code == 0 if return_code != "" else True,
                 "return_code": return_code,
-                "runtime_seconds": finished_at - float(proc["started_monotonic"]),
+                "runtime_seconds": runtime_seconds,
                 "started_at_monotonic": float(proc["started_monotonic"]),
-                "finished_at_monotonic": finished_at,
+                "finished_at_monotonic": finished_at_monotonic,
+                "started_at_wall_time": str(proc.get("started_wall_time", "")),
+                "finished_at_wall_time": finished_at_wall_time,
                 "finish_status": finish_status,
             }
             remaining.pop(stage)
@@ -1095,6 +1159,12 @@ def execute_progressive_trial_real(
                 "candidate_finished": False,
                 "candidate_started_at_monotonic": launched["started_monotonic"],
                 "candidate_finished_at_monotonic": "",
+                "candidate_started_at_wall_time": launched["started_wall_time"],
+                "candidate_finished_at_wall_time": "",
+                "candidate_waiting_time_seconds": "",
+                "candidate_execution_time_seconds": "",
+                "candidate_completion_time_seconds": "",
+                "candidate_execution_slowdown": "",
                 "candidate_return_code": "",
                 "candidate_runtime_seconds": "",
                 "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
@@ -1172,6 +1242,12 @@ def execute_progressive_trial_real(
                             "candidate_finished": False,
                             "candidate_started_at_monotonic": "",
                             "candidate_finished_at_monotonic": "",
+                            "candidate_started_at_wall_time": "",
+                            "candidate_finished_at_wall_time": "",
+                            "candidate_waiting_time_seconds": "",
+                            "candidate_execution_time_seconds": "",
+                            "candidate_completion_time_seconds": "",
+                            "candidate_execution_slowdown": "",
                             "candidate_return_code": "",
                             "candidate_runtime_seconds": "",
                             "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
@@ -1234,6 +1310,14 @@ def execute_progressive_trial_real(
                         launched["started_monotonic"] if started else ""
                     ),
                     "candidate_finished_at_monotonic": "",
+                    "candidate_started_at_wall_time": (
+                        launched["started_wall_time"] if started else ""
+                    ),
+                    "candidate_finished_at_wall_time": "",
+                    "candidate_waiting_time_seconds": "",
+                    "candidate_execution_time_seconds": "",
+                    "candidate_completion_time_seconds": "",
+                    "candidate_execution_slowdown": "",
                     "candidate_return_code": "",
                     "candidate_runtime_seconds": "",
                     "candidate_solo_runtime_seconds": "" if solo_runtime is None else solo_runtime,
@@ -1278,8 +1362,17 @@ def execute_progressive_trial_real(
             result = finish_results[stage]
             row["candidate_finished"] = result["finished"]
             row["candidate_finished_at_monotonic"] = result.get("finished_at_monotonic", "")
+            row["candidate_started_at_wall_time"] = result.get(
+                "started_at_wall_time",
+                row.get("candidate_started_at_wall_time", ""),
+            )
+            row["candidate_finished_at_wall_time"] = result.get("finished_at_wall_time", "")
             row["candidate_return_code"] = result["return_code"]
+
+            # Backward-compatible name: this is now intended to mean execution time
+            # after the job has been launched, not completion time since sequence start.
             row["candidate_runtime_seconds"] = result["runtime_seconds"]
+            row["candidate_execution_time_seconds"] = result["runtime_seconds"]
 
             solo_runtime = row.get("candidate_solo_runtime_seconds", "")
             if (
@@ -1287,9 +1380,61 @@ def execute_progressive_trial_real(
                 and solo_runtime != ""
                 and result["runtime_seconds"] != ""
             ):
-                row["max_slowdown"] = float(result["runtime_seconds"]) / float(solo_runtime)
+                execution_slowdown = float(result["runtime_seconds"]) / float(solo_runtime)
+                row["max_slowdown"] = execution_slowdown
+                row["candidate_execution_slowdown"] = execution_slowdown
             else:
                 row["max_slowdown"] = ""
+                row["candidate_execution_slowdown"] = ""
+
+        started_finished_rows = [
+            r for r in rows
+            if r.get("candidate_started") is True
+            and r.get("candidate_finished") is True
+        ]
+
+        start_wall_times = [
+            parse_iso_datetime(str(r.get("candidate_started_at_wall_time", "")))
+            for r in started_finished_rows
+        ]
+        start_wall_times = [x for x in start_wall_times if x is not None]
+
+        if start_wall_times:
+            sequence_start_wall = min(start_wall_times)
+
+            for r in started_finished_rows:
+                start_dt = parse_iso_datetime(str(r.get("candidate_started_at_wall_time", "")))
+                finish_dt = parse_iso_datetime(str(r.get("candidate_finished_at_wall_time", "")))
+
+                if start_dt is None or finish_dt is None:
+                    continue
+
+                if start_dt.tzinfo is None and sequence_start_wall.tzinfo is not None:
+                    start_dt = start_dt.replace(tzinfo=sequence_start_wall.tzinfo)
+
+                if finish_dt.tzinfo is None and sequence_start_wall.tzinfo is not None:
+                    finish_dt = finish_dt.replace(tzinfo=sequence_start_wall.tzinfo)
+
+                r["candidate_waiting_time_seconds"] = (
+                    start_dt - sequence_start_wall
+                ).total_seconds()
+
+                r["candidate_execution_time_seconds"] = (
+                    finish_dt - start_dt
+                ).total_seconds()
+
+                r["candidate_completion_time_seconds"] = (
+                    finish_dt - sequence_start_wall
+                ).total_seconds()
+
+                solo_runtime = r.get("candidate_solo_runtime_seconds", "")
+                if solo_runtime != "" and r["candidate_execution_time_seconds"] != "":
+                    execution_slowdown = (
+                        float(r["candidate_execution_time_seconds"]) / float(solo_runtime)
+                    )
+                    r["candidate_execution_slowdown"] = execution_slowdown
+                    r["max_slowdown"] = execution_slowdown
+                    r["candidate_runtime_seconds"] = r["candidate_execution_time_seconds"]
 
     finally:
         if cleanup_after_observation:
@@ -1314,6 +1459,15 @@ def append_trial_summaries(path: Path, rows: list[dict]) -> None:
         writer = csv.DictWriter(f, fieldnames=TRIAL_SUMMARY_COLUMNS)
         for row in rows:
             writer.writerow(row)
+
+
+def _to_float_or_none(value) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def build_trial_summary_from_rows(
@@ -1346,51 +1500,71 @@ def build_trial_summary_from_rows(
     ]
 
     solo_runtimes = []
-    collocated_runtimes = []
-    slowdowns = []
-
-    sequence_start_times = []
-    sequence_finish_times = []
+    execution_runtimes = []
+    completion_times = []
+    execution_slowdowns = []
 
     for r in finished_rows:
-        solo = r.get("candidate_solo_runtime_seconds", "")
-        runtime = r.get("candidate_runtime_seconds", "")
+        solo = _to_float_or_none(r.get("candidate_solo_runtime_seconds", ""))
 
-        started_at = r.get("candidate_started_at_monotonic", "")
-        finished_at = r.get("candidate_finished_at_monotonic", "")
+        # Prefer explicit event-based execution time. Fall back to the legacy
+        # runtime field for older rows.
+        execution_time = _to_float_or_none(
+            r.get("candidate_execution_time_seconds", "")
+        )
+        if execution_time is None:
+            execution_time = _to_float_or_none(r.get("candidate_runtime_seconds", ""))
 
-        if solo == "" or runtime == "":
+        completion_time = _to_float_or_none(
+            r.get("candidate_completion_time_seconds", "")
+        )
+
+        if completion_time is None:
+            started_at = _to_float_or_none(r.get("candidate_started_at_monotonic", ""))
+            finished_at = _to_float_or_none(r.get("candidate_finished_at_monotonic", ""))
+            sequence_starts = [
+                _to_float_or_none(x.get("candidate_started_at_monotonic", ""))
+                for x in finished_rows
+            ]
+            sequence_starts = [x for x in sequence_starts if x is not None]
+            if (
+                started_at is not None
+                and finished_at is not None
+                and sequence_starts
+            ):
+                completion_time = finished_at - min(sequence_starts)
+
+        if solo is None or execution_time is None:
             continue
 
-        solo = float(solo)
-        runtime = float(runtime)
-
         solo_runtimes.append(solo)
-        collocated_runtimes.append(runtime)
+        execution_runtimes.append(execution_time)
 
-        slowdown = runtime / solo
-        slowdowns.append(slowdown)
+        if completion_time is not None:
+            completion_times.append(completion_time)
 
-        r["max_slowdown"] = slowdown
+        execution_slowdown = _to_float_or_none(
+            r.get("candidate_execution_slowdown", "")
+        )
+        if execution_slowdown is None:
+            execution_slowdown = execution_time / solo
 
-        if started_at != "":
-            sequence_start_times.append(float(started_at))
+        execution_slowdowns.append(execution_slowdown)
 
-        if finished_at != "":
-            sequence_finish_times.append(float(finished_at))
+        # Backward-compatible field name for existing analysis scripts.
+        r["max_slowdown"] = execution_slowdown
+        r["candidate_execution_slowdown"] = execution_slowdown
 
-    if len(finished_rows) == admitted_count and slowdowns:
+    if len(finished_rows) == admitted_count and execution_slowdowns:
         solo_runtime_sum = sum(solo_runtimes)
 
-        # legacy metric
-        collocated_wall_time = max(collocated_runtimes)
+        # Legacy-compatible name: longest individual collocated execution time.
+        collocated_wall_time = max(execution_runtimes)
 
-        # REAL sequence-level metric
-        if sequence_start_times and sequence_finish_times:
-            sequence_wall_time = (
-                max(sequence_finish_times)
-                - min(sequence_start_times)
-            )
+        # Sequence-level wall time includes waiting/admission delay and execution.
+        # Prefer explicit completion times derived from event timestamps.
+        if completion_times:
+            sequence_wall_time = max(completion_times)
         else:
             sequence_wall_time = collocated_wall_time
 
@@ -1400,12 +1574,12 @@ def build_trial_summary_from_rows(
             else ""
         )
 
-        mean_slowdown = sum(slowdowns) / len(slowdowns)
-        max_slowdown = max(slowdowns)
+        mean_slowdown = sum(execution_slowdowns) / len(execution_slowdowns)
+        max_slowdown = max(execution_slowdowns)
 
         import math
 
-        sorted_slowdowns = sorted(slowdowns)
+        sorted_slowdowns = sorted(execution_slowdowns)
         p95_index = max(0, math.ceil(0.95 * len(sorted_slowdowns)) - 1)
         p95_slowdown = sorted_slowdowns[p95_index]
 
@@ -1438,7 +1612,11 @@ def build_trial_summary_from_rows(
         "mean_slowdown": mean_slowdown,
         "max_slowdown": max_slowdown,
         "p95_slowdown": p95_slowdown,
+        "mean_execution_slowdown": mean_slowdown,
+        "max_execution_slowdown": max_slowdown,
+        "p95_execution_slowdown": p95_slowdown,
     }
+
 
 def main() -> int:
     args = parse_args()
