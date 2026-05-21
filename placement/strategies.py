@@ -99,7 +99,6 @@ def _execute_horus_selector(selector, request):
         return None
 
     return selector(
-        gpus_with_metrics=request.gpus_with_metrics,
         gpu_memory_estimation=gpu_memory_estimation,
         candidate_horus_gpu_util=float(candidate_horus_gpu_util),
         available_gpu_ids=request.available_gpu_ids,

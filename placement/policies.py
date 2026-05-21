@@ -214,47 +214,42 @@ def select_est_lug(
 
 def select_horus(
     *,
-    gpus_with_metrics: pd.DataFrame,
     gpu_memory_estimation: int,
     candidate_horus_gpu_util: float,
     available_gpu_ids,
     number_of_gpus_requested: int,
     utilization_budget: float = 100.0,
 ):
-    candidate_gpus = build_candidate_gpus(
-        gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + 2048,
-        available_gpu_ids=available_gpu_ids,
-        use_utilization_gate=False,
-    )
-
-    if candidate_gpus.empty or len(candidate_gpus) < number_of_gpus_requested:
-        return None
+    del gpu_memory_estimation
 
     reserved = gpu_allocations.reserved_profiled_gpu_util_by_gpu()
-    candidate_gpus["horus_reserved_gpu_util"] = [
-        float(reserved.get(str(gpu_id), 0.0))
-        for gpu_id in candidate_gpus.index
-    ]
 
-    candidate_gpus["horus_projected_gpu_util"] = (
-        candidate_gpus["horus_reserved_gpu_util"] + float(candidate_horus_gpu_util)
-    )
+    rows = []
+    for gpu_id in available_gpu_ids:
+        reserved_util = float(reserved.get(str(gpu_id), 0.0))
+        projected_util = reserved_util + float(candidate_horus_gpu_util)
 
-    candidate_gpus = candidate_gpus.loc[
-        candidate_gpus["horus_projected_gpu_util"] <= float(utilization_budget)
-    ].copy()
+        if projected_util <= float(utilization_budget):
+            rows.append(
+                {
+                    "gpu_id": str(gpu_id),
+                    "horus_reserved_gpu_util": reserved_util,
+                    "horus_projected_gpu_util": projected_util,
+                }
+            )
+
+    candidate_gpus = pd.DataFrame(rows)
 
     if candidate_gpus.empty or len(candidate_gpus) < number_of_gpus_requested:
         return None
 
-    sorted_ = candidate_gpus.sort_values(
-        by=["horus_projected_gpu_util", "GPU_mem_available"],
-        ascending=[True, False],
-        kind="mergesort",
-    )
+    candidate_gpus = candidate_gpus.set_index("gpu_id")
 
-    return sorted_.head(number_of_gpus_requested)
+    return candidate_gpus.sort_values(
+        by="horus_projected_gpu_util",
+        ascending=True,
+        kind="mergesort",
+    ).head(number_of_gpus_requested)
 
 def select_or_rr(
     *,
