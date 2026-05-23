@@ -15,8 +15,8 @@ SOLO_RUNTIME_CSV = "evaluation/threshold_sensitivity/manifests/threshold_sweep_v
 
 # Start with a smaller, meaningful grid. We can expand later.
 TAU_SMACT_VALUES = [0.50, 0.65, 0.80, 0.90]
-TAU_SMOCC_VALUES = [0.20, 0.35, 0.45, 0.55]
-TAU_DRAMA_VALUES = [0.20, 0.30, 0.40, 0.50]
+TAU_SMOCC_VALUES = [0.20, 0.35, 0.45, 0.55, 0.65]
+TAU_DRAMA_VALUES = [0.20, 0.30, 0.40, 0.50, 0.60]
 
 EXPECTED_TRIALS = 5
 
