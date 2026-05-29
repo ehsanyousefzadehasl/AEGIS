@@ -78,9 +78,9 @@ def load_trials(sweep_root: Path) -> pd.DataFrame:
             if col not in sub.columns or sub[col].isna().all():
                 sub[col] = val
 
-        # Compatibility defaults for older trial summary files.
         if "failed_started_rows" not in sub.columns:
             sub["failed_started_rows"] = 0
+
         if "reject_retry_count" not in sub.columns:
             obs_path = run_dir / "admission_observations.csv"
             if obs_path.exists():
@@ -101,12 +101,20 @@ def load_trials(sweep_root: Path) -> pd.DataFrame:
 
     trials = pd.concat(rows, ignore_index=True)
 
-    # Normalize expected numeric fields.
     for c in [
-        "tau_smact", "tau_smocc", "tau_drama", "planned_workload_count",
-        "admitted_workload_count", "reject_retry_count", "sequence_wall_time_seconds",
-        "throughput_gain", "mean_slowdown", "max_slowdown", "p95_slowdown",
-        "failed_started_rows", "solo_runtime_sum_seconds",
+        "tau_smact",
+        "tau_smocc",
+        "tau_drama",
+        "planned_workload_count",
+        "admitted_workload_count",
+        "reject_retry_count",
+        "sequence_wall_time_seconds",
+        "throughput_gain",
+        "mean_slowdown",
+        "max_slowdown",
+        "p95_slowdown",
+        "failed_started_rows",
+        "solo_runtime_sum_seconds",
     ]:
         if c in trials.columns:
             trials[c] = pd.to_numeric(trials[c], errors="coerce")
@@ -119,6 +127,7 @@ def load_trials(sweep_root: Path) -> pd.DataFrame:
 
 def aggregate_thresholds(trials: pd.DataFrame, metadata: dict) -> pd.DataFrame:
     rows = []
+
     for threshold_dir, g in trials.groupby("threshold_dir", dropna=False):
         tau_smact = to_num(g.get("tau_smact")).iloc[0] if "tau_smact" in g else float("nan")
         tau_smocc = to_num(g.get("tau_smocc")).iloc[0] if "tau_smocc" in g else float("nan")
@@ -136,35 +145,38 @@ def aggregate_thresholds(trials: pd.DataFrame, metadata: dict) -> pd.DataFrame:
         completed = throughput.notna() & max_slowdown.notna() & (failed.fillna(0) == 0)
         num_trials = len(g)
         completion_fraction = float(completed.mean()) if num_trials else 0.0
+
         worst = max_slowdown.max()
         p95 = max_slowdown.quantile(0.95)
         mean_t = throughput.mean()
         score = mean_t / max(worst, 1.0) if pd.notna(mean_t) and pd.notna(worst) else float("nan")
 
-        rows.append({
-            "threshold_dir": threshold_dir,
-            "run_dir": g["run_dir"].iloc[0] if "run_dir" in g else "",
-            "tau_smact": tau_smact,
-            "tau_smocc": tau_smocc,
-            "tau_drama": tau_drama,
-            "num_trials": num_trials,
-            "planned_workload_count_sum": planned.sum(),
-            "admitted_workload_count_sum": admitted.sum(),
-            "admission_fraction": admitted.sum() / planned.sum() if planned.sum() else float("nan"),
-            "completion_fraction": completion_fraction,
-            "mean_throughput_gain": mean_t,
-            "median_throughput_gain": throughput.median(),
-            "mean_slowdown": mean_slowdown.mean(),
-            "median_max_slowdown": max_slowdown.median(),
-            "max_slowdown": worst,
-            "p95_max_slowdown": p95,
-            "p95_slowdown_mean": p95_slowdown.mean(),
-            "failed_started_rows": int(failed.sum()),
-            "reject_retry_count": int(retries.sum()),
-            "score": score,
-            "manifest": metadata.get("plan_jsonl", ""),
-            "solo_runtime_csv": metadata.get("solo_runtime_csv", ""),
-        })
+        rows.append(
+            {
+                "threshold_dir": threshold_dir,
+                "run_dir": g["run_dir"].iloc[0] if "run_dir" in g else "",
+                "tau_smact": tau_smact,
+                "tau_smocc": tau_smocc,
+                "tau_drama": tau_drama,
+                "num_trials": num_trials,
+                "planned_workload_count_sum": planned.sum(),
+                "admitted_workload_count_sum": admitted.sum(),
+                "admission_fraction": admitted.sum() / planned.sum() if planned.sum() else float("nan"),
+                "completion_fraction": completion_fraction,
+                "mean_throughput_gain": mean_t,
+                "median_throughput_gain": throughput.median(),
+                "mean_slowdown": mean_slowdown.mean(),
+                "median_max_slowdown": max_slowdown.median(),
+                "max_slowdown": worst,
+                "p95_max_slowdown": p95,
+                "p95_slowdown_mean": p95_slowdown.mean(),
+                "failed_started_rows": int(failed.sum()),
+                "reject_retry_count": int(retries.sum()),
+                "score": score,
+                "manifest": metadata.get("plan_jsonl", ""),
+                "solo_runtime_csv": metadata.get("solo_runtime_csv", ""),
+            }
+        )
 
     return pd.DataFrame(rows)
 
@@ -181,7 +193,8 @@ def add_labels(grid: pd.DataFrame) -> pd.DataFrame:
     grid = grid.sort_values(["tau_smact", "tau_smocc", "tau_drama"]).copy()
     grid["x"] = range(len(grid))
     grid["label"] = grid.apply(
-        lambda r: f"{r['tau_smact']:.2f}/{r['tau_smocc']:.2f}/{r['tau_drama']:.2f}", axis=1
+        lambda r: f"{r['tau_smact']:.2f}/{r['tau_smocc']:.2f}/{r['tau_drama']:.2f}",
+        axis=1,
     )
     return grid
 
@@ -197,9 +210,30 @@ def plot_grid(ranked: pd.DataFrame, figs: Path, max_slowdown_budget: float) -> P
 
     fig, ax1 = plt.subplots(figsize=(16, 6.5))
     ax2 = ax1.twinx()
-    ax1.plot(grid["x"], grid["mean_throughput_gain"], marker="o", linewidth=2.0, markersize=4.5, label="Mean throughput gain")
-    ax2.plot(grid["x"], grid["max_slowdown"], marker="s", linewidth=1.8, markersize=4.2, linestyle="--", label="Worst max slowdown")
-    ax2.axhline(max_slowdown_budget, linestyle=":", linewidth=1.4, label=f"Slowdown budget ({max_slowdown_budget:g}×)")
+
+    ax1.plot(
+        grid["x"],
+        grid["mean_throughput_gain"],
+        marker="o",
+        linewidth=2.0,
+        markersize=4.5,
+        label="Mean throughput gain",
+    )
+    ax2.plot(
+        grid["x"],
+        grid["max_slowdown"],
+        marker="s",
+        linewidth=1.8,
+        markersize=4.2,
+        linestyle="--",
+        label="Worst max slowdown",
+    )
+    ax2.axhline(
+        max_slowdown_budget,
+        linestyle=":",
+        linewidth=1.4,
+        label=f"Slowdown budget ({max_slowdown_budget:g}×)",
+    )
 
     ax1.set_ylim(bottom=0)
     ax2.set_ylim(bottom=0)
@@ -210,16 +244,24 @@ def plot_grid(ranked: pd.DataFrame, figs: Path, max_slowdown_budget: float) -> P
     ax2.set_ylabel("Worst max slowdown")
     ax1.grid(axis="y", linestyle=":", alpha=0.35)
     ax1.set_title("Threshold grid: throughput benefit vs. slowdown cost")
+
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", frameon=True)
+
     fig.tight_layout()
     fig.savefig(fig_path, dpi=240)
     plt.close(fig)
+
     return fig_path
 
 
-def plot_per_sequence(trials: pd.DataFrame, ranked: pd.DataFrame, figs: Path, max_slowdown_budget: float) -> Path | None:
+def plot_per_sequence(
+    trials: pd.DataFrame,
+    ranked: pd.DataFrame,
+    figs: Path,
+    max_slowdown_budget: float,
+) -> Path | None:
     needed = {"threshold_dir", "trial_id", "throughput_gain", "max_slowdown"}
     if not needed.issubset(trials.columns):
         return None
@@ -238,8 +280,12 @@ def plot_per_sequence(trials: pd.DataFrame, ranked: pd.DataFrame, figs: Path, ma
         return None
 
     fig_path = figs / "per_sequence_throughput_and_slowdown.png"
+
     fig, axes = plt.subplots(
-        nrows=len(trial_ids), ncols=1, figsize=(16, max(9, 2.6 * len(trial_ids))), sharex=True
+        nrows=len(trial_ids),
+        ncols=1,
+        figsize=(16, max(9, 2.6 * len(trial_ids))),
+        sharex=True,
     )
     if len(trial_ids) == 1:
         axes = [axes]
@@ -247,10 +293,31 @@ def plot_per_sequence(trials: pd.DataFrame, ranked: pd.DataFrame, figs: Path, ma
     for ax, trial_id in zip(axes, trial_ids):
         g = per_seq[per_seq["trial_id"] == trial_id].sort_values("threshold_index")
         ax2 = ax.twinx()
-        ax.plot(g["threshold_index"], g["throughput_gain"], marker="o", linewidth=1.8, markersize=4, label="Throughput gain")
-        ax2.plot(g["threshold_index"], g["max_slowdown"], marker="s", linestyle="--", linewidth=1.5, markersize=3.8, label="Max slowdown")
-        ax2.axhline(max_slowdown_budget, linestyle=":", linewidth=1.1, label=f"Budget ({max_slowdown_budget:g}×)")
-        
+
+        ax.plot(
+            g["threshold_index"],
+            g["throughput_gain"],
+            marker="o",
+            linewidth=1.8,
+            markersize=4,
+            label="Throughput gain",
+        )
+        ax2.plot(
+            g["threshold_index"],
+            g["max_slowdown"],
+            marker="s",
+            linestyle="--",
+            linewidth=1.5,
+            markersize=3.8,
+            label="Max slowdown",
+        )
+        ax2.axhline(
+            max_slowdown_budget,
+            linestyle=":",
+            linewidth=1.1,
+            label=f"Budget ({max_slowdown_budget:g}×)",
+        )
+
         ax.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
 
@@ -258,45 +325,158 @@ def plot_per_sequence(trials: pd.DataFrame, ranked: pd.DataFrame, figs: Path, ma
         ax2.set_ylabel("Slowdown")
         ax.grid(axis="y", linestyle=":", alpha=0.30)
         ax.set_title(str(trial_id), fontsize=10)
+
         lines1, labels1 = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         ax.legend(lines1 + lines2, labels1 + labels2, fontsize=7, loc="upper right")
 
     axes[-1].set_xlabel("Threshold setting: SMACT / SMOCC / DRAMA")
     set_threshold_xticks(axes[-1], [label_map[i] for i in range(len(grid))])
+
     fig.suptitle("Per-sequence threshold sensitivity", y=1.0, fontsize=14)
     fig.tight_layout()
     fig.savefig(fig_path, dpi=240)
     plt.close(fig)
+
     return fig_path
 
 
 def plot_rejections(ranked: pd.DataFrame, figs: Path) -> Path:
     grid = add_labels(ranked)
     fig_path = figs / "rejection_diagnostics.png"
+
     fig, ax = plt.subplots(figsize=(16, 5.8))
     ax.bar(grid["x"], grid["reject_retry_count"])
     set_threshold_xticks(ax, grid["label"].tolist())
     ax.set_xlabel("Threshold setting: SMACT / SMOCC / DRAMA")
-    ax.set_ylabel("Total reject retries")
-    ax.set_title("Rejection diagnostics: threshold gate activity")
+    ax.set_ylabel("Total admission deferrals")
+    ax.set_title("Admission-control diagnostics: deferred placement attempts")
     ax.grid(axis="y", linestyle=":", alpha=0.35)
+
     fig.tight_layout()
     fig.savefig(fig_path, dpi=240)
     plt.close(fig)
+
+    return fig_path
+
+
+def pick_threshold_row(summary: pd.DataFrame, tau: tuple[float, float, float]) -> pd.Series | None:
+    smact, smocc, drama = tau
+    m = (
+        summary["tau_smact"].round(4).eq(smact)
+        & summary["tau_smocc"].round(4).eq(smocc)
+        & summary["tau_drama"].round(4).eq(drama)
+    )
+    if not m.any():
+        return None
+    return summary[m].iloc[0]
+
+
+def plot_paper_threshold_tradeoff(summary: pd.DataFrame, figs: Path) -> Path | None:
+    selected = [
+        ("Strict admission", (0.10, 0.05, 0.10)),
+        ("Safe admission", (0.50, 0.20, 0.40)),
+        ("Selected knee", (0.65, 0.35, 0.50)),
+        ("Near admit-all", (1.00, 1.00, 0.95)),
+    ]
+
+    rows = []
+    for name, tau in selected:
+        r = pick_threshold_row(summary, tau)
+        if r is None:
+            print(f"warning: missing threshold setting {name}: {tau}")
+            continue
+
+        rows.append(
+            {
+                "name": name,
+                "label": f"{tau[0]:.2f}/{tau[1]:.2f}/{tau[2]:.2f}",
+                "mean_throughput_gain": float(r["mean_throughput_gain"]),
+                "max_slowdown": float(r["max_slowdown"]),
+                "reject_retry_count": int(r["reject_retry_count"]),
+            }
+        )
+
+    if len(rows) < 2:
+        return None
+
+    paper = pd.DataFrame(rows)
+    x = range(len(paper))
+
+    fig_path = figs / "paper_threshold_tradeoff_with_deferrals.png"
+
+    fig, (ax_top, ax_bottom) = plt.subplots(
+        nrows=2,
+        ncols=1,
+        figsize=(8.5, 5.2),
+        sharex=True,
+        gridspec_kw={"height_ratios": [2.2, 1.0]},
+    )
+
+    ax_slow = ax_top.twinx()
+
+    ax_top.plot(
+        x,
+        paper["mean_throughput_gain"],
+        marker="o",
+        linewidth=2.0,
+        markersize=6,
+        label="Mean throughput gain",
+    )
+    ax_slow.plot(
+        x,
+        paper["max_slowdown"],
+        marker="s",
+        linestyle="--",
+        linewidth=2.0,
+        markersize=5.5,
+        label="Worst slowdown",
+    )
+
+    ax_top.set_ylabel("Throughput gain")
+    ax_slow.set_ylabel("Worst slowdown")
+    ax_top.set_ylim(bottom=0)
+    ax_slow.set_ylim(bottom=0)
+    ax_top.grid(axis="y", linestyle=":", alpha=0.35)
+
+    lines1, labels1 = ax_top.get_legend_handles_labels()
+    lines2, labels2 = ax_slow.get_legend_handles_labels()
+    ax_top.legend(lines1 + lines2, labels1 + labels2, loc="upper left", frameon=True)
+
+    ax_bottom.bar(x, paper["reject_retry_count"])
+    ax_bottom.set_ylabel("Admission\ndeferrals")
+    ax_bottom.set_ylim(bottom=0)
+    ax_bottom.grid(axis="y", linestyle=":", alpha=0.35)
+
+    ax_bottom.set_xticks(list(x))
+    ax_bottom.set_xticklabels(
+        [f"{n}\n{l}" for n, l in zip(paper["name"], paper["label"])],
+        rotation=0,
+        ha="center",
+        fontsize=8,
+    )
+
+    ax_top.set_title("Admission-threshold tradeoff")
+    fig.tight_layout()
+    fig.savefig(fig_path, dpi=300)
+    plt.close(fig)
+
     return fig_path
 
 
 def main() -> int:
     args = parse_args()
+
     sweep_root = Path(args.sweep_root)
     out = Path(args.output_dir)
     tables = out / "tables"
     figs = out / "figures"
+
     tables.mkdir(parents=True, exist_ok=True)
     figs.mkdir(parents=True, exist_ok=True)
 
     metadata = load_metadata(sweep_root)
+
     trials = load_trials(sweep_root)
     if trials.empty:
         raise SystemExit(f"No progressive_trial_summary.csv files found under {sweep_root}/smact_*/")
@@ -315,7 +495,11 @@ def main() -> int:
         & (ranked["max_slowdown"] <= args.max_slowdown_budget)
         & (ranked["p95_max_slowdown"] <= args.p95_slowdown_budget)
     )
-    ranked = ranked.sort_values(["feasible", "score", "mean_throughput_gain"], ascending=[False, False, False])
+    ranked = ranked.sort_values(
+        ["feasible", "score", "mean_throughput_gain"],
+        ascending=[False, False, False],
+    )
+
     ranked_path = tables / "threshold_settings_ranked.csv"
     ranked.to_csv(ranked_path, index=False)
     markdown_table(ranked, tables / "threshold_settings_ranked.md")
@@ -345,6 +529,7 @@ def main() -> int:
     grid_fig = plot_grid(ranked, figs, args.max_slowdown_budget)
     seq_fig = plot_per_sequence(trials, ranked, figs, args.max_slowdown_budget)
     rej_fig = plot_rejections(ranked, figs)
+    paper_fig = plot_paper_threshold_tradeoff(summary, figs)
 
     best = ranked.iloc[0]
     report_lines = [
@@ -358,7 +543,7 @@ def main() -> int:
         f"- Mean throughput gain: {best['mean_throughput_gain']:.3f}",
         f"- Worst max slowdown: {best['max_slowdown']:.3f}",
         f"- P95 max slowdown: {best['p95_max_slowdown']:.3f}",
-        f"- Total reject retries: {int(best['reject_retry_count'])}",
+        f"- Total admission deferrals: {int(best['reject_retry_count'])}",
         f"- Feasible under selected budgets: {bool(best['feasible'])}",
         "",
         "## Selection rule",
@@ -376,8 +561,12 @@ def main() -> int:
         "- `figures/threshold_grid_throughput_vs_slowdown.png`",
         "- `figures/rejection_diagnostics.png`",
     ]
+
     if seq_fig is not None:
         report_lines.append("- `figures/per_sequence_throughput_and_slowdown.png`")
+
+    if paper_fig is not None:
+        report_lines.append("- `figures/paper_threshold_tradeoff_with_deferrals.png`")
 
     (out / "report.md").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
 
@@ -386,16 +575,33 @@ def main() -> int:
     print(f"wrote {ranked_path}")
     print(f"wrote {feasible_path}")
     print(f"wrote {grid_fig}")
+
     if seq_fig is not None:
         print(f"wrote {seq_fig}")
+
     print(f"wrote {rej_fig}")
+
+    if paper_fig is not None:
+        print(f"wrote {paper_fig}")
+
     print(f"wrote {out / 'report.md'}")
+
     print("\nTOP 10:")
     cols = [
-        "tau_smact", "tau_smocc", "tau_drama", "num_trials", "completion_fraction",
-        "mean_throughput_gain", "max_slowdown", "p95_max_slowdown", "reject_retry_count", "feasible", "score",
+        "tau_smact",
+        "tau_smocc",
+        "tau_drama",
+        "num_trials",
+        "completion_fraction",
+        "mean_throughput_gain",
+        "max_slowdown",
+        "p95_max_slowdown",
+        "reject_retry_count",
+        "feasible",
+        "score",
     ]
     print(ranked[cols].head(10).to_string(index=False))
+
     return 0
 
 
