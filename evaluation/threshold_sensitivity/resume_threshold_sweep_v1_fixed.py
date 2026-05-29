@@ -14,9 +14,9 @@ PLAN_JSONL = "evaluation/threshold_sensitivity/manifests/threshold_sweep_v1_fixe
 SOLO_RUNTIME_CSV = "evaluation/threshold_sensitivity/manifests/threshold_sweep_v1_solo_runtimes.csv"
 
 # Start with a smaller, meaningful grid. We can expand later.
-TAU_SMACT_VALUES = [0.50, 0.65, 0.80, 0.90]
-TAU_SMOCC_VALUES = [0.20, 0.35, 0.45, 0.55, 0.65]
-TAU_DRAMA_VALUES = [0.20, 0.30, 0.40, 0.50, 0.60]
+TAU_SMACT_VALUES = [0.95, 1.0]
+TAU_SMOCC_VALUES = [0.95, 1.0]
+TAU_DRAMA_VALUES = [0.95, 1.0]
 
 EXPECTED_TRIALS = 5
 
