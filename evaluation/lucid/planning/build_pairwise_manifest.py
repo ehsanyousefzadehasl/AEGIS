@@ -77,7 +77,13 @@ def list_specs(spec_dir: str) -> list[Path]:
     if not root.exists():
         raise FileNotFoundError(f"Spec directory does not exist: {root}")
 
-    specs = sorted([*root.glob("*.yaml"), *root.glob("*.yml")])
+    specs = sorted(
+        [
+            *root.glob("*maxbatches1200.yaml"),
+            *root.glob("*maxsteps2000.yaml"),
+        ]
+    )
+    
     if not specs:
         raise FileNotFoundError(f"No YAML specs found in: {root}")
 
