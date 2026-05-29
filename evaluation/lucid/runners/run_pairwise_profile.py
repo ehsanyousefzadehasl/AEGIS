@@ -30,6 +30,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--pair-id", default=None)
     p.add_argument("--conda-prefix", default="")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--timeout-s", type=float, default=None)
     return p.parse_args()
 
 
@@ -208,19 +209,69 @@ def main() -> int:
         err_log=err_b,
     )
 
+    started_index_row = {
+        "run_id": run_id,
+        "pair_id": pair_id,
+        "status": "started",
+        "gpu_id": str(args.gpu_id),
+        "spec_a": spec_a,
+        "spec_b": spec_b,
+        "return_code_a": "",
+        "return_code_b": "",
+        "elapsed_seconds": "",
+        "run_dir": str(run_dir),
+        "metadata_path": str(metadata_path),
+        "out_a": str(out_a),
+        "err_a": str(err_a),
+        "out_b": str(out_b),
+        "err_b": str(err_b),
+    }
+    append_index_row(Path(args.output_dir) / "index.csv", started_index_row)
+
+    timed_out = False
     try:
-        return_a = proc_a.wait()
-        return_b = proc_b.wait()
+        if args.timeout_s is None:
+            return_a = proc_a.wait()
+            return_b = proc_b.wait()
+        else:
+            deadline = time.time() + float(args.timeout_s)
+            while time.time() < deadline:
+                done_a = proc_a.poll() is not None
+                done_b = proc_b.poll() is not None
+                if done_a and done_b:
+                    break
+                time.sleep(1.0)
+
+            if proc_a.poll() is None or proc_b.poll() is None:
+                timed_out = True
+                terminate_process_tree(proc_a)
+                terminate_process_tree(proc_b)
+
+            return_a = proc_a.poll()
+            return_b = proc_b.poll()
     except KeyboardInterrupt:
         terminate_process_tree(proc_a)
         terminate_process_tree(proc_b)
+        finished_at = time.time()
+        interrupted_row = dict(started_index_row)
+        interrupted_row.update(
+            {
+                "status": "interrupted",
+                "return_code_a": proc_a.poll(),
+                "return_code_b": proc_b.poll(),
+                "elapsed_seconds": f"{finished_at - started_at:.3f}",
+            }
+        )
+        append_index_row(Path(args.output_dir) / "index.csv", interrupted_row)
         raise
 
     finished_at = time.time()
+    status = "timeout" if timed_out else "finished"
 
     index_row = {
         "run_id": run_id,
         "pair_id": pair_id,
+        "status": status,
         "gpu_id": str(args.gpu_id),
         "spec_a": spec_a,
         "spec_b": spec_b,
