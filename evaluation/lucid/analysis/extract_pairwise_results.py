@@ -9,7 +9,7 @@ import pandas as pd
 
 
 DEFAULT_INDEX = "evaluation/lucid/results/pairwise_runs/index.csv"
-DEFAULT_SOLO = "evaluation/profiling/solo/extracted/solo_profile_results_1gpu.csv"
+DEFAULT_SOLO_INDEX = "evaluation/lucid/results/solo_runs/index.csv"
 DEFAULT_OUTPUT = "evaluation/lucid/results/pairwise_results.csv"
 
 TRAIN_TIME_RE = re.compile(r"training_loop_time_s:\s*([0-9.]+)")
@@ -18,7 +18,7 @@ TRAIN_TIME_RE = re.compile(r"training_loop_time_s:\s*([0-9.]+)")
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Extract Lucid pairwise normalized speeds from run logs.")
     p.add_argument("--index-csv", default=DEFAULT_INDEX)
-    p.add_argument("--solo-profile-csv", default=DEFAULT_SOLO)
+    p.add_argument("--solo-index-csv", default=DEFAULT_SOLO_INDEX)
     p.add_argument("--output-csv", default=DEFAULT_OUTPUT)
     return p.parse_args()
 
@@ -60,18 +60,20 @@ def parse_training_time(log_path: str) -> float | None:
 def load_solo_times(path: str) -> dict[str, float]:
     df = pd.read_csv(path)
 
-    required = {"spec_path", "training_loop_time_s"}
+    required = {"spec_path", "status", "out_log"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"{path} missing columns: {sorted(missing)}")
 
+    finished = df.loc[df["status"] == "finished"].copy()
+
     out: dict[str, float] = {}
-    for _, row in df.iterrows():
+    for _, row in finished.iterrows():
         spec = canonical_spec_name(row["spec_path"])
-        val = row["training_loop_time_s"]
-        if pd.isna(val):
+        train_time = parse_training_time(str(row["out_log"]))
+        if train_time is None:
             continue
-        out[spec] = float(val)
+        out[spec] = float(train_time)
 
     return out
 
@@ -80,7 +82,7 @@ def main() -> int:
     args = parse_args()
 
     index = pd.read_csv(args.index_csv)
-    solo_times = load_solo_times(args.solo_profile_csv)
+    solo_times = load_solo_times(args.solo_index_csv)
 
     finished = index.loc[index["status"] == "finished"].copy()
 
