@@ -81,11 +81,14 @@ def list_specs(spec_dir: str) -> list[Path]:
         [
             *root.glob("*maxbatches1200.yaml"),
             *root.glob("*maxsteps2000.yaml"),
+            *root.glob("*cifar100*20e*1gpu.yaml"),
+            root / "unet_voc_1gpu.yaml",
         ]
     )
-    
+    specs = [p for p in specs if p.exists()]
+
     if not specs:
-        raise FileNotFoundError(f"No YAML specs found in: {root}")
+        raise FileNotFoundError(f"No selected YAML specs found in: {root}")
 
     return specs
 
