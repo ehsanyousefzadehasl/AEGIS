@@ -1,9 +1,8 @@
 version: 1
 job:
   conda_env: tf
-  command: python evaluation/workloads/training/scripts/clean/xception_imagenet_train.py
+  command: python evaluation/workloads/training/scripts/clean/xception_imagenet_train.py --max_batches 1200
     --batch_size 32
-    --max_batches 1200
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 5922

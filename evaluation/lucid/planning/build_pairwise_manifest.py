@@ -14,6 +14,29 @@ DEFAULT_SOLO_PROFILE_CSV = "evaluation/profiling/solo/extracted/solo_profile_res
 DEFAULT_OUTPUT_CSV = "evaluation/lucid/manifests/lucid_pairwise_manifest.csv"
 
 
+SELECTED_SPEC_NAMES = [
+    "efficientnet_imagenet_bs32_maxbatches1200.yaml",
+    "efficientnet_imagenet_bs64_maxbatches1200.yaml",
+    "efficientnet_imagenet_bs128_maxbatches1200.yaml",
+    "mobilenet_imagenet_bs32_maxbatches1200.yaml",
+    "mobilenet_imagenet_bs64_maxbatches1200.yaml",
+    "mobilenet_imagenet_bs128_maxbatches1200.yaml",
+    "resnet50_imagenet_bs32_maxbatches1200.yaml",
+    "resnet50_imagenet_bs64_maxbatches1200.yaml",
+    "resnet50_imagenet_bs128_maxbatches1200.yaml",
+    "vgg16_imagenet_bs32_maxbatches1200.yaml",
+    "vgg16_imagenet_bs64_maxbatches1200.yaml",
+    "vgg16_imagenet_bs128_maxbatches1200.yaml",
+    "xception_imagenet_bs32_maxbatches1200.yaml",
+    "xception_imagenet_bs64_maxbatches1200.yaml",
+    "xception_imagenet_bs128_maxbatches1200.yaml",
+    "mobilenet_cifar100_bs64_20e_1gpu.yaml",
+    "resnet18_cifar100_bs32_20e_1gpu.yaml",
+    "resnet34_cifar100_bs64_20e_1gpu.yaml",
+    "llama3_width_8layer_wiki_bs1_1gpu_maxsteps2000.yaml",
+    "unet_voc_1gpu_10e.yaml",
+]
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Build Lucid pairwise profiling manifest from bounded YAML specs and solo memory profiles."
@@ -77,20 +100,12 @@ def list_specs(spec_dir: str) -> list[Path]:
     if not root.exists():
         raise FileNotFoundError(f"Spec directory does not exist: {root}")
 
-    specs = sorted(
-        [
-            *root.glob("*maxbatches1200.yaml"),
-            *root.glob("*maxsteps2000.yaml"),
-            *root.glob("*cifar100*20e*1gpu.yaml"),
-            root / "unet_voc_1gpu.yaml",
-        ]
-    )
-    specs = [p for p in specs if p.exists()]
+    specs = [root / name for name in SELECTED_SPEC_NAMES]
+    missing = [str(p) for p in specs if not p.exists()]
+    if missing:
+        raise FileNotFoundError(f"Selected Lucid specs are missing: {missing}")
 
-    if not specs:
-        raise FileNotFoundError(f"No selected YAML specs found in: {root}")
-
-    return specs
+    return sorted(specs)
 
 
 def main() -> int:
