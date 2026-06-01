@@ -1,0 +1,29 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/resnet34_cifar100_train.py
+    --batch_size 128 --epochs 20
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 1076
+estimates:
+  horus_mib: 11409.6445
+  faketensor_mib: 145.3094711
+  gpumemnet_mib: 8000.0
+profile:
+  peak_memory_mib: 1076
+  avg_smact: 0.20171875
+  avg_smocc: 0.079375
+  avg_drama: 0.0693828125
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 1074
+    full_run_peak_memory_mib: 1076
+  horus_gpu_util_mean: 36.4765625
+  horus_gpu_util_p95: 50.0
+  horus_gpu_util_max: 65.0
+online_estimation:
+  summary_path: resnet34_cifar100.model
+  parser_arg_1: cifar100
+  parser_arg_2: 128

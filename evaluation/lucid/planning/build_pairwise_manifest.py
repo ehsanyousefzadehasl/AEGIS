@@ -35,6 +35,18 @@ SELECTED_SPEC_NAMES = [
     "resnet34_cifar100_bs64_20e_1gpu.yaml",
     "llama3_width_8layer_wiki_bs1_1gpu_maxsteps2000.yaml",
     "unet_voc_1gpu_10e.yaml",
+    "efficientnet_cifar100_bs32_20e_1gpu.yaml",
+    "efficientnet_cifar100_bs64_20e_1gpu.yaml",
+    "efficientnet_cifar100_bs128_20e_1gpu.yaml",
+    "mobilenet_cifar100_bs32_20e_1gpu.yaml",
+    "mobilenet_cifar100_bs64_20e_1gpu.yaml",
+    "mobilenet_cifar100_bs128_20e_1gpu.yaml",
+    "resnet18_cifar100_bs32_20e_1gpu.yaml",
+    "resnet18_cifar100_bs64_20e_1gpu.yaml",
+    "resnet18_cifar100_bs128_20e_1gpu.yaml",
+    "resnet34_cifar100_bs32_20e_1gpu.yaml",
+    "resnet34_cifar100_bs64_20e_1gpu.yaml",
+    "resnet34_cifar100_bs128_20e_1gpu.yaml",
 ]
 
 def parse_args() -> argparse.Namespace:
