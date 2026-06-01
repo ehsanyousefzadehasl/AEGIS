@@ -144,6 +144,14 @@ POLICY_PROFILES = {
         placement_strategy="horus",
         required_profile_metrics=("peak_memory_mib", "horus_gpu_util_mean"),
     ),
+    "LUCID": PolicyProfile(
+    name="LUCID",
+    estimate_source="profiled_metadata",
+    exclusive_first=True,
+    uses_dispatcher=True,
+    placement_strategy="lucid",
+    required_profile_metrics=("peak_memory_mib", "lucid_ss"),
+),
 }
 
 
@@ -154,7 +162,7 @@ def policy_required_profile_metrics(policy: str) -> tuple[str, ...]:
     return get_policy_profile(policy).required_profile_metrics
 
 def policy_requires_gpu_metrics(policy: str) -> bool:
-    return policy_placement_strategy(policy) not in {"or_rr", "horus"}
+    return policy_placement_strategy(policy) not in {"or_rr", "horus", "lucid"}
 
 def policy_requires_estimator(policy: str) -> bool:
     return get_policy_profile(policy).estimate_source in {
