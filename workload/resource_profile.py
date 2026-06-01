@@ -13,6 +13,7 @@ class ResourceProfile:
     horus_gpu_util_mean: Optional[float] = None
     horus_gpu_util_p95: Optional[float] = None
     horus_gpu_util_max: Optional[float] = None
+    lucid_ss: int | None = None
     class_label: Optional[str] = None
     profiling_duration_s: Optional[int] = None
     source: Optional[str] = None
@@ -58,6 +59,7 @@ def load_resource_profile(data: dict | None) -> ResourceProfile | None:
         horus_gpu_util_mean=None if data.get("horus_gpu_util_mean") is None else float(data.get("horus_gpu_util_mean")),
         horus_gpu_util_p95=None if data.get("horus_gpu_util_p95") is None else float(data.get("horus_gpu_util_p95")),
         horus_gpu_util_max=None if data.get("horus_gpu_util_max") is None else float(data.get("horus_gpu_util_max")),
+        lucid_ss=None if data.get("lucid_ss") is None else int(float(data.get("lucid_ss"))),
         class_label=data.get("class_label"),
         profiling_duration_s=None if data.get("profiling_duration_s") is None else int(float(data.get("profiling_duration_s"))),
         source=data.get("source"),
