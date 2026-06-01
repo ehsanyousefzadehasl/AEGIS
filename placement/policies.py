@@ -251,6 +251,66 @@ def select_horus(
         kind="mergesort",
     ).head(number_of_gpus_requested)
 
+
+def select_lucid(
+    *,
+    peak_memory_mib: int,
+    lucid_ss: int,
+    available_gpu_ids,
+    number_of_gpus_requested: int,
+    gpu_memory_capacity_mib: int = 40960,
+    memory_guard_mib: int = 2048,
+    gss_capacity: int = 2,
+    max_jobs_per_gpu: int = 2,
+):
+    usable_memory_mib = int(gpu_memory_capacity_mib) - int(memory_guard_mib)
+
+    rows = []
+    for gpu_id in available_gpu_ids:
+        gid = str(gpu_id)
+        allocations = gpu_allocations.allocations_for_gpu(gid)
+
+        current_job_count = len(allocations)
+        reserved_memory_mib = sum(int(a.profiled_memory_mib or 0) for a in allocations)
+        reserved_lucid_ss = sum(
+            int(a.metadata.get("lucid_ss", 0) or 0) for a in allocations
+        )
+
+        projected_job_count = current_job_count + 1
+        projected_memory_mib = reserved_memory_mib + int(peak_memory_mib)
+        projected_lucid_ss = reserved_lucid_ss + int(lucid_ss)
+
+        if projected_job_count > int(max_jobs_per_gpu):
+            continue
+        if projected_lucid_ss > int(gss_capacity):
+            continue
+        if projected_memory_mib > usable_memory_mib:
+            continue
+
+        rows.append(
+            {
+                "gpu_id": gid,
+                "lucid_reserved_memory_mib": reserved_memory_mib,
+                "lucid_projected_memory_mib": projected_memory_mib,
+                "lucid_reserved_ss": reserved_lucid_ss,
+                "lucid_projected_ss": projected_lucid_ss,
+                "lucid_current_job_count": current_job_count,
+                "lucid_projected_job_count": projected_job_count,
+            }
+        )
+
+    if not rows or len(rows) < number_of_gpus_requested:
+        return None
+
+    candidate_gpus = pd.DataFrame(rows).set_index("gpu_id")
+
+    return candidate_gpus.sort_values(
+        by=["lucid_projected_ss", "lucid_projected_memory_mib"],
+        ascending=[True, True],
+        kind="mergesort",
+    ).head(number_of_gpus_requested)
+
+
 def select_or_rr(
     *,
     round_robin_generator,
