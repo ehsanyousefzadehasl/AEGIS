@@ -105,6 +105,21 @@ def _execute_horus_selector(selector, request):
         number_of_gpus_requested=request.number_of_gpus_requested,
     )
 
+def _execute_lucid_selector(selector, request):
+    required = request.placement_estimate.resource_profile.resolve_required_profile_metrics(
+        ("peak_memory_mib", "lucid_ss")
+    )
+
+    peak_memory_mib = required["peak_memory_mib"]
+    lucid_ss = required["lucid_ss"]
+
+    return selector(
+        peak_memory_mib=int(peak_memory_mib),
+        lucid_ss=int(lucid_ss),
+        available_gpu_ids=request.available_gpu_ids,
+        number_of_gpus_requested=request.number_of_gpus_requested,
+    )
+
 _STRATEGY_REGISTRY = {
     "oracle_ff": (_execute_oracle_selector, select_oracle_ff),
     "oracle_bf": (_execute_oracle_selector, select_oracle_bf),
@@ -117,6 +132,7 @@ _STRATEGY_REGISTRY = {
     "est_magm": (_execute_est_selector, select_est_magm),
     "est_lug": (_execute_est_selector, select_est_lug),
     "horus": (_execute_horus_selector, select_horus),
+    "lucid": _execute_lucid_selector,
 }
 
 
