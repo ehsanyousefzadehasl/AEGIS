@@ -7,7 +7,7 @@ from itertools import combinations_with_replacement
 from pathlib import Path
 
 import pandas as pd
-
+import yaml
 
 DEFAULT_SPEC_DIR = "evaluation/workloads/training/specs/yaml_threshold_short"
 DEFAULT_SOLO_PROFILE_CSV = "evaluation/profiling/solo/extracted/solo_profile_results_1gpu.csv"
@@ -15,39 +15,34 @@ DEFAULT_OUTPUT_CSV = "evaluation/lucid/manifests/lucid_pairwise_manifest.csv"
 
 
 SELECTED_SPEC_NAMES = [
-    "efficientnet_imagenet_bs32_maxbatches1200.yaml",
-    "efficientnet_imagenet_bs64_maxbatches1200.yaml",
-    "efficientnet_imagenet_bs128_maxbatches1200.yaml",
-    "mobilenet_imagenet_bs32_maxbatches1200.yaml",
-    "mobilenet_imagenet_bs64_maxbatches1200.yaml",
-    "mobilenet_imagenet_bs128_maxbatches1200.yaml",
-    "resnet50_imagenet_bs32_maxbatches1200.yaml",
-    "resnet50_imagenet_bs64_maxbatches1200.yaml",
-    "resnet50_imagenet_bs128_maxbatches1200.yaml",
-    "vgg16_imagenet_bs32_maxbatches1200.yaml",
-    "vgg16_imagenet_bs64_maxbatches1200.yaml",
-    "vgg16_imagenet_bs128_maxbatches1200.yaml",
     "xception_imagenet_bs32_maxbatches1200.yaml",
+    "vgg16_imagenet_bs32_maxbatches1200.yaml",
+    "mobilenet_imagenet_bs64_maxbatches1200.yaml",
+    "efficientnet_imagenet_bs64_maxbatches1200.yaml",
+    "resnet50_imagenet_bs64_maxbatches1200.yaml",
+    "resnet34_cifar100_bs128_20e_1gpu.yaml",
+    "mobilenet_cifar100_bs128_20e_1gpu.yaml",
+    "resnet18_cifar100_bs64_20e_1gpu.yaml",
+    "vgg16_imagenet_bs64_maxbatches1200.yaml",
     "xception_imagenet_bs64_maxbatches1200.yaml",
+    "mobilenet_imagenet_bs128_maxbatches1200.yaml",
+    "efficientnet_imagenet_bs128_maxbatches1200.yaml",
+    "resnet50_imagenet_bs128_maxbatches1200.yaml",
+    "efficientnet_cifar100_bs128_20e_1gpu.yaml",
+    "llama3_width_8layer_wiki_bs1_1gpu_maxsteps2000.yaml",
+    "resnet34_cifar100_bs64_20e_1gpu.yaml",
+    "vgg16_imagenet_bs128_maxbatches1200.yaml",
     "xception_imagenet_bs128_maxbatches1200.yaml",
     "mobilenet_cifar100_bs64_20e_1gpu.yaml",
-    "resnet18_cifar100_bs32_20e_1gpu.yaml",
-    "resnet34_cifar100_bs64_20e_1gpu.yaml",
-    "llama3_width_8layer_wiki_bs1_1gpu_maxsteps2000.yaml",
     "unet_voc_1gpu_10e.yaml",
-    "efficientnet_cifar100_bs32_20e_1gpu.yaml",
-    "efficientnet_cifar100_bs64_20e_1gpu.yaml",
-    "efficientnet_cifar100_bs128_20e_1gpu.yaml",
-    "mobilenet_cifar100_bs32_20e_1gpu.yaml",
-    "mobilenet_cifar100_bs64_20e_1gpu.yaml",
-    "mobilenet_cifar100_bs128_20e_1gpu.yaml",
-    "resnet18_cifar100_bs32_20e_1gpu.yaml",
-    "resnet18_cifar100_bs64_20e_1gpu.yaml",
-    "resnet18_cifar100_bs128_20e_1gpu.yaml",
-    "resnet34_cifar100_bs32_20e_1gpu.yaml",
-    "resnet34_cifar100_bs64_20e_1gpu.yaml",
-    "resnet34_cifar100_bs128_20e_1gpu.yaml",
 ]
+
+def load_spec_memory_requirement_mib(spec_path: Path) -> float | None:
+    data = yaml.safe_load(spec_path.read_text())
+    value = data.get("resources", {}).get("gpu_memory_requirement_mib")
+    if value is None:
+        return None
+    return float(value)
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -138,7 +133,12 @@ def main() -> int:
     for spec in specs:
         spec_name = spec.name
         lookup_name = normalize_spec(spec_name)
+
+        
         peak = memory_lookup.get(lookup_name)
+        if peak is None:
+            peak = load_spec_memory_requirement_mib(spec)
+
         if peak is None:
             missing_memory.append(spec_name)
             continue
