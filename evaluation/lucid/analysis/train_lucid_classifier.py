@@ -110,6 +110,19 @@ def main() -> int:
         out.loc[predict.index, "lucid_final_class"] = [ss_to_class[int(x)] for x in pred_ss]
         out.loc[predict.index, "lucid_final_label_source"] = f"predicted_classifier_{args.feature_set}"
 
+    low_resource_mask = (
+        (out["peak_memory_mib"] <= 2048)
+        & (out["horus_gpu_util_mean"] <= 20)
+        & (out["lucid_final_ss"] == 2)
+        & (out["lucid_label_usable"] != True)
+    )
+
+    out.loc[low_resource_mask, "lucid_final_ss"] = 1
+    out.loc[low_resource_mask, "lucid_final_class"] = "medium"
+    out.loc[low_resource_mask, "lucid_final_label_source"] = (
+        "low_resource_safeguard_after_classifier"
+    )
+    
     proba = model.predict_proba(df[feature_cols])
     classes = list(model.named_steps["clf"].classes_)
 

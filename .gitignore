@@ -138,3 +138,7 @@ evaluation/lucid/results/solo_runs/
 evaluation/lucid/results/**/*.log
 evaluation/lucid/results/**/*.json
 evaluation/lucid/results/**/*.jsonl
+
+# Keep Lucid summary CSV artifacts
+!evaluation/lucid/results/
+!evaluation/lucid/results/*.csv
