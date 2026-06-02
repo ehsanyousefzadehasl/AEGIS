@@ -272,9 +272,8 @@ def select_lucid(
 
         current_job_count = len(allocations)
         reserved_memory_mib = sum(int(a.profiled_memory_mib or 0) for a in allocations)
-        reserved_lucid_ss = sum(
-            int(a.metadata.get("lucid_ss", 0) or 0) for a in allocations
-        )
+        
+        reserved_lucid_ss = sum(int(a.lucid_ss or 0) for a in allocations)
 
         projected_job_count = current_job_count + 1
         projected_memory_mib = reserved_memory_mib + int(peak_memory_mib)

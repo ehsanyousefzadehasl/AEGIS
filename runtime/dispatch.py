@@ -34,6 +34,7 @@ def dispatch_selected_job(
     failed_host_free_mib_at_dispatch: int | None,
     profiled_gpu_util: float = 0.0,
     profiled_memory_mib: int = 0,
+    lucid_ss: int | None = None,
 ) -> int | None:
     gpu_ids_list = list(assigned_gpu_ids)
 
@@ -139,6 +140,7 @@ def dispatch_selected_job(
         assigned_gpu_ids=gpu_ids_list,
         profiled_gpu_util=float(profiled_gpu_util or 0.0),
         profiled_memory_mib=int(profiled_memory_mib or 0),
+        lucid_ss=int(lucid_ss or 0),
         metadata={
             "run_id": run_id,
             "user": user,
@@ -165,6 +167,7 @@ def dispatch_selected_job(
             "run_id": run_id,
             "profiled_gpu_util": float(profiled_gpu_util or 0.0),
             "profiled_memory_mib": int(profiled_memory_mib or 0),
+            "lucid_ss": int(lucid_ss or 0),
         },
     )
 

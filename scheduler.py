@@ -38,6 +38,15 @@ def profiled_dispatch_metadata(placement_estimate):
         0 if memory is None else int(float(memory)),
     )
 
+def lucid_dispatch_metadata(placement_estimate) -> int:
+    profile = getattr(placement_estimate, "resource_profile", None)
+    if profile is None:
+        return 0
+    value = getattr(profile, "lucid_ss", None)
+    if value is None:
+        return 0
+    return int(value)
+
 def load_job_spec_safe(task_path: str, estimator_name: str):
     try:
         return load_job_spec(task_path, estimator_name)
@@ -159,6 +168,8 @@ def run_scheduler(policy=policy, estimator=estimator):
                 
                 profiled_gpu_util, profiled_memory_mib = profiled_dispatch_metadata(placement_estimate)
 
+                lucid_ss = lucid_dispatch_metadata(placement_estimate)
+
                 dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
@@ -184,6 +195,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     failed_host_free_mib_at_dispatch=None,
                     profiled_gpu_util=profiled_gpu_util,
                     profiled_memory_mib=profiled_memory_mib,
+                    lucid_ss=lucid_ss,
                 )
 
                 print(gpus_state)
@@ -235,6 +247,8 @@ def run_scheduler(policy=policy, estimator=estimator):
 
                 profiled_gpu_util, profiled_memory_mib = profiled_dispatch_metadata(placement_estimate)
 
+                lucid_ss = lucid_dispatch_metadata(placement_estimate)
+
                 dispatch_selected_job(
                     selected=selected,
                     task_obj=a,
@@ -260,6 +274,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     failed_host_free_mib_at_dispatch=failed_host_free_mib_at_dispatch,
                     profiled_gpu_util=profiled_gpu_util,
                     profiled_memory_mib=profiled_memory_mib,
+                    lucid_ss=lucid_ss,
                 )
 
                 time_point = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")

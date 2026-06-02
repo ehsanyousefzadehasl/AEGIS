@@ -14,6 +14,7 @@ class AllocationRecord:
     assigned_gpu_ids: tuple[str, ...]
     profiled_gpu_util: float = 0.0
     profiled_memory_mib: int = 0
+    lucid_ss: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -28,6 +29,7 @@ def register_allocation(
     assigned_gpu_ids,
     profiled_gpu_util: float = 0.0,
     profiled_memory_mib: int = 0,
+    lucid_ss: int = 0,
     metadata: dict[str, Any] | None = None,
 ) -> None:
     _allocations_by_task[str(task_id)] = AllocationRecord(
@@ -37,6 +39,7 @@ def register_allocation(
         assigned_gpu_ids=tuple(str(g) for g in assigned_gpu_ids),
         profiled_gpu_util=float(profiled_gpu_util or 0.0),
         profiled_memory_mib=int(profiled_memory_mib or 0),
+        lucid_ss=int(lucid_ss or 0),
         metadata={} if metadata is None else dict(metadata),
     )
 
@@ -81,6 +84,7 @@ def snapshot() -> dict[str, dict[str, Any]]:
             "assigned_gpu_ids": list(record.assigned_gpu_ids),
             "profiled_gpu_util": record.profiled_gpu_util,
             "profiled_memory_mib": record.profiled_memory_mib,
+            "lucid_ss": record.lucid_ss,
             "metadata": record.metadata,
         }
         for task_id, record in _allocations_by_task.items()
