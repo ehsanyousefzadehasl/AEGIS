@@ -17,6 +17,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-csv", default=DEFAULT_OUTPUT)
     p.add_argument("--tiny-threshold", type=float, default=0.95)
     p.add_argument("--medium-threshold", type=float, default=0.85)
+    p.add_argument("--min-partner-runtime-ratio", type=float, default=0.8)
+    p.add_argument(
+        "--observations-output-csv",
+        default="evaluation/lucid/results/lucid_label_observations.csv",
+    )
     return p.parse_args()
 
 
@@ -35,6 +40,12 @@ def main() -> int:
     observations = []
 
     for _, row in df.iterrows():
+        pair_time_a = float(row["pair_time_a_s"])
+        pair_time_b = float(row["pair_time_b_s"])
+
+        partner_ratio_for_a = pair_time_b / pair_time_a if pair_time_a > 0 else 0.0
+        partner_ratio_for_b = pair_time_a / pair_time_b if pair_time_b > 0 else 0.0
+
         observations.append(
             {
                 "spec_key": row["spec_a_key"],
@@ -42,8 +53,13 @@ def main() -> int:
                 "normalized_speed": row["normalized_speed_a"],
                 "partner_spec_key": row["spec_b_key"],
                 "pair_id": row["pair_id"],
+                "pair_time_s": pair_time_a,
+                "partner_pair_time_s": pair_time_b,
+                "partner_runtime_ratio": partner_ratio_for_a,
+                "valid_for_label": partner_ratio_for_a >= args.min_partner_runtime_ratio,
             }
         )
+
         observations.append(
             {
                 "spec_key": row["spec_b_key"],
@@ -51,11 +67,18 @@ def main() -> int:
                 "normalized_speed": row["normalized_speed_b"],
                 "partner_spec_key": row["spec_a_key"],
                 "pair_id": row["pair_id"],
+                "pair_time_s": pair_time_b,
+                "partner_pair_time_s": pair_time_a,
+                "partner_runtime_ratio": partner_ratio_for_b,
+                "valid_for_label": partner_ratio_for_b >= args.min_partner_runtime_ratio,
             }
         )
 
     obs = pd.DataFrame(observations)
     obs = obs.dropna(subset=["normalized_speed"])
+
+    obs.to_csv(args.observations_output_csv, index=False)
+    obs = obs[obs["valid_for_label"]].copy()
 
     rows = []
     for spec_key, group in obs.groupby("spec_key", sort=True):
