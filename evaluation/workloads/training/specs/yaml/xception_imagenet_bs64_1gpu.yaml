@@ -23,6 +23,14 @@ profile:
   horus_gpu_util_mean: 86.59701492537313
   horus_gpu_util_p95: 92.0
   horus_gpu_util_max: 92.0
+  lucid_class: medium
+  lucid_ss: 1
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: medium
+  lucid_classifier_ss: 1
+  lucid_pred_proba_ss0: 0.0
+  lucid_pred_proba_ss1: 0.685
+  lucid_pred_proba_ss2: 0.315
 online_estimation:
   summary_path: Xception_64.model
   parser_arg_1: /raid/datasets/imagenet

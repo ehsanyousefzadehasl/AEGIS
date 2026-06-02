@@ -23,6 +23,14 @@ profile:
   horus_gpu_util_mean: 29.54615384615385
   horus_gpu_util_p95: 39.0
   horus_gpu_util_max: 44.0
+  lucid_class: tiny
+  lucid_ss: 0
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: tiny
+  lucid_classifier_ss: 0
+  lucid_pred_proba_ss0: 0.645
+  lucid_pred_proba_ss1: 0.345
+  lucid_pred_proba_ss2: 0.01
 online_estimation:
   summary_path: mobilenet_cifar100.model
   parser_arg_1: cifar100
