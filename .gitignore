@@ -129,3 +129,12 @@ evaluation/threshold_sensitivity/solo_runs/**/*.log
 
 evaluation/threshold_sensitivity/solo_runs/threshold_sweep_calibration_imagenet_1200/
 evaluation/threshold_sensitivity/solo_runs/threshold_sweep_calibration_v1/
+
+
+
+# Lucid raw execution artifacts
+evaluation/lucid/results/pairwise_runs/
+evaluation/lucid/results/solo_runs/
+evaluation/lucid/results/**/*.log
+evaluation/lucid/results/**/*.json
+evaluation/lucid/results/**/*.jsonl
