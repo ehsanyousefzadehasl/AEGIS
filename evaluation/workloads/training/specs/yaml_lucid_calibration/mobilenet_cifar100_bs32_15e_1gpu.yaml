@@ -1,0 +1,29 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/mobilenet_cifar100_train.py
+    --batch_size 32 --epochs 15
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 592
+estimates:
+  horus_mib: 1348.8069
+  faketensor_mib: 15.16733551
+  gpumemnet_mib: 8000.0
+profile:
+  peak_memory_mib: 592
+  avg_smact: 0.0877846153846153
+  avg_smocc: 0.0436615384615384
+  avg_drama: 0.0019
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 590
+    full_run_peak_memory_mib: 592
+  horus_gpu_util_mean: 29.54615384615385
+  horus_gpu_util_p95: 39.0
+  horus_gpu_util_max: 44.0
+online_estimation:
+  summary_path: mobilenet_cifar100.model
+  parser_arg_1: cifar100
+  parser_arg_2: 32
