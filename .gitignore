@@ -142,3 +142,5 @@ evaluation/lucid/results/**/*.jsonl
 # Keep Lucid summary CSV artifacts
 !evaluation/lucid/results/
 !evaluation/lucid/results/*.csv
+
+!evaluation/lucid/manifests/*.csv
