@@ -17,7 +17,10 @@ from placement.policies import (
     select_est_magm,
     select_est_lug,
     select_horus,
+    select_lucid,
 )
+
+from workload.resource_profile import resolve_required_profile_metrics
 
 def _resolve_required_metric(request, metric_name: str):
     if request.placement_estimate is None or request.placement_estimate.resource_profile is None:
@@ -106,16 +109,14 @@ def _execute_horus_selector(selector, request):
     )
 
 def _execute_lucid_selector(selector, request):
-    required = request.placement_estimate.resource_profile.resolve_required_profile_metrics(
-        ("peak_memory_mib", "lucid_ss")
+    required = resolve_required_profile_metrics(
+        request.placement_estimate.resource_profile,
+        ("peak_memory_mib", "lucid_ss"),
     )
 
-    peak_memory_mib = required["peak_memory_mib"]
-    lucid_ss = required["lucid_ss"]
-
     return selector(
-        peak_memory_mib=int(peak_memory_mib),
-        lucid_ss=int(lucid_ss),
+        peak_memory_mib=int(required["peak_memory_mib"]),
+        lucid_ss=int(required["lucid_ss"]),
         available_gpu_ids=request.available_gpu_ids,
         number_of_gpus_requested=request.number_of_gpus_requested,
     )
@@ -132,7 +133,7 @@ _STRATEGY_REGISTRY = {
     "est_magm": (_execute_est_selector, select_est_magm),
     "est_lug": (_execute_est_selector, select_est_lug),
     "horus": (_execute_horus_selector, select_horus),
-    "lucid": _execute_lucid_selector,
+    "lucid": (_execute_lucid_selector, select_lucid),
 }
 
 
