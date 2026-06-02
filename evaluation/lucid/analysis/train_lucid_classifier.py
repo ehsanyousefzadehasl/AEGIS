@@ -54,7 +54,7 @@ def main() -> int:
     feature_cols = FEATURES[args.feature_set]
 
     train = df[df["lucid_label_usable"] == True].copy()
-    predict = df[df["lucid_label_usable"] != True].copy()
+    predict = df[df["lucid_ss"].isna()].copy()
 
     if train.empty:
         raise ValueError("No usable measured Lucid labels found for training")
@@ -95,6 +95,11 @@ def main() -> int:
     out["lucid_final_class"] = out["lucid_class"]
     out["lucid_final_label_source"] = out["lucid_label_source"]
 
+
+    low_coverage_mask = out["lucid_label_usable"] == False
+    out.loc[low_coverage_mask, "lucid_final_label_source"] = "low_coverage_pairwise"
+
+
     if not predict.empty:
         X_pred = predict[feature_cols]
         pred_ss = model.predict(X_pred)
@@ -115,7 +120,7 @@ def main() -> int:
     print("\nFeature importances:")
     for name, value in sorted(zip(feature_cols, importances), key=lambda x: x[1], reverse=True):
         print(f"{name}: {value:.4f}")
-              
+
     Path(args.output_csv).parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(args.output_csv, index=False)
 
