@@ -22,6 +22,7 @@ def parse_args() -> argparse.Namespace:
         "--observations-output-csv",
         default="evaluation/lucid/results/lucid_label_observations.csv",
     )
+    p.add_argument("--min-valid-observations", type=int, default=5)
     return p.parse_args()
 
 
@@ -90,6 +91,12 @@ def main() -> int:
             medium_threshold=args.medium_threshold,
         )
 
+        label_source = (
+            "measured_pairwise"
+            if int(len(speeds)) >= args.min_valid_observations
+            else "insufficient_pairwise"
+        )
+
         rows.append(
             {
                 "spec_key": spec_key,
@@ -101,6 +108,8 @@ def main() -> int:
                 "lucid_num_pair_observations": int(len(speeds)),
                 "lucid_class": lucid_class,
                 "lucid_ss": lucid_ss,
+                "lucid_label_source": label_source,
+                "lucid_label_usable": label_source == "measured_pairwise",
             }
         )
 
