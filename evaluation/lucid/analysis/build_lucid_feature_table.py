@@ -35,6 +35,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--labels-csv", default=DEFAULT_LABELS)
     p.add_argument("--output-csv", default=DEFAULT_OUTPUT)
     p.add_argument("--gpu-capacity-mib", type=float, default=40960)
+    p.add_argument(
+        "--manifest-csv",
+        default="evaluation/lucid/manifests/lucid_pairwise_manifest.csv",
+    )
     return p.parse_args()
 
 
@@ -97,13 +101,25 @@ def build_row(spec_path: Path, *, gpu_capacity_mib: float) -> dict:
 def main() -> int:
     args = parse_args()
 
+    manifest = pd.read_csv(args.manifest_csv)
+    spec_paths = sorted(
+        set(manifest["spec_a"].dropna().astype(str))
+        | set(manifest["spec_b"].dropna().astype(str))
+    )
+
     rows = [
-        build_row(p, gpu_capacity_mib=args.gpu_capacity_mib)
-        for p in sorted(Path(args.spec_dir).glob("*.yaml"))
+        build_row(Path(p), gpu_capacity_mib=args.gpu_capacity_mib)
+        for p in spec_paths
     ]
+
     features = pd.DataFrame(rows)
 
     labels = pd.read_csv(args.labels_csv)
+    labels = labels.sort_values(
+        ["lucid_label_usable", "lucid_num_pair_observations"],
+        ascending=[False, False],
+    ).drop_duplicates("spec_key", keep="first")
+    
     out = features.merge(labels, on="spec_key", how="left", suffixes=("", "_label"))
 
     Path(args.output_csv).parent.mkdir(parents=True, exist_ok=True)
