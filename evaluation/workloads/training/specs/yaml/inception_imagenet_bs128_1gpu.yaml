@@ -29,8 +29,8 @@ profile:
   lucid_classifier_class: medium
   lucid_classifier_ss: 1
   lucid_pred_proba_ss0: 0.0
-  lucid_pred_proba_ss1: 0.755
-  lucid_pred_proba_ss2: 0.245
+  lucid_pred_proba_ss1: 0.625
+  lucid_pred_proba_ss2: 0.375
 online_estimation:
   summary_path: Inception_128.model
   parser_arg_1: /raid/datasets/imagenet

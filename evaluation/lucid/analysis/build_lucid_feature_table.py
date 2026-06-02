@@ -16,6 +16,7 @@ FEATURE_COLUMNS_LUCID_FAITHFUL = [
     "peak_memory_mib",
     "memory_fraction",
     "horus_gpu_util_mean",
+    "avg_drama",
     "amp_enabled",
 ]
 
@@ -23,7 +24,6 @@ FEATURE_COLUMNS_EXTENDED = [
     *FEATURE_COLUMNS_LUCID_FAITHFUL,
     "avg_smact",
     "avg_smocc",
-    "avg_drama",
     "horus_gpu_util_p95",
     "horus_gpu_util_max",
 ]

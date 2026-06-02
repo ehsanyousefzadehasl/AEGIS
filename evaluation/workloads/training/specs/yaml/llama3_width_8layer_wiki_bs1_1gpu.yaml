@@ -29,8 +29,8 @@ profile:
   lucid_classifier_class: medium
   lucid_classifier_ss: 1
   lucid_pred_proba_ss0: 0.0
-  lucid_pred_proba_ss1: 0.95
-  lucid_pred_proba_ss2: 0.05
+  lucid_pred_proba_ss1: 0.885
+  lucid_pred_proba_ss2: 0.115
 online_estimation:
   summary_path: null
   parser_arg_1: null

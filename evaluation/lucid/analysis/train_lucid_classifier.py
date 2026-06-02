@@ -22,6 +22,7 @@ FEATURES = {
         "peak_memory_mib",
         "memory_fraction",
         "horus_gpu_util_mean",
+        "avg_drama",
         "amp_enabled",
     ],
     "extended": [
@@ -31,7 +32,6 @@ FEATURES = {
         "amp_enabled",
         "avg_smact",
         "avg_smocc",
-        "avg_drama",
         "horus_gpu_util_p95",
         "horus_gpu_util_max",
     ],

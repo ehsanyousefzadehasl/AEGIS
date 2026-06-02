@@ -29,8 +29,8 @@ profile:
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
   lucid_pred_proba_ss0: 0.0
-  lucid_pred_proba_ss1: 0.0
-  lucid_pred_proba_ss2: 1.0
+  lucid_pred_proba_ss1: 0.005
+  lucid_pred_proba_ss2: 0.995
 online_estimation:
   summary_path: Xception_32.model
   parser_arg_1: /raid/datasets/imagenet

@@ -28,9 +28,9 @@ profile:
   lucid_label_source: predicted_classifier_lucid_faithful
   lucid_classifier_class: tiny
   lucid_classifier_ss: 0
-  lucid_pred_proba_ss0: 0.6
-  lucid_pred_proba_ss1: 0.2
-  lucid_pred_proba_ss2: 0.2
+  lucid_pred_proba_ss0: 0.55
+  lucid_pred_proba_ss1: 0.29
+  lucid_pred_proba_ss2: 0.16
 online_estimation:
   summary_path: resnet34_cifar100.model
   parser_arg_1: cifar100
