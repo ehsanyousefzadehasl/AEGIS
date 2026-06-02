@@ -26,9 +26,9 @@ profile:
   horus_gpu_util_mean: 10.477611940298509
   horus_gpu_util_p95: 52.35
   horus_gpu_util_max: 72.0
-  lucid_class: jumbo
-  lucid_ss: 2
-  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_class: tiny
+  lucid_ss: 0
+  lucid_label_source: low_resource_tiny_safeguard_after_classifier
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
   lucid_pred_proba_ss0: 0.375
