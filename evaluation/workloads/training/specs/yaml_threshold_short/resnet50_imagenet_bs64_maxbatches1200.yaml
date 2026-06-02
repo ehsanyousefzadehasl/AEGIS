@@ -2,8 +2,7 @@ version: 1
 job:
   conda_env: tf
   command: python evaluation/workloads/training/scripts/clean/resnet50_imagenet_train.py
-    --batch_size 64
-    --max_batches 1200
+    --batch_size 64 --max_batches 1200
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 7118
@@ -24,6 +23,11 @@ profile:
   horus_gpu_util_mean: 77.74436090225564
   horus_gpu_util_p95: 84.0
   horus_gpu_util_max: 84.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: measured_pairwise
+  lucid_mean_normalized_speed: 0.7934315508130284
+  lucid_num_pair_observations: 20
 online_estimation:
   summary_path: resnet50_64.model
   parser_arg_1: /raid/datasets/imagenet

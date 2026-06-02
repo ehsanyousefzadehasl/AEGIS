@@ -1,8 +1,8 @@
 version: 1
 job:
   conda_env: tf
-  command: python evaluation/workloads/training/scripts/clean/vgg16_imagenet_train.py --max_batches 1200
-    --batch_size 32
+  command: python evaluation/workloads/training/scripts/clean/vgg16_imagenet_train.py
+    --max_batches 1200 --batch_size 32
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 6680
@@ -23,6 +23,11 @@ profile:
   horus_gpu_util_mean: 86.13432835820896
   horus_gpu_util_p95: 90.35
   horus_gpu_util_max: 91.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: measured_pairwise
+  lucid_mean_normalized_speed: 0.833882893024762
+  lucid_num_pair_observations: 19
 online_estimation:
   summary_path: vgg_32.model
   parser_arg_1: /raid/datasets/imagenet

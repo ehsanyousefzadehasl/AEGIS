@@ -23,6 +23,11 @@ profile:
   horus_gpu_util_mean: 32.61538461538461
   horus_gpu_util_p95: 40.0
   horus_gpu_util_max: 46.0
+  lucid_class: medium
+  lucid_ss: 1
+  lucid_label_source: measured_pairwise
+  lucid_mean_normalized_speed: 0.898231203241855
+  lucid_num_pair_observations: 15
 online_estimation:
   summary_path: mobilenet_cifar100.model
   parser_arg_1: cifar100

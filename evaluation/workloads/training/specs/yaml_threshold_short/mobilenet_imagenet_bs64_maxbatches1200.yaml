@@ -2,8 +2,7 @@ version: 1
 job:
   conda_env: tf
   command: python evaluation/workloads/training/scripts/clean/mobilenet_imagenet_train.py
-    --batch_size 64
-    --max_batches 1200
+    --batch_size 64 --max_batches 1200
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 6164
@@ -24,6 +23,11 @@ profile:
   horus_gpu_util_mean: 64.27407407407408
   horus_gpu_util_p95: 75.3
   horus_gpu_util_max: 79.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: measured_pairwise
+  lucid_mean_normalized_speed: 0.8373312850760938
+  lucid_num_pair_observations: 21
 online_estimation:
   summary_path: mobilenet_64.model
   parser_arg_1: /raid/datasets/imagenet
