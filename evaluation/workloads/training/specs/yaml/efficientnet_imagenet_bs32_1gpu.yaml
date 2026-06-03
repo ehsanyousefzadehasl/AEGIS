@@ -28,9 +28,9 @@ profile:
   lucid_label_source: predicted_classifier_lucid_faithful
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
-  lucid_pred_proba_ss0: 0.015
+  lucid_pred_proba_ss0: 0.01
   lucid_pred_proba_ss1: 0.11
-  lucid_pred_proba_ss2: 0.875
+  lucid_pred_proba_ss2: 0.88
 online_estimation:
   summary_path: efficientNet_32.model
   parser_arg_1: /raid/datasets/imagenet

@@ -39,6 +39,12 @@ def parse_args() -> argparse.Namespace:
         "--manifest-csv",
         default="evaluation/lucid/manifests/lucid_pairwise_manifest.csv",
     )
+    p.add_argument(
+        "--extra-manifest-csv",
+        action="append",
+        default=[],
+        help="Additional manifests whose specs should be included in the feature table.",
+    )
     return p.parse_args()
 
 
@@ -101,7 +107,12 @@ def build_row(spec_path: Path, *, gpu_capacity_mib: float) -> dict:
 def main() -> int:
     args = parse_args()
 
-    manifest = pd.read_csv(args.manifest_csv)
+    manifests = [pd.read_csv(args.manifest_csv)]
+    for extra_manifest in args.extra_manifest_csv:
+        manifests.append(pd.read_csv(extra_manifest))
+
+    manifest = pd.concat(manifests, ignore_index=True)
+
     spec_paths = sorted(
         set(manifest["spec_a"].dropna().astype(str))
         | set(manifest["spec_b"].dropna().astype(str))
@@ -114,6 +125,12 @@ def main() -> int:
 
     features = pd.DataFrame(rows)
 
+    features = (
+        features.sort_values("spec_path")
+        .drop_duplicates("spec_key", keep="first")
+        .reset_index(drop=True)
+    )
+    
     labels = pd.read_csv(args.labels_csv)
     labels = labels.sort_values(
         ["lucid_label_usable", "lucid_num_pair_observations"],

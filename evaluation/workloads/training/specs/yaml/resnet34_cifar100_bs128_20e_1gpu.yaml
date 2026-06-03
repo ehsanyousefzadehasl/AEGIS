@@ -28,9 +28,9 @@ profile:
   lucid_label_source: predicted_classifier_lucid_faithful
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
-  lucid_pred_proba_ss0: 0.305
-  lucid_pred_proba_ss1: 0.055
-  lucid_pred_proba_ss2: 0.64
+  lucid_pred_proba_ss0: 0.27
+  lucid_pred_proba_ss1: 0.045
+  lucid_pred_proba_ss2: 0.685
 online_estimation:
   summary_path: resnet34_cifar100.model
   parser_arg_1: cifar100

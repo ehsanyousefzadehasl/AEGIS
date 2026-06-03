@@ -28,9 +28,9 @@ profile:
   lucid_label_source: tiny_profile_safeguard_after_classifier
   lucid_classifier_class: medium
   lucid_classifier_ss: 1
-  lucid_pred_proba_ss0: 0.22
-  lucid_pred_proba_ss1: 0.77
-  lucid_pred_proba_ss2: 0.01
+  lucid_pred_proba_ss0: 0.37
+  lucid_pred_proba_ss1: 0.63
+  lucid_pred_proba_ss2: 0.0
 online_estimation:
   summary_path: mobilenet_cifar100.model
   parser_arg_1: cifar100

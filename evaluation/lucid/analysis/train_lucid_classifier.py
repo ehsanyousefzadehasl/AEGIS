@@ -29,6 +29,7 @@ FEATURES = {
         "peak_memory_mib",
         "memory_fraction",
         "horus_gpu_util_mean",
+        "avg_drama",
         "amp_enabled",
         "avg_smact",
         "avg_smocc",

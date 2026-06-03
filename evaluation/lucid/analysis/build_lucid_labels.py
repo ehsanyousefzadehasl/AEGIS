@@ -14,6 +14,17 @@ DEFAULT_OUTPUT = "evaluation/lucid/results/lucid_labels.csv"
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Build Lucid Tiny/Medium/Jumbo labels from pairwise normalized speeds.")
     p.add_argument("--input-csv", default=DEFAULT_INPUT)
+    p.add_argument(
+        "--extra-pairwise-csv",
+        action="append",
+        default=[],
+        help="Additional pairwise result CSVs to append before building labels.",
+    )
+    p.add_argument(
+        "--cap-speed-at-one",
+        action="store_true",
+        help="Cap normalized speeds at 1.0 to avoid treating run-to-run speedups as extra compatibility.",
+    )
     p.add_argument("--output-csv", default=DEFAULT_OUTPUT)
     p.add_argument("--tiny-threshold", type=float, default=0.95)
     p.add_argument("--medium-threshold", type=float, default=0.85)
@@ -36,7 +47,19 @@ def classify(mean_speed: float, *, tiny_threshold: float, medium_threshold: floa
 
 def main() -> int:
     args = parse_args()
-    df = pd.read_csv(args.input_csv)
+
+    frames = []
+
+    main_df = pd.read_csv(args.input_csv)
+    main_df["pairwise_source_csv"] = args.input_csv
+    frames.append(main_df)
+
+    for extra_csv in args.extra_pairwise_csv:
+        extra_df = pd.read_csv(extra_csv)
+        extra_df["pairwise_source_csv"] = extra_csv
+        frames.append(extra_df)
+
+    df = pd.concat(frames, ignore_index=True)
 
     observations = []
 
@@ -47,13 +70,21 @@ def main() -> int:
         partner_ratio_for_a = pair_time_b / pair_time_a if pair_time_a > 0 else 0.0
         partner_ratio_for_b = pair_time_a / pair_time_b if pair_time_b > 0 else 0.0
 
+        normalized_speed_a = float(row["normalized_speed_a"])
+        normalized_speed_b = float(row["normalized_speed_b"])
+
+        if args.cap_speed_at_one:
+            normalized_speed_a = min(normalized_speed_a, 1.0)
+            normalized_speed_b = min(normalized_speed_b, 1.0)
+
         observations.append(
             {
                 "spec_key": row["spec_a_key"],
                 "spec_path": row["spec_a"],
-                "normalized_speed": row["normalized_speed_a"],
+                "normalized_speed": normalized_speed_a,
                 "partner_spec_key": row["spec_b_key"],
                 "pair_id": row["pair_id"],
+                "pairwise_source_csv": row["pairwise_source_csv"],
                 "pair_time_s": pair_time_a,
                 "partner_pair_time_s": pair_time_b,
                 "partner_runtime_ratio": partner_ratio_for_a,
@@ -65,9 +96,10 @@ def main() -> int:
             {
                 "spec_key": row["spec_b_key"],
                 "spec_path": row["spec_b"],
-                "normalized_speed": row["normalized_speed_b"],
+                "normalized_speed": normalized_speed_b,
                 "partner_spec_key": row["spec_a_key"],
                 "pair_id": row["pair_id"],
+                "pairwise_source_csv": row["pairwise_source_csv"],
                 "pair_time_s": pair_time_b,
                 "partner_pair_time_s": pair_time_a,
                 "partner_runtime_ratio": partner_ratio_for_b,
