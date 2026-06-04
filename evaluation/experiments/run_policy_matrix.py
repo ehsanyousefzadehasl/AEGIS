@@ -37,6 +37,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--delay-scale", type=float, default=1.0)
     p.add_argument("--startup-wait-s", type=float, default=10.0)
     p.add_argument("--eval-idle-exit-minutes", type=float, default=2.0)
+    p.add_argument(
+        "--run-timeout-minutes",
+        type=float,
+        default=240.0,
+        help="Maximum time to wait for each launched policy run.",
+    )
     return p.parse_args()
 
 
@@ -164,6 +170,12 @@ def main() -> int:
             "base_config": str(base_config_path),
             "run_dir": str(run_dir),
             "command": ["python", "main.py"],
+            "trace_csv": args.trace_csv,
+            "delay_scale": args.delay_scale,
+            "startup_wait_s": args.startup_wait_s,
+            "run_timeout_minutes": args.run_timeout_minutes,
+            "eval_idle_exit_minutes": args.eval_idle_exit_minutes,
+            "expected_tasks": count_trace_tasks(args.trace_csv) if args.trace_csv else 0,
         }
         (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
@@ -227,8 +239,23 @@ def main() -> int:
 
                     print(f"SUBMITTED {policy}: submit_return_code={submit_rc}")
 
-                return_code = proc.wait()
+                try:
+                    return_code = proc.wait(timeout=args.run_timeout_minutes * 60.0)
+                    timed_out = False
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+                    proc.terminate()
+                    try:
+                        return_code = proc.wait(timeout=30)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        return_code = proc.wait()
+
                 metadata["return_code"] = return_code
+
+                metadata["timed_out"] = timed_out
+                metadata["run_timeout_minutes"] = args.run_timeout_minutes
+
                 (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
                 print(f"DONE {policy}: return_code={return_code} dir={run_dir}")
