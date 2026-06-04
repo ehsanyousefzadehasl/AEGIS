@@ -36,22 +36,21 @@ def wait_for_eval_completion(
         events = _read_events(event_path)
 
         submitted = {
-            str(e.get("task_id"))
+            str(e.get("task_file") or e.get("task"))
             for e in events
             if e.get("event") == "submitted"
         }
 
         completed = {
-            str(e.get("task_id"))
+            str(e.get("task_file") or e.get("task"))
             for e in events
             if e.get("event") == "completed"
         }
 
-        failed = {
-            str(e.get("task_id"))
-            for e in events
+        failed = [
+            e for e in events
             if e.get("event") == "failed"
-        }
+        ]
 
 
         done = len(submitted) >= expected_tasks and len(completed) >= expected_tasks
@@ -64,7 +63,7 @@ def wait_for_eval_completion(
             if idle_s >= idle_exit_minutes * 60.0:
                 print(
                     "[eval] expected tasks reached; exiting "
-                    f"submitted={len(submitted)} completed={len(completed)} failed={len(failed)}"
+                    f"submitted={len(submitted)} completed={len(completed)} failed_events={len(failed)}"
                 )
                 os._exit(0)
         else:
