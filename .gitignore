@@ -146,3 +146,5 @@ evaluation/lucid/results/**/*.jsonl
 !evaluation/lucid/manifests/*.csv
 
 !evaluation/experiments/traces/smoke_4jobs.csv
+
+evaluation/experiments/results/
