@@ -43,6 +43,12 @@ def parse_args() -> argparse.Namespace:
         default=240.0,
         help="Maximum time to wait for each launched policy run.",
     )
+    p.add_argument(
+        "--estimators",
+        nargs="+",
+        default=["horus"],
+        help="Estimators to use for estimator-based policies.",
+    )
     return p.parse_args()
 
 
@@ -104,7 +110,7 @@ def start_process(
     return proc, out, err
 
 
-def policy_estimator(policy: str, base_estimator: str | None) -> str:
+def policy_estimators(policy: str, requested_estimators: list[str]) -> list[str]:
     policies_without_estimator = {
         "exclusive",
         "LUCID",
@@ -121,9 +127,18 @@ def policy_estimator(policy: str, base_estimator: str | None) -> str:
     }
 
     if policy in policies_without_estimator:
-        return "None"
+        return ["None"]
 
-    return base_estimator or "horus"
+    if policy == "HORUS":
+        return ["horus"]
+
+    return requested_estimators
+
+
+def run_label_for(policy: str, estimator: str) -> str:
+    if estimator == "None":
+        return policy
+    return f"{policy}__{estimator}"
 
 def build_run_dir(results_dir: Path, experiment_name: str, policy: str) -> Path:
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -138,7 +153,9 @@ def main() -> int:
     base_config = load_yaml(base_config_path)
 
     for policy in args.policies:
-        run_dir = build_run_dir(Path(args.results_dir), args.experiment_name, policy)
+        for estimator in policy_estimators(policy, args.estimators):
+            run_label = run_label_for(policy, estimator)
+            run_dir = build_run_dir(Path(args.results_dir), args.experiment_name, run_label)
 
         if args.dry_run:
             print(f"DRY {policy}: {run_dir}")
@@ -149,10 +166,7 @@ def main() -> int:
         cfg = copy.deepcopy(base_config)
         cfg.setdefault("mapper", {})
         cfg["mapper"]["policy"] = policy
-        cfg["mapper"]["estimator"] = policy_estimator(
-            policy,
-            base_config.get("mapper", {}).get("estimator"),
-        )
+        cfg["mapper"]["estimator"] = estimator
 
         runtime_dir = run_dir / "runtime"
         runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -179,6 +193,8 @@ def main() -> int:
             "run_timeout_minutes": args.run_timeout_minutes,
             "eval_idle_exit_minutes": args.eval_idle_exit_minutes,
             "expected_tasks": count_trace_tasks(args.trace_csv) if args.trace_csv else 0,
+            "estimator": estimator,
+            "run_label": run_label,
         }
         (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
