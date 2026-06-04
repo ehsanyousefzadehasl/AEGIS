@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import shlex
+
 from collections.abc import Iterable
 
 
@@ -19,11 +22,19 @@ def build_recovery_header(
     recovery_force_full_gpu: bool,
     failed_host_free_mib_at_dispatch: int | None,
     now: str,
+    log_dir: str | None = None,
 ) -> str:
     failed_host_free_mib_at_dispatch = (
         "" if failed_host_free_mib_at_dispatch is None else int(failed_host_free_mib_at_dispatch)
     )
-    return (
-        f'echo "{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+{user_submit_time}+{recovery_count}+{int(recovery_force_full_gpu)}+{failed_host_free_mib_at_dispatch}" '
-        f'> {dir}/err-{now}-{task_id}.log'
+    log_dir = dir if log_dir is None else log_dir
+    os.makedirs(log_dir, exist_ok=True)
+    err_log = os.path.join(log_dir, f"err-{now}-{task_id}.log")
+
+    header = (
+        f"{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+"
+        f"{user_submit_time}+{recovery_count}+{int(recovery_force_full_gpu)}+"
+        f"{failed_host_free_mib_at_dispatch}"
     )
+
+    return f"echo {shlex.quote(header)} > {shlex.quote(err_log)}"

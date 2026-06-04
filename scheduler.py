@@ -2,6 +2,8 @@ import time
 import datetime
 import logging
 
+import os
+
 from telemetry import monitor
 from telemetry.gpu_state import launch_task, update, all_available_GPUs
 from queueing.task_queue import Task
@@ -74,6 +76,9 @@ print("Configured mapping estimator:", estimator)
 recovery_dir = settings.recovery_dir
 print("Configured recovery directory:", recovery_dir)
 
+task_log_dir = os.path.join(recovery_dir, "task_logs")
+os.makedirs(task_log_dir, exist_ok=True)
+
 gpu_UUIDs = runtime_state.gpu_uuids
 GPU_IDs = runtime_state.gpu_ids
 round_robin_generator = runtime_state.round_robin_generator
@@ -91,7 +96,7 @@ def run_scheduler(policy=policy, estimator=estimator):
         time.sleep(1)
 
         recovery(
-            dirs=[recovery_dir],
+            dirs=[task_log_dir],
             handled_crashes=handled_crashes,
             task_cls=Task,
             recovery_queue=recovery_queue,
@@ -192,6 +197,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     logger=logger,
                     event_path=event_path,
                     run_id=run_id,
+                    task_log_dir=task_log_dir,
                     failed_host_free_mib_at_dispatch=None,
                     profiled_gpu_util=profiled_gpu_util,
                     profiled_memory_mib=profiled_memory_mib,
@@ -271,6 +277,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     logger=logger,
                     event_path=event_path,
                     run_id=run_id,
+                    task_log_dir=task_log_dir,
                     failed_host_free_mib_at_dispatch=failed_host_free_mib_at_dispatch,
                     profiled_gpu_util=profiled_gpu_util,
                     profiled_memory_mib=profiled_memory_mib,

@@ -31,6 +31,7 @@ def dispatch_selected_job(
     logger,
     event_path: str,
     run_id: str,
+    task_log_dir: str | None = None,
     failed_host_free_mib_at_dispatch: int | None,
     profiled_gpu_util: float = 0.0,
     profiled_memory_mib: int = 0,
@@ -50,6 +51,7 @@ def dispatch_selected_job(
         task_obj,
         event_path,
         run_id,
+        log_dir=task_log_dir,
     )
 
     dequeue_selected_job(selected, main_queue, recovery_queue, main_lock, recovery_lock)
@@ -66,6 +68,7 @@ def dispatch_selected_job(
         task_obj.recovery_force_full_gpu,
         failed_host_free_mib_at_dispatch,
         now,
+        log_dir=task_log_dir,
     )
 
     logger.info(f"dispatched {task_obj.task_id} - {task_obj.task} - {gpus_identifiers}")

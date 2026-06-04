@@ -78,6 +78,7 @@ def build_launch_command(
     event_path,
     run_id,
     cuda_visible_devices=None,
+    log_dir=None,
 ):
     cuda_visible_devices = (
         gpus_identifiers if cuda_visible_devices is None else cuda_visible_devices
@@ -111,9 +112,12 @@ def build_launch_command(
 
     clean_command = " ".join(str(command_to_execute).split())
 
-    out_log = f"{dir}/out-{now}-{task_obj.task_id}.log"
-    err_log = f"{dir}/err-{now}-{task_obj.task_id}.log"
-    time_log = f"{dir}/time-{now}-{task_obj.task_id}.et"
+    log_dir = dir if log_dir is None else log_dir
+    os.makedirs(log_dir, exist_ok=True)
+    
+    out_log = f"{log_dir}/out-{now}-{task_obj.task_id}.log"
+    err_log = f"{log_dir}/err-{now}-{task_obj.task_id}.log"
+    time_log = f"{log_dir}/time-{now}-{task_obj.task_id}.et"
 
     command = (
         f"cd {shlex.quote(dir)} ; "

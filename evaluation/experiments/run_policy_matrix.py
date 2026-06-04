@@ -157,6 +157,9 @@ def main() -> int:
         runtime_dir = run_dir / "runtime"
         runtime_dir.mkdir(parents=True, exist_ok=True)
 
+        telemetry_dir = runtime_dir / "telemetry"
+        telemetry_dir.mkdir(parents=True, exist_ok=True)
+
         cfg.setdefault("recovery", {})
         cfg["recovery"]["dir"] = str(runtime_dir.resolve())
 
@@ -184,6 +187,9 @@ def main() -> int:
         if args.launch:
             env = os.environ.copy()
             env["CONFIG_PATH"] = str(run_config_path.resolve())
+
+            env["AEGIS_TELEMETRY_DIR"] = str(telemetry_dir.resolve())
+            metadata["telemetry_dir"] = str(telemetry_dir.resolve())
 
             if args.trace_csv:
                 expected_tasks = count_trace_tasks(args.trace_csv)

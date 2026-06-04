@@ -10,6 +10,9 @@ import io
 import csv
 import math
 
+import os
+from pathlib import Path
+
 analyze_configuration = "risk" # can be Normal | risk
 
 MEMORY_GUARD_MIB = 512
@@ -35,6 +38,13 @@ def _lin_slope(s):
 def _trend_flag(s, thresh=0.003, up_only=True):
     m = _lin_slope(s)
     return int(m > thresh) if up_only else int(abs(m) > thresh)
+
+
+def telemetry_output_path(filename: str) -> Path:
+    out_dir = Path(os.getenv("AEGIS_TELEMETRY_DIR", "."))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / filename
+
 
 # weights + trend threshold (tweak as you like)
 RISK_W = dict(wT=0.5, wE=0.3, wB=0.1, wC=0.1)  # T=p95, E=EMA, B=CV, C=trend_flag
@@ -411,10 +421,10 @@ def monitor_logger(window = 30):
         temp1 = temp.assign(time=[now] * len(temp))
         global header_flag
         if header_flag:
-            temp1.to_csv('dcgmi_metrics.csv', mode='a', index=False)
+            temp1.to_csv(telemetry_output_path("dcgmi_metrics.csv"), mode="a", index=False)
             header_flag = False
         else:
-            temp1.to_csv('dcgmi_metrics.csv', mode='a', header=False, index=False)
+            temp1.to_csv(telemetry_output_path("dcgmi_metrics.csv"), mode="a", header=False, index=False)
 
         # === 1s tick ===
         next_tick += INTERVAL
@@ -621,10 +631,10 @@ def top_system_logger():
 
         global header_flag_top
         if header_flag_top == True:
-            a.to_csv('top_data.csv', mode='a', index = False)
+            a.to_csv(telemetry_output_path("top_data.csv"), mode="a", index=False)
             header_flag_top = False
         else:
-            a.to_csv('top_data.csv', mode='a', header = False, index=False)
+            a.to_csv(telemetry_output_path("top_data.csv"), mode="a", header=False, index=False)
 
 
 def pid_on_system(pid: str) -> bool:

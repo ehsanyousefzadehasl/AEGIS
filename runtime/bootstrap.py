@@ -25,8 +25,12 @@ class SchedulerRuntime:
     event_path: str
 
 def configure_scheduler_logger():
+    settings = load_scheduler_settings()
+    recovery_dir = Path(settings.recovery_dir)
+    recovery_dir.mkdir(parents=True, exist_ok=True)
+
     logging.basicConfig(
-        filename="std.log",
+        filename=str(recovery_dir / "std.log"),
         filemode="w",
         format="%(asctime)s %(message)s",
         datefmt="%d-%b-%y %H:%M:%S",
