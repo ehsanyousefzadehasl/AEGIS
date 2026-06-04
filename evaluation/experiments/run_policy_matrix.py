@@ -270,10 +270,6 @@ def main() -> int:
                 out_handle.close()
                 err_handle.close()
 
-            metadata["return_code"] = return_code
-            (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
-
-            print(f"DONE {policy}: return_code={return_code} dir={run_dir}")
         else:
             print(f"READY {policy}: {run_dir}")
 
