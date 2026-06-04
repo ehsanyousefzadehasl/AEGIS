@@ -91,6 +91,9 @@ def dispatch_selected_job(
             "failure_reason": task_obj.last_failure_reason,
             "run_id": run_id,
             "failed_host_free_mib_at_dispatch": failed_host_free_mib_at_dispatch,
+            "profiled_gpu_util": float(profiled_gpu_util or 0.0),
+            "profiled_memory_mib": int(profiled_memory_mib or 0),
+            "lucid_ss": int(lucid_ss or 0),
         },
     )
 
