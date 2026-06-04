@@ -16,7 +16,7 @@ mapper:
   # PROFILED-* uses metrics from each workload YAML profile: block
   # estimator is ignored unless the selected policy needs it
   
-  policy: EST-MAGM
+  policy: exclusive
   #policy: exclusive
   #policy: oracle-FF
   #policy: oracle-BF
@@ -34,8 +34,9 @@ mapper:
   #policy: PROFILED-BF
   #policy: PROFILED-MAGM
   #policy: PROFILED-LUG
+  #policy: LUCID
   # knobs for each policy (ignored when not applicable)
-  estimator: horus
+  estimator: None
   # estimator: None
   # estimator: horus
   # estimator: faketensor
