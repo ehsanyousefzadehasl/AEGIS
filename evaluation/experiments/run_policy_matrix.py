@@ -3,26 +3,40 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-from email import policy
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
 import yaml
+import copy
 
+import time
 
 DEFAULT_CONFIG = "config.yaml"
 DEFAULT_RESULTS_DIR = "evaluation/experiments/results"
 
+def count_trace_tasks(trace_csv: str | None) -> int:
+    if not trace_csv:
+        return 0
 
+    with Path(trace_csv).open() as f:
+        return max(0, sum(1 for _ in f) - 1)
+    
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run AEGIS policy matrix experiments.")
+    p.add_argument("--launch", action="store_true", help="Launch each run with CONFIG_PATH.")
+    p.add_argument("--main", default="main.py", help="Scheduler entrypoint.")
     p.add_argument("--base-config", default=DEFAULT_CONFIG)
     p.add_argument("--results-dir", default=DEFAULT_RESULTS_DIR)
     p.add_argument("--experiment-name", required=True)
     p.add_argument("--policies", nargs="+", required=True)
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--trace-csv", help="Optional trace CSV to submit after launching main.py.")
+    p.add_argument("--delay-scale", type=float, default=1.0)
+    p.add_argument("--startup-wait-s", type=float, default=10.0)
+    p.add_argument("--eval-idle-exit-minutes", type=float, default=2.0)
     return p.parse_args()
 
 
@@ -43,6 +57,67 @@ def load_yaml(path: Path) -> dict:
 def write_yaml(path: Path, data: dict) -> None:
     path.write_text(yaml.safe_dump(data, sort_keys=False))
 
+def run_command(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    stdout_path: Path,
+    stderr_path: Path,
+) -> int:
+    with stdout_path.open("w") as out, stderr_path.open("w") as err:
+        proc = subprocess.Popen(
+            command,
+            cwd=str(cwd),
+            env=env,
+            stdout=out,
+            stderr=err,
+            text=True,
+        )
+        return proc.wait()
+    
+
+def start_process(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    stdout_path: Path,
+    stderr_path: Path,
+) -> tuple[subprocess.Popen, object, object]:
+    out = stdout_path.open("w")
+    err = stderr_path.open("w")
+    proc = subprocess.Popen(
+        command,
+        cwd=str(cwd),
+        env=env,
+        stdout=out,
+        stderr=err,
+        text=True,
+    )
+    return proc, out, err
+
+
+def policy_estimator(policy: str, base_estimator: str | None) -> str:
+    policies_without_estimator = {
+        "exclusive",
+        "LUCID",
+        "oracle-FF",
+        "oracle-BF",
+        "oracle-MAGM",
+        "oracle-LUG",
+        "OR-RR",
+        "OR-MAGM",
+        "OR-LUG",
+        "PROFILED-BF",
+        "PROFILED-MAGM",
+        "PROFILED-LUG",
+    }
+
+    if policy in policies_without_estimator:
+        return "None"
+
+    return base_estimator or "horus"
 
 def build_run_dir(results_dir: Path, experiment_name: str, policy: str) -> Path:
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -65,9 +140,19 @@ def main() -> int:
 
         run_dir.mkdir(parents=True, exist_ok=True)
 
-        cfg = dict(base_config)
+        cfg = copy.deepcopy(base_config)
         cfg.setdefault("mapper", {})
         cfg["mapper"]["policy"] = policy
+        cfg["mapper"]["estimator"] = policy_estimator(
+            policy,
+            base_config.get("mapper", {}).get("estimator"),
+        )
+
+        runtime_dir = run_dir / "runtime"
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+
+        cfg.setdefault("recovery", {})
+        cfg["recovery"]["dir"] = str(runtime_dir.resolve())
 
         run_config_path = run_dir / "config.yaml"
         write_yaml(run_config_path, cfg)
@@ -84,7 +169,80 @@ def main() -> int:
 
         shutil.copy2(base_config_path, run_dir / "base_config.yaml")
 
-        print(f"READY {policy}: {run_dir}")
+        if args.launch:
+            env = os.environ.copy()
+            env["CONFIG_PATH"] = str(run_config_path.resolve())
+
+            if args.trace_csv:
+                expected_tasks = count_trace_tasks(args.trace_csv)
+                env["AEGIS_EVAL_MODE"] = "1"
+                env["AEGIS_EXPECTED_TASKS"] = str(expected_tasks)
+                env["AEGIS_EVAL_IDLE_EXIT_MINUTES"] = str(args.eval_idle_exit_minutes)
+                metadata["expected_tasks"] = expected_tasks
+                metadata["eval_idle_exit_minutes"] = args.eval_idle_exit_minutes
+
+            command = ["python", args.main]
+            metadata["command"] = command
+            metadata["config_path"] = str(run_config_path.resolve())
+            (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+            proc, out_handle, err_handle = start_process(
+                command,
+                cwd=Path.cwd(),
+                env=env,
+                stdout_path=run_dir / "stdout.log",
+                stderr_path=run_dir / "stderr.log",
+            )
+
+            metadata["pid"] = proc.pid
+            metadata["trace_csv"] = args.trace_csv
+            (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+            print(f"STARTED {policy}: pid={proc.pid} dir={run_dir}")
+
+            try:
+                if args.trace_csv:
+                    time.sleep(args.startup_wait_s)
+
+                    submit_cmd = [
+                        "python",
+                        "evaluation/experiments/submit_trace.py",
+                        "--trace-csv",
+                        args.trace_csv,
+                        "--delay-scale",
+                        str(args.delay_scale),
+                    ]
+
+                    submit_rc = run_command(
+                        submit_cmd,
+                        cwd=Path.cwd(),
+                        env=os.environ.copy(),
+                        stdout_path=run_dir / "submit_stdout.log",
+                        stderr_path=run_dir / "submit_stderr.log",
+                    )
+
+                    metadata["submit_command"] = submit_cmd
+                    metadata["submit_return_code"] = submit_rc
+                    (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+                    print(f"SUBMITTED {policy}: submit_return_code={submit_rc}")
+
+                return_code = proc.wait()
+                metadata["return_code"] = return_code
+                (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+                print(f"DONE {policy}: return_code={return_code} dir={run_dir}")
+
+            finally:
+                out_handle.close()
+                err_handle.close()
+
+            metadata["return_code"] = return_code
+            (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+            print(f"DONE {policy}: return_code={return_code} dir={run_dir}")
+        else:
+            print(f"READY {policy}: {run_dir}")
 
     return 0
 
