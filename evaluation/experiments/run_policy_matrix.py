@@ -195,6 +195,11 @@ def main() -> int:
             "expected_tasks": count_trace_tasks(args.trace_csv) if args.trace_csv else 0,
             "estimator": estimator,
             "run_label": run_label,
+            "risk_thresholds": {
+                "smact": float(cfg.get("risk", {}).get("smact_threshold", 0.65)),
+                "smocc": float(cfg.get("risk", {}).get("smocc_threshold", 0.35)),
+                "drama": float(cfg.get("risk", {}).get("drama_threshold", 0.50)),
+            },
         }
         (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 

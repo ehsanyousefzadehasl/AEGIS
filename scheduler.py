@@ -21,6 +21,7 @@ from placement.dispatcher import (
     resolve_policy_placement_estimate,
     validate_policy_placement,
 )
+from placement.candidate_selection import RiskThresholds
 from placement.profiles import policy_requires_gpu_metrics, policy_uses_dispatcher
 from placement.admission import should_dispatch_exclusive_first
 from recovery.manager import recovery
@@ -75,6 +76,12 @@ print("Configured mapping estimator:", estimator)
 
 recovery_dir = settings.recovery_dir
 print("Configured recovery directory:", recovery_dir)
+
+risk_thresholds = RiskThresholds(
+    smact=settings.risk_smact_threshold,
+    smocc=settings.risk_smocc_threshold,
+    drama=settings.risk_drama_threshold,
+)
 
 task_log_dir = os.path.join(recovery_dir, "task_logs")
 os.makedirs(task_log_dir, exist_ok=True)
@@ -237,6 +244,7 @@ def run_scheduler(policy=policy, estimator=estimator):
                     placement_estimate=placement_estimate,
                     round_robin_generator=round_robin_generator,
                     gpu_ids=GPU_IDs,
+                    risk_thresholds=risk_thresholds,
                 )
 
                 if assigned_gpu_ids is None:

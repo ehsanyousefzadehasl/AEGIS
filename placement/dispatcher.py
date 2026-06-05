@@ -7,6 +7,7 @@ from placement.inputs import (
     get_missing_policy_input_message,
     resolve_placement_estimate,
 )
+from placement.candidate_selection import RiskThresholds
 from dataclasses import dataclass
 
 
@@ -20,6 +21,7 @@ class _PlacementRequest:
     placement_estimate: PlacementEstimate | None = None
     round_robin_generator: object | None = None
     gpu_ids: object | None = None
+    risk_thresholds: RiskThresholds | None = None
 
 
 def _build_placement_request(
@@ -32,6 +34,7 @@ def _build_placement_request(
     placement_estimate: PlacementEstimate | None,
     round_robin_generator=None,
     gpu_ids=None,
+    risk_thresholds: RiskThresholds | None = None,
 ):
 
     return _PlacementRequest(
@@ -43,6 +46,7 @@ def _build_placement_request(
         placement_estimate=placement_estimate,
         round_robin_generator=round_robin_generator,
         gpu_ids=gpu_ids,
+        risk_thresholds=risk_thresholds,
     )
 
 
@@ -70,6 +74,7 @@ def dispatch_policy_placement(
     round_robin_generator=None,
     gpu_ids=None,
     recovery_min_free_mib_override=None,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     request = _build_placement_request(
         policy=policy,
@@ -80,6 +85,7 @@ def dispatch_policy_placement(
         round_robin_generator=round_robin_generator,
         gpu_ids=gpu_ids,
         recovery_min_free_mib_override=recovery_min_free_mib_override,
+        risk_thresholds=risk_thresholds,
     )
     return dispatch_placement(request)
 

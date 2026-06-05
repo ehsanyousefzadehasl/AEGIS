@@ -4,9 +4,9 @@ import pandas as pd
 
 @dataclass
 class RiskThresholds:
-    smact: float = 0.80
-    smocc: float = 0.45
-    drama: float = 0.40
+    smact: float = 0.65
+    smocc: float = 0.35
+    drama: float = 0.50
 
 
 def apply_memory_filter(

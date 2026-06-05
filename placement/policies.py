@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from placement.candidate_selection import build_candidate_gpus
+from placement.candidate_selection import RiskThresholds, build_candidate_gpus
 from runtime import gpu_allocations
 
 def select_oracle_bf(
@@ -11,11 +11,13 @@ def select_oracle_bf(
     gpu_memory_requirement: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_requirement + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -36,11 +38,13 @@ def select_oracle_magm(
     gpu_memory_requirement: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_requirement + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -61,11 +65,13 @@ def select_oracle_lug(
     gpu_memory_requirement: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_requirement + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -87,6 +93,7 @@ def select_or_magm(
     available_gpu_ids,
     number_of_gpus_requested: int,
     recovery_min_free_mib_override: int | None = None,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     min_free_mib = 5120
     if recovery_min_free_mib_override is not None:
@@ -96,6 +103,7 @@ def select_or_magm(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=min_free_mib,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -116,6 +124,7 @@ def select_or_lug(
     available_gpu_ids,
     number_of_gpus_requested: int,
     recovery_min_free_mib_override: int | None = None,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     min_free_mib = 5120
     if recovery_min_free_mib_override is not None:
@@ -125,6 +134,7 @@ def select_or_lug(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=min_free_mib,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -145,11 +155,13 @@ def select_est_magm(
     gpu_memory_estimation: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_estimation + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -169,11 +181,13 @@ def select_est_bf(
     gpu_memory_estimation: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_estimation + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 
@@ -194,11 +208,13 @@ def select_est_lug(
     gpu_memory_estimation: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_estimation + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 

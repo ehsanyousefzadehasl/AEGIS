@@ -54,6 +54,7 @@ def _execute_oracle_selector(selector, request):
         gpu_memory_requirement=gpu_memory_requirement,
         available_gpu_ids=request.available_gpu_ids,
         number_of_gpus_requested=request.number_of_gpus_requested,
+        risk_thresholds=request.risk_thresholds,
     )
 
 
@@ -63,6 +64,7 @@ def _execute_or_selector(selector, request):
         available_gpu_ids=request.available_gpu_ids,
         number_of_gpus_requested=request.number_of_gpus_requested,
         recovery_min_free_mib_override=request.recovery_min_free_mib_override,
+        risk_thresholds=request.risk_thresholds,
     )
 
 
@@ -76,6 +78,7 @@ def _execute_est_selector(selector, request):
         gpu_memory_estimation=gpu_memory_estimation,
         available_gpu_ids=request.available_gpu_ids,
         number_of_gpus_requested=request.number_of_gpus_requested,
+        risk_thresholds=request.risk_thresholds,
     )
 
 def _execute_or_rr_selector(selector, request):

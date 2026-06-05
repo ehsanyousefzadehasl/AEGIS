@@ -17,6 +17,9 @@ class SchedulerSettings:
     recovery_max_step_mib: int
     patience: str
     monitoring_window_size: str
+    risk_smact_threshold: float
+    risk_smocc_threshold: float
+    risk_drama_threshold: float
 
 
 def load_scheduler_settings() -> SchedulerSettings:
@@ -74,6 +77,8 @@ def load_scheduler_settings() -> SchedulerSettings:
     if recovery_max_step_mib <= 0:
         raise ValueError("recovery.max_step_mib must be positive")
 
+    risk_cfg = cfg.get("risk", {})
+
     return SchedulerSettings(
         policy=policy,
         estimator=estimator,
@@ -84,4 +89,8 @@ def load_scheduler_settings() -> SchedulerSettings:
         recovery_max_step_mib=recovery_max_step_mib,
         patience=cfg.get("monitor", {}).get("patience", "10"),
         monitoring_window_size=cfg.get("monitor", {}).get("window", "30"),
+
+        risk_smact_threshold=float(risk_cfg.get("smact_threshold", 0.65)),
+        risk_smocc_threshold=float(risk_cfg.get("smocc_threshold", 0.35)),
+        risk_drama_threshold=float(risk_cfg.get("drama_threshold", 0.50)),
     )
