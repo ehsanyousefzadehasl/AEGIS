@@ -20,7 +20,7 @@ def apply_memory_filter(
 
 def apply_utilization_gate(
     candidate_gpus: pd.DataFrame,
-    thresholds: RiskThresholds,
+    risk_thresholds: RiskThresholds,
     enabled: bool = True,
 ) -> pd.DataFrame:
     if not enabled:
@@ -29,10 +29,10 @@ def apply_utilization_gate(
     temp_ = candidate_gpus
     return temp_.loc[
         ~(
-            (temp_["smact"] >= thresholds.smact)
+            (temp_["smact"] >= risk_thresholds.smact)
             & (
-                (temp_["smocc"] >= thresholds.smocc)
-                | (temp_["drama"] >= thresholds.drama)
+                (temp_["smocc"] >= risk_thresholds.smocc)
+                | (temp_["drama"] >= risk_thresholds.drama)
             )
         )
     ].copy()
@@ -50,14 +50,14 @@ def build_candidate_gpus(
     gpus_with_metrics: pd.DataFrame,
     min_free_mib: int,
     available_gpu_ids,
-    thresholds: RiskThresholds | None = None,
+    risk_thresholds: RiskThresholds | None = None,
     use_utilization_gate: bool = True,
 ) -> pd.DataFrame:
-    thresholds = thresholds or RiskThresholds()
+    thresholds = risk_thresholds or RiskThresholds()
     candidates = apply_memory_filter(gpus_with_metrics, min_free_mib)
     candidates = apply_utilization_gate(
         candidates,
-        thresholds=thresholds,
+        risk_thresholds=thresholds,
         enabled=use_utilization_gate,
     )
     candidates = apply_availability_filter(candidates, available_gpu_ids)

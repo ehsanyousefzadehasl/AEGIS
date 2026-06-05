@@ -157,142 +157,142 @@ def main() -> int:
             run_label = run_label_for(policy, estimator)
             run_dir = build_run_dir(Path(args.results_dir), args.experiment_name, run_label)
 
-        if args.dry_run:
-            print(f"DRY {policy}: {run_dir}")
-            continue
+            if args.dry_run:
+                print(f"DRY {policy}: {run_dir}")
+                continue
 
-        run_dir.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
 
-        cfg = copy.deepcopy(base_config)
-        cfg.setdefault("mapper", {})
-        cfg["mapper"]["policy"] = policy
-        cfg["mapper"]["estimator"] = estimator
+            cfg = copy.deepcopy(base_config)
+            cfg.setdefault("mapper", {})
+            cfg["mapper"]["policy"] = policy
+            cfg["mapper"]["estimator"] = estimator
 
-        runtime_dir = run_dir / "runtime"
-        runtime_dir.mkdir(parents=True, exist_ok=True)
+            runtime_dir = run_dir / "runtime"
+            runtime_dir.mkdir(parents=True, exist_ok=True)
 
-        telemetry_dir = runtime_dir / "telemetry"
-        telemetry_dir.mkdir(parents=True, exist_ok=True)
+            telemetry_dir = runtime_dir / "telemetry"
+            telemetry_dir.mkdir(parents=True, exist_ok=True)
 
-        cfg.setdefault("recovery", {})
-        cfg["recovery"]["dir"] = str(runtime_dir.resolve())
+            cfg.setdefault("recovery", {})
+            cfg["recovery"]["dir"] = str(runtime_dir.resolve())
 
-        run_config_path = run_dir / "config.yaml"
-        write_yaml(run_config_path, cfg)
+            run_config_path = run_dir / "config.yaml"
+            write_yaml(run_config_path, cfg)
 
-        metadata = {
-            "experiment_name": args.experiment_name,
-            "policy": policy,
-            "git_commit": git_commit(),
-            "base_config": str(base_config_path),
-            "run_dir": str(run_dir),
-            "command": ["python", "main.py"],
-            "trace_csv": args.trace_csv,
-            "delay_scale": args.delay_scale,
-            "startup_wait_s": args.startup_wait_s,
-            "run_timeout_minutes": args.run_timeout_minutes,
-            "eval_idle_exit_minutes": args.eval_idle_exit_minutes,
-            "expected_tasks": count_trace_tasks(args.trace_csv) if args.trace_csv else 0,
-            "estimator": estimator,
-            "run_label": run_label,
-            "risk_thresholds": {
-                "smact": float(cfg.get("risk", {}).get("smact_threshold", 0.65)),
-                "smocc": float(cfg.get("risk", {}).get("smocc_threshold", 0.35)),
-                "drama": float(cfg.get("risk", {}).get("drama_threshold", 0.50)),
-            },
-        }
-        (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
-
-        shutil.copy2(base_config_path, run_dir / "base_config.yaml")
-
-        if args.launch:
-            env = os.environ.copy()
-            env["CONFIG_PATH"] = str(run_config_path.resolve())
-
-            env["AEGIS_TELEMETRY_DIR"] = str(telemetry_dir.resolve())
-            metadata["telemetry_dir"] = str(telemetry_dir.resolve())
-
-            if args.trace_csv:
-                expected_tasks = count_trace_tasks(args.trace_csv)
-                env["AEGIS_EVAL_MODE"] = "1"
-                env["AEGIS_EXPECTED_TASKS"] = str(expected_tasks)
-                env["AEGIS_EVAL_IDLE_EXIT_MINUTES"] = str(args.eval_idle_exit_minutes)
-                metadata["expected_tasks"] = expected_tasks
-                metadata["eval_idle_exit_minutes"] = args.eval_idle_exit_minutes
-
-            command = ["python", args.main]
-            metadata["command"] = command
-            metadata["config_path"] = str(run_config_path.resolve())
+            metadata = {
+                "experiment_name": args.experiment_name,
+                "policy": policy,
+                "git_commit": git_commit(),
+                "base_config": str(base_config_path),
+                "run_dir": str(run_dir),
+                "command": ["python", "main.py"],
+                "trace_csv": args.trace_csv,
+                "delay_scale": args.delay_scale,
+                "startup_wait_s": args.startup_wait_s,
+                "run_timeout_minutes": args.run_timeout_minutes,
+                "eval_idle_exit_minutes": args.eval_idle_exit_minutes,
+                "expected_tasks": count_trace_tasks(args.trace_csv) if args.trace_csv else 0,
+                "estimator": estimator,
+                "run_label": run_label,
+                "risk_thresholds": {
+                    "smact": float(cfg.get("risk", {}).get("smact_threshold", 0.65)),
+                    "smocc": float(cfg.get("risk", {}).get("smocc_threshold", 0.35)),
+                    "drama": float(cfg.get("risk", {}).get("drama_threshold", 0.50)),
+                },
+            }
             (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
-            proc, out_handle, err_handle = start_process(
-                command,
-                cwd=Path.cwd(),
-                env=env,
-                stdout_path=run_dir / "stdout.log",
-                stderr_path=run_dir / "stderr.log",
-            )
+            shutil.copy2(base_config_path, run_dir / "base_config.yaml")
 
-            metadata["pid"] = proc.pid
-            metadata["trace_csv"] = args.trace_csv
-            (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+            if args.launch:
+                env = os.environ.copy()
+                env["CONFIG_PATH"] = str(run_config_path.resolve())
 
-            print(f"STARTED {policy}: pid={proc.pid} dir={run_dir}")
+                env["AEGIS_TELEMETRY_DIR"] = str(telemetry_dir.resolve())
+                metadata["telemetry_dir"] = str(telemetry_dir.resolve())
 
-            try:
                 if args.trace_csv:
-                    time.sleep(args.startup_wait_s)
+                    expected_tasks = count_trace_tasks(args.trace_csv)
+                    env["AEGIS_EVAL_MODE"] = "1"
+                    env["AEGIS_EXPECTED_TASKS"] = str(expected_tasks)
+                    env["AEGIS_EVAL_IDLE_EXIT_MINUTES"] = str(args.eval_idle_exit_minutes)
+                    metadata["expected_tasks"] = expected_tasks
+                    metadata["eval_idle_exit_minutes"] = args.eval_idle_exit_minutes
 
-                    submit_cmd = [
-                        "python",
-                        "evaluation/experiments/submit_trace.py",
-                        "--trace-csv",
-                        args.trace_csv,
-                        "--delay-scale",
-                        str(args.delay_scale),
-                    ]
-
-                    submit_rc = run_command(
-                        submit_cmd,
-                        cwd=Path.cwd(),
-                        env=os.environ.copy(),
-                        stdout_path=run_dir / "submit_stdout.log",
-                        stderr_path=run_dir / "submit_stderr.log",
-                    )
-
-                    metadata["submit_command"] = submit_cmd
-                    metadata["submit_return_code"] = submit_rc
-                    (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
-
-                    print(f"SUBMITTED {policy}: submit_return_code={submit_rc}")
-
-                try:
-                    return_code = proc.wait(timeout=args.run_timeout_minutes * 60.0)
-                    timed_out = False
-                except subprocess.TimeoutExpired:
-                    timed_out = True
-                    proc.terminate()
-                    try:
-                        return_code = proc.wait(timeout=30)
-                    except subprocess.TimeoutExpired:
-                        proc.kill()
-                        return_code = proc.wait()
-
-                metadata["return_code"] = return_code
-
-                metadata["timed_out"] = timed_out
-                metadata["run_timeout_minutes"] = args.run_timeout_minutes
-
+                command = ["python", args.main]
+                metadata["command"] = command
+                metadata["config_path"] = str(run_config_path.resolve())
                 (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
-                print(f"DONE {policy}: return_code={return_code} dir={run_dir}")
+                proc, out_handle, err_handle = start_process(
+                    command,
+                    cwd=Path.cwd(),
+                    env=env,
+                    stdout_path=run_dir / "stdout.log",
+                    stderr_path=run_dir / "stderr.log",
+                )
 
-            finally:
-                out_handle.close()
-                err_handle.close()
+                metadata["pid"] = proc.pid
+                metadata["trace_csv"] = args.trace_csv
+                (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
-        else:
-            print(f"READY {policy}: {run_dir}")
+                print(f"STARTED {run_label}: pid={proc.pid} dir={run_dir}")
+
+                try:
+                    if args.trace_csv:
+                        time.sleep(args.startup_wait_s)
+
+                        submit_cmd = [
+                            "python",
+                            "evaluation/experiments/submit_trace.py",
+                            "--trace-csv",
+                            args.trace_csv,
+                            "--delay-scale",
+                            str(args.delay_scale),
+                        ]
+
+                        submit_rc = run_command(
+                            submit_cmd,
+                            cwd=Path.cwd(),
+                            env=os.environ.copy(),
+                            stdout_path=run_dir / "submit_stdout.log",
+                            stderr_path=run_dir / "submit_stderr.log",
+                        )
+
+                        metadata["submit_command"] = submit_cmd
+                        metadata["submit_return_code"] = submit_rc
+                        (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+                        print(f"SUBMITTED {run_label}: submit_return_code={submit_rc}")
+
+                    try:
+                        return_code = proc.wait(timeout=args.run_timeout_minutes * 60.0)
+                        timed_out = False
+                    except subprocess.TimeoutExpired:
+                        timed_out = True
+                        proc.terminate()
+                        try:
+                            return_code = proc.wait(timeout=30)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                            return_code = proc.wait()
+
+                    metadata["return_code"] = return_code
+
+                    metadata["timed_out"] = timed_out
+                    metadata["run_timeout_minutes"] = args.run_timeout_minutes
+
+                    (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+                    print(f"DONE {run_label}: return_code={return_code} dir={run_dir}")
+
+                finally:
+                    out_handle.close()
+                    err_handle.close()
+
+            else:
+                print(f"READY {run_label}: {run_dir}")
 
     return 0
 

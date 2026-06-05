@@ -359,11 +359,13 @@ def select_oracle_ff(
     gpu_memory_requirement: int,
     available_gpu_ids,
     number_of_gpus_requested: int,
+    risk_thresholds: RiskThresholds | None = None,
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
         min_free_mib=gpu_memory_requirement + 2048,
         available_gpu_ids=available_gpu_ids,
+        risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
     )
 

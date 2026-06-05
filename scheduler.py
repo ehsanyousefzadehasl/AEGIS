@@ -121,6 +121,19 @@ def run_scheduler(policy=policy, estimator=estimator):
         
         update()
 
+        print(
+            "GPU lifecycle state:\n",
+            gpus_state[
+                [
+                    "GPU_id",
+                    "CPU_task_PID",
+                    "validity",
+                    "gpu_seen_at",
+                    "window_seconds",
+                ]
+            ].to_string(),
+        )
+
         gpu_allocations.reconcile_allocations()
         print("GPU allocation snapshot:", gpu_allocations.snapshot())
 
