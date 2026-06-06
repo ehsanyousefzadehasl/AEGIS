@@ -392,6 +392,141 @@ def summarize_jobs(
 
     return rows
 
+def percentile_summary(
+    series: pd.Series,
+    prefix: str,
+) -> dict[str, float | None]:
+    values = pd.to_numeric(series, errors="coerce").dropna()
+
+    if values.empty:
+        return {
+            f"{prefix}_mean_s": None,
+            f"{prefix}_p50_s": None,
+            f"{prefix}_p95_s": None,
+            f"{prefix}_p99_s": None,
+        }
+
+    return {
+        f"{prefix}_mean_s": float(values.mean()),
+        f"{prefix}_p50_s": float(values.quantile(0.50)),
+        f"{prefix}_p95_s": float(values.quantile(0.95)),
+        f"{prefix}_p99_s": float(values.quantile(0.99)),
+    }
+
+def summarize_run(
+    *,
+    run_dir: Path,
+    metadata: dict,
+    jobs: list[dict],
+    attempts: list[dict],
+) -> dict:
+    job_df = pd.DataFrame(jobs)
+    attempt_df = pd.DataFrame(attempts)
+
+    submitted_count = (
+        int(job_df["submitted_at"].notna().sum())
+        if "submitted_at" in job_df
+        else 0
+    )
+    completed_count = (
+        int(job_df["completed_successfully"].fillna(False).sum())
+        if "completed_successfully" in job_df
+        else 0
+    )
+
+    first_submitted_at = pd.to_datetime(
+        job_df.get("submitted_at"),
+        errors="coerce",
+        utc=True,
+    ).min()
+
+    last_completed_at = pd.to_datetime(
+        job_df.get("completed_at"),
+        errors="coerce",
+        utc=True,
+    ).max()
+
+    makespan_s = None
+    if pd.notna(first_submitted_at) and pd.notna(last_completed_at):
+        makespan_s = float(
+            (last_completed_at - first_submitted_at).total_seconds()
+        )
+
+    row = {
+        "experiment_name": metadata.get("experiment_name"),
+        "run_label": metadata.get("run_label", run_dir.name),
+        "policy": metadata.get("policy"),
+        "estimator": metadata.get("estimator"),
+        "trace_csv": metadata.get("trace_csv"),
+        "run_dir": str(run_dir),
+        "git_commit": metadata.get("git_commit"),
+        "return_code": metadata.get("return_code"),
+        "timed_out": metadata.get("timed_out"),
+        "expected_tasks": metadata.get("expected_tasks"),
+        "submitted_job_count": submitted_count,
+        "completed_job_count": completed_count,
+        "incomplete_job_count": max(0, submitted_count - completed_count),
+        "completion_fraction": (
+            completed_count / submitted_count
+            if submitted_count > 0
+            else None
+        ),
+        "makespan_s": makespan_s,
+        "total_attempt_count": len(attempt_df),
+        "failed_attempt_count": (
+            int((attempt_df["terminal_event"] == "failed").sum())
+            if "terminal_event" in attempt_df
+            else 0
+        ),
+        "recovered_attempt_count": (
+            int(attempt_df["recovered"].fillna(False).sum())
+            if "recovered" in attempt_df
+            else 0
+        ),
+        "recovery_stopped_job_count": (
+            int((job_df["recovery_stopped_count"] > 0).sum())
+            if "recovery_stopped_count" in job_df
+            else 0
+        ),
+        "total_recovery_queue_wait_s": (
+            float(job_df["total_recovery_queue_wait_s"].sum())
+            if "total_recovery_queue_wait_s" in job_df
+            else 0.0
+        ),
+        "total_failed_attempt_runtime_s": (
+            float(job_df["failed_attempt_runtime_s"].sum())
+            if "failed_attempt_runtime_s" in job_df
+            else 0.0
+        ),
+        "risk_smact_threshold": metadata.get(
+            "risk_thresholds", {}
+        ).get("smact"),
+        "risk_smocc_threshold": metadata.get(
+            "risk_thresholds", {}
+        ).get("smocc"),
+        "risk_drama_threshold": metadata.get(
+            "risk_thresholds", {}
+        ).get("drama"),
+    }
+
+    metrics = {
+        "initial_queue_wait": "initial_queue_wait_s",
+        "jct": "jct_s",
+        "execution_span": "execution_span_s",
+        "successful_attempt_runtime": "successful_attempt_runtime_s",
+        "recovery_queue_wait": "total_recovery_queue_wait_s",
+        "recovery_gap": "total_recovery_gap_s",
+    }
+
+    for prefix, column in metrics.items():
+        series = (
+            job_df[column]
+            if column in job_df
+            else pd.Series(dtype="float64")
+        )
+        row.update(percentile_summary(series, prefix))
+
+    return row
 
 def main() -> int:
     args = parse_args()
@@ -410,6 +545,7 @@ def main() -> int:
 
     attempt_rows = []
     job_rows = []
+    run_rows = []
 
     for run_dir in run_dirs:
         metadata = load_json(run_dir / "metadata.json")
@@ -429,6 +565,16 @@ def main() -> int:
             attempts=run_attempt_rows,
         )
         job_rows.extend(rows)
+
+
+        run_rows.append(
+            summarize_run(
+                run_dir=run_dir,
+                metadata=metadata,
+                jobs=rows,
+                attempts=run_attempt_rows,
+            )
+        )
 
         print(
             metadata.get("run_label", run_dir.name),
@@ -450,6 +596,12 @@ def main() -> int:
         f"Wrote {len(attempt_df)} attempt rows to "
         f"{attempt_output}"
     )
+
+    run_df = pd.DataFrame(run_rows)
+    run_output = output_dir / "run_summary.csv"
+    run_df.to_csv(run_output, index=False)
+
+    print(f"Wrote {len(run_df)} run rows to {run_output}")
 
     return 0
 

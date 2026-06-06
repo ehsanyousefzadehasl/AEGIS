@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from evaluation.experiments.summarize_policy_runs import (
     summarize_attempts,
     summarize_jobs,
+    summarize_run,
 )
 
 
@@ -75,6 +76,15 @@ class SummarizePolicyRunsTests(unittest.TestCase):
             attempts=attempts,
         )
 
+
+        run = summarize_run(
+            run_dir=run_dir,
+            metadata=metadata,
+            jobs=jobs,
+            attempts=attempts,
+        )
+
+
         self.assertEqual(len(attempts), 2)
         self.assertEqual(len(jobs), 1)
 
@@ -111,6 +121,38 @@ class SummarizePolicyRunsTests(unittest.TestCase):
         self.assertAlmostEqual(job["total_recovery_gap_s"], 23.0)
         self.assertEqual(job["maximum_recovery_count"], 1)
         self.assertTrue(job["completed_successfully"])
+
+
+        self.assertEqual(run["submitted_job_count"], 1)
+        self.assertEqual(run["completed_job_count"], 1)
+        self.assertEqual(run["incomplete_job_count"], 0)
+        self.assertAlmostEqual(run["completion_fraction"], 1.0)
+
+        self.assertEqual(run["total_attempt_count"], 2)
+        self.assertEqual(run["failed_attempt_count"], 1)
+        self.assertEqual(run["recovered_attempt_count"], 1)
+
+        self.assertAlmostEqual(run["makespan_s"], 155.0)
+        self.assertAlmostEqual(run["total_recovery_queue_wait_s"], 20.0)
+        self.assertAlmostEqual(run["total_failed_attempt_runtime_s"], 40.0)
+
+        # Only one job exists, so every percentile equals that job's value.
+        for suffix in ["mean_s", "p50_s", "p95_s", "p99_s"]:
+            self.assertAlmostEqual(run[f"initial_queue_wait_{suffix}"], 10.0)
+            self.assertAlmostEqual(run[f"jct_{suffix}"], 155.0)
+            self.assertAlmostEqual(run[f"execution_span_{suffix}"], 143.0)
+            self.assertAlmostEqual(
+                run[f"successful_attempt_runtime_{suffix}"],
+                80.0,
+            )
+            self.assertAlmostEqual(
+                run[f"recovery_queue_wait_{suffix}"],
+                20.0,
+            )
+            self.assertAlmostEqual(
+                run[f"recovery_gap_{suffix}"],
+                23.0,
+            )
 
 
 if __name__ == "__main__":
