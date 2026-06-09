@@ -63,7 +63,7 @@ recovery:
   max_step_mib: 8192
 
 
-  risk:
+risk:
   smact_threshold: 0.65
   smocc_threshold: 0.35
   drama_threshold: 0.50
