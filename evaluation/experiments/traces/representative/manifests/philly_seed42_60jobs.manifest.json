@@ -1,0 +1,228 @@
+{
+  "configuration": {
+    "config_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/examples/configs/philly_source_preserving.yaml",
+    "duration_matching": "nearest_quantile",
+    "gpu_demand_matching": "exact",
+    "minimum_jobs_by_gpu_count": {
+      "2": 2
+    },
+    "preserve_arrivals": true,
+    "requested_job_count": 60,
+    "seed": 42,
+    "selection_method": "representative",
+    "simulation": {
+      "enabled": true,
+      "server_gpu_count": 3
+    },
+    "source_cluster": "philly",
+    "source_format": "philly",
+    "supported_gpu_counts": [
+      1,
+      2
+    ],
+    "unsupported_gpu_policy": "filter"
+  },
+  "exclusive_simulation": {
+    "arrival_span_s": 9404.0,
+    "jct_mean_s": 18601.151333333335,
+    "jct_p50_s": 19334.945000000003,
+    "jct_p95_s": 30216.703500000003,
+    "jct_p99_s": 33371.70809999999,
+    "job_count": 60,
+    "makespan_s": 42136.47000000001,
+    "scheduling_model": "arrival_order_earliest_available_exclusive_gpus",
+    "server_gpu_count": 3,
+    "waiting_mean_s": 16726.779333333332,
+    "waiting_p50_s": 17265.275,
+    "waiting_p95_s": 28809.03250000001,
+    "waiting_p99_s": 29440.822600000007
+  },
+  "inputs": {
+    "source_trace_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/data/raw/philly/cluster_job_log",
+    "source_trace_sha256": "aedddbb94523e7ddf454284ce3f3211ce7175f16dd189e5f00195603c65472c6",
+    "workload_catalog_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/outputs/workload_catalog.csv",
+    "workload_catalog_sha256": "e5cce4145666093e60c66a72332b740194c4c4fc6306b97b6e65c44df02a2d6c"
+  },
+  "manifest_version": 1,
+  "mapping": {
+    "mapped_job_count": 60,
+    "runtime_quantile_distance_max": 0.010025062656641603,
+    "runtime_quantile_distance_mean": 0.004845446950710105,
+    "runtime_quantile_distance_p50": 0.00483351235230936,
+    "runtime_quantile_distance_p95": 0.009667024704618665,
+    "unique_workload_count": 52,
+    "workload_usage": {
+      "bert_base_wiki_bs32_1gpu": 1,
+      "bert_large_wiki_bs8_1gpu": 1,
+      "dlrm_criteo_bs32768_1gpu": 1,
+      "efficientnet_cifar100_bs128_20e_1gpu": 1,
+      "efficientnet_cifar100_bs128_50e_1gpu": 1,
+      "efficientnet_cifar100_bs32_20e_1gpu": 1,
+      "efficientnet_cifar100_bs32_50e_1gpu": 1,
+      "efficientnet_cifar100_bs64_20e_1gpu": 1,
+      "efficientnet_cifar100_bs64_50e_1gpu": 1,
+      "efficientnet_imagenet_bs128_1gpu": 1,
+      "efficientnet_imagenet_bs32_1gpu": 1,
+      "efficientnet_imagenet_bs64_1gpu": 2,
+      "gpt2_large_wiki_bs8_2gpu": 1,
+      "gpt2_xl_wiki_bs2_1gpu": 1,
+      "inception_imagenet_bs128_1gpu": 1,
+      "inception_imagenet_bs32_1gpu": 1,
+      "inception_imagenet_bs64_1gpu": 2,
+      "llama3_width_8layer_wiki_bs1_1gpu": 1,
+      "maskrcnn_coco_bs8_1gpu": 1,
+      "mnist_bs32_1gpu": 1,
+      "mobilenet_cifar100_bs128_20e_1gpu": 2,
+      "mobilenet_cifar100_bs128_50e_1gpu": 1,
+      "mobilenet_cifar100_bs32_20e_1gpu": 1,
+      "mobilenet_cifar100_bs32_50e_1gpu": 1,
+      "mobilenet_cifar100_bs64_20e_1gpu": 1,
+      "mobilenet_cifar100_bs64_50e_1gpu": 1,
+      "mobilenet_imagenet_bs128_1gpu": 1,
+      "mobilenet_imagenet_bs32_1gpu": 1,
+      "mobilenet_imagenet_bs64_1gpu": 1,
+      "resnet18_cifar100_bs128_20e_1gpu": 1,
+      "resnet18_cifar100_bs128_50e_1gpu": 1,
+      "resnet18_cifar100_bs32_20e_1gpu": 2,
+      "resnet18_cifar100_bs32_50e_1gpu": 2,
+      "resnet18_cifar100_bs64_20e_1gpu": 1,
+      "resnet18_cifar100_bs64_50e_1gpu": 1,
+      "resnet34_cifar100_bs128_20e_1gpu": 1,
+      "resnet34_cifar100_bs128_50e_1gpu": 1,
+      "resnet34_cifar100_bs32_20e_1gpu": 2,
+      "resnet34_cifar100_bs32_50e_1gpu": 1,
+      "resnet34_cifar100_bs64_20e_1gpu": 1,
+      "resnet34_cifar100_bs64_50e_1gpu": 1,
+      "resnet50_imagenet_bs128_1gpu": 1,
+      "resnet50_imagenet_bs32_1gpu": 2,
+      "resnet50_imagenet_bs64_1gpu": 1,
+      "unet_voc_1gpu": 1,
+      "vgg16_imagenet_bs128_1gpu": 1,
+      "vgg16_imagenet_bs32_1gpu": 1,
+      "vgg16_imagenet_bs64_1gpu": 2,
+      "xception_imagenet_bs128_1gpu": 1,
+      "xception_imagenet_bs32_1gpu": 1,
+      "xception_imagenet_bs64_1gpu": 1,
+      "xlnet_large_cased_wiki_bs4_2gpu": 1
+    }
+  },
+  "output": {
+    "exclusive_job_metrics_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/outputs/generated_traces/philly_seed42_60jobs.exclusive_jobs.csv",
+    "exclusive_summary_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/outputs/generated_traces/philly_seed42_60jobs.exclusive_summary.json",
+    "execution_trace_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/outputs/generated_traces/philly_seed42_60jobs.execution.csv",
+    "execution_trace_sha256": "e0a791ba7d2ca8f252de5b9f914984facba926e46d87f8d415462c903fec94a0",
+    "trace_path": "/home/ehyo/Philly-Trace-Analyser-and-Task-Mapper/outputs/generated_traces/philly_seed42_60jobs.csv",
+    "trace_sha256": "1588d266cf79ca78d5dfd8ebb12b0cdfb151acfd63c26586834ae43c04597b2c"
+  },
+  "selection": {
+    "candidate_window_count": 732,
+    "eligible_end_index_exclusive": 8249,
+    "eligible_job_count": 79126,
+    "eligible_start_index": 8189,
+    "first_source_job_id": "application_1506638472019_5833",
+    "last_source_job_id": "application_1506638472019_5917",
+    "minimum_jobs_by_gpu_count": {
+      "2": 2
+    },
+    "original_first_submit_time_s": 2565270.0,
+    "original_last_submit_time_s": 2574674.0,
+    "representativeness": {
+      "acceptance_constraints": {
+        "maximum_gpu_fraction_deviation": 0.05,
+        "maximum_runtime_cdf_deviation": 0.1
+      },
+      "components": {
+        "burst_fraction_distance": 0.0336008391679094,
+        "gpu_demand_distance": 0.010091920902526762,
+        "gpu_service_distance": 0.12603312573014414,
+        "interarrival_distance": 0.0,
+        "runtime_cdf_distance": 0.03483642123532929
+      },
+      "selected_maximum_gpu_fraction_deviation": 0.010091920902526773,
+      "selected_maximum_runtime_cdf_deviation": 0.07682262046187938,
+      "selected_profile": {
+        "duration_p50_s": 3125.0,
+        "duration_p95_s": 7604.8499999999985,
+        "gpu_demand_fractions": {
+          "1": 0.9666666666666667,
+          "2": 0.03333333333333333
+        },
+        "gpu_service_fractions": {
+          "1": 0.9998637671781074,
+          "2": 0.00013623282189261448
+        },
+        "interarrival_p50_s": 8.0,
+        "interarrival_p95_s": 600.0,
+        "job_count": 60,
+        "runtime_cdf": {
+          "under_10m": 0.3333333333333333,
+          "under_1d": 1.0,
+          "under_1h": 0.7833333333333333,
+          "under_6h": 0.9833333333333333
+        },
+        "supported_gpu_counts": [
+          1,
+          2
+        ],
+        "total_gpu_service_s": 234892.0,
+        "zero_interarrival_fraction": 0.05
+      },
+      "target_profile": {
+        "duration_p50_s": 1052.0,
+        "duration_p95_s": 19494.5,
+        "gpu_demand_fractions": {
+          "1": 0.9767585875691934,
+          "2": 0.02324141243080656
+        },
+        "gpu_service_fractions": {
+          "1": 0.8738306414479633,
+          "2": 0.12616935855203676
+        },
+        "interarrival_p50_s": 8.0,
+        "interarrival_p95_s": 600.0,
+        "job_count": 79126,
+        "runtime_cdf": {
+          "under_10m": 0.4101559537952127,
+          "under_1d": 0.9829891565351465,
+          "under_1h": 0.7980057124080581,
+          "under_6h": 0.9524934913934737
+        },
+        "supported_gpu_counts": [
+          1,
+          2
+        ],
+        "total_gpu_service_s": 674151973.0,
+        "zero_interarrival_fraction": 0.0836008391679094
+      },
+      "total_score": 0.03530073847591403,
+      "weights": {
+        "burst_fraction": 0.05,
+        "gpu_demand": 0.25,
+        "gpu_service": 0.15,
+        "interarrival": 0.2,
+        "runtime_cdf": 0.35
+      }
+    },
+    "requested_job_count": 60,
+    "selected_arrival_span_s": 9404.0,
+    "selected_jobs_by_gpu_count": {
+      "1": 58,
+      "2": 2
+    },
+    "selection_method": "best_representative_contiguous_eligible_window",
+    "source_job_count": 83140,
+    "supported_gpu_counts": [
+      1,
+      2
+    ]
+  },
+  "source_counts": {
+    "eligible_job_count": 79126,
+    "normalized_job_count": 83140,
+    "unsupported_job_count": 4014
+  },
+  "tool": {
+    "name": "dl-trace-mapper",
+    "version": "0.1.0"
+  }
+}
