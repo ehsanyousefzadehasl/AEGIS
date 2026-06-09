@@ -1,0 +1,28 @@
+version: 1
+experiment_name: representative_smoke
+repetitions: 1
+
+runner:
+  base_config: config.yaml
+  results_dir: evaluation/experiments/results
+  delay_scale: 0.0
+  startup_wait_s: 10
+  eval_idle_exit_minutes: 2
+  run_timeout_minutes: 240
+
+traces:
+  - name: smoke
+    csv: evaluation/experiments/traces/smoke_4jobs.csv
+
+configurations:
+  - label: exclusive
+    policy: exclusive
+    estimator: None
+
+  - label: aegis_candidate
+    policy: EST-MAGM
+    estimator: horus
+
+  - label: lucid
+    policy: LUCID
+    estimator: None
