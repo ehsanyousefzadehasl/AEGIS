@@ -1,4 +1,5 @@
 version: 1
+
 experiment_name: representative_smoke
 repetitions: 1
 
@@ -19,10 +20,22 @@ configurations:
     policy: exclusive
     estimator: None
 
-  - label: aegis_candidate
+  - label: aegis_estimator_free
+    policy: OR-MAGM
+    estimator: None
+
+  - label: aegis_horus
     policy: EST-MAGM
     estimator: horus
 
-  - label: lucid
+  - label: horus_baseline
+    policy: HORUS
+    estimator: horus
+
+  - label: lucid_baseline
     policy: LUCID
+    estimator: None
+
+  - label: oracle_upper_bound
+    policy: oracle-MAGM
     estimator: None
