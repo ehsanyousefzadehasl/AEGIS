@@ -36,15 +36,17 @@ def wait_for_eval_completion(
         events = _read_events(event_path)
 
         submitted = {
-            str(e.get("task_file") or e.get("task"))
+            str(e.get("task_id"))
             for e in events
             if e.get("event") == "submitted"
+            and e.get("task_id") is not None
         }
 
         completed = {
-            str(e.get("task_file") or e.get("task"))
+            str(e.get("task_id"))
             for e in events
             if e.get("event") == "completed"
+            and e.get("task_id") is not None
         }
 
         failed = [
@@ -53,7 +55,12 @@ def wait_for_eval_completion(
         ]
 
 
-        done = len(submitted) >= expected_tasks and len(completed) >= expected_tasks
+        completed_submitted = submitted & completed
+
+        done = (
+            len(submitted) >= expected_tasks
+            and len(completed_submitted) >= expected_tasks
+        )
 
         if done:
             if idle_started_at is None:
