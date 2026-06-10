@@ -31,8 +31,10 @@ def build_recovery_header(
     os.makedirs(log_dir, exist_ok=True)
     err_log = os.path.join(log_dir, f"err-{now}-{task_id}.log")
 
+    clean_command = " ".join(str(command_to_execute).split())
+
     header = (
-        f"{dir}+{environment}+{command_to_execute}+{task}+{user}+{task_id}+"
+        f"{dir}+{environment}+{clean_command}+{task}+{user}+{task_id}+"
         f"{user_submit_time}+{recovery_count}+{int(recovery_force_full_gpu)}+"
         f"{failed_host_free_mib_at_dispatch}"
     )
