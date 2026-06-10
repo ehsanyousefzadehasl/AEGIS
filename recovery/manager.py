@@ -166,6 +166,8 @@ def _classify_recovery_failure(lines: list[str]) -> str | None:
         or "cuda out of memory" in text_lower
         or "out of memory" in text_lower
         or "outofmemoryerror" in text_lower
+        or "cublas_status_alloc_failed" in text_lower
+        or "cudnn_status_alloc_failed" in text_lower
         or re.search(r"\boom\b", text_lower) is not None
     ):
         return "oom"
@@ -232,7 +234,7 @@ def recovery(
 
         crashes += 1
         handled_crashes.append(iterator)
-
+ 
         recovery_data = _parse_recovery_header(lines)
 
         if recovery_data is None:
