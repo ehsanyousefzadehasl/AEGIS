@@ -130,6 +130,29 @@ def _base_effective_min_free_mib_for_estimate_policy(
 
     return int(gpu_memory_estimation) + 2048
 
+def _parse_recovery_header(lines: list[str]) -> list[str] | None:
+    header = ""
+
+    for line in lines:
+        stripped = line.strip()
+
+        if not stripped:
+            continue
+
+        if stripped.lower() in {"successful", "unsuccessful"}:
+            break
+
+        if stripped.startswith("Traceback"):
+            break
+
+        header += stripped
+        fields = header.split("+")
+
+        if len(fields) >= 6:
+            return fields
+
+    return None
+
 def _classify_recovery_failure(lines: list[str]) -> str | None:
     # Ignore the recovery header line. It may contain task ids / paths with
     # accidental substrings such as "oom".
@@ -143,6 +166,8 @@ def _classify_recovery_failure(lines: list[str]) -> str | None:
         or "cuda out of memory" in text_lower
         or "out of memory" in text_lower
         or "outofmemoryerror" in text_lower
+        or "cublas_status_alloc_failed" in text_lower
+        or "cudnn_status_alloc_failed" in text_lower
         or re.search(r"\boom\b", text_lower) is not None
     ):
         return "oom"
@@ -209,8 +234,15 @@ def recovery(
 
         crashes += 1
         handled_crashes.append(iterator)
+ 
+        recovery_data = _parse_recovery_header(lines)
 
-        recovery_data = lines[0].strip().split("+")
+        if recovery_data is None:
+            logger.warning(
+                "Skipping malformed recovery log %s: recovery header could not be parsed",
+                iterator,
+            )
+            continue
 
         tmp_user_submit_time = recovery_data[6] if len(recovery_data) > 6 else None
         tmp_recovery_count = int(recovery_data[7]) if len(recovery_data) > 7 else 0
