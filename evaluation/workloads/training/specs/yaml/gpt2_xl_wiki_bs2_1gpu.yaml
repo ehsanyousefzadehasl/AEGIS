@@ -4,20 +4,20 @@ job:
   command: python evaluation/workloads/training/scripts/clean/gpt2_xl_wiki_train.py
 resources:
   num_gpus: 1
-  gpu_memory_requirement_mib: 40182
+  gpu_memory_requirement_mib: 33704
 estimates:
-  horus_mib: null
-  faketensor_mib: null
-  gpumemnet_mib: null
+  horus_mib: 40000
+  faketensor_mib: 40000
+  gpumemnet_mib: 40000
 profile:
-  peak_memory_mib: 40182
+  peak_memory_mib: 33704
   avg_smact: 0.6757894736842105
   avg_smocc: 0.2350902255639097
   avg_drama: 0.1555864661654135
   profiling_duration_s: 200
   source: solo_profile_200s
   extra_metrics:
-    full_run_peak_memory_mib: 40182
+    full_run_peak_memory_mib: 33704
   horus_gpu_util_mean: 72.09774436090225
   horus_gpu_util_p95: 100.0
   horus_gpu_util_max: 100.0
