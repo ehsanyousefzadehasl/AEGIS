@@ -443,7 +443,14 @@ def monitor_logger(window = 30):
     """
     INTERVAL = 1
     next_tick = time.monotonic()
-    
+
+    backend = detect_telemetry_backend()
+
+    print(
+        f"[telemetry] selected backend: {backend}",
+        flush=True,
+    )
+
     cols = [
         "sample_monotonic_time",
         "sample_wall_time",
@@ -475,7 +482,10 @@ def monitor_logger(window = 30):
         # === gather ===
         gpus = gpu_uuids()             # dict: uuid -> id
         free_mem = gpu_mem_usage()           # dict: uuid -> [mem_used, mem_cap, util]
-        dcgm = dcgmi_monitor()         # dict: gpu_id -> [gract, smact, ... energy]
+        if backend == TELEMETRY_BACKEND_DCGM:
+            dcgm = dcgmi_monitor()
+        else:
+            dcgm = {}
         num_gpus = len(gpus)
         max_rows = window * max(1, num_gpus)
 
@@ -485,8 +495,31 @@ def monitor_logger(window = 30):
         temp = pd.DataFrame(columns=cols)
         for gpu_uuid, gpu_id in gpus.items():
             free_val = int(free_mem.get(gpu_uuid, 0))
-            dcgm_metrics = dcgm[gpu_id]
-            row = [sample_monotonic_time, sample_wall_time, gpu_uuid, free_val] + dcgm_metrics + [gpu_id]
+            if backend == TELEMETRY_BACKEND_DCGM:
+                dcgm_metrics = dcgm.get(gpu_id)
+
+                if dcgm_metrics is None:
+                    print(
+                        "[telemetry] skipping sample because DCGM returned "
+                        f"no metrics for GPU {gpu_id}",
+                        flush=True,
+                    )
+                    continue
+            else:
+                # The 16 DCGM fields are unavailable on this platform.
+                # Keep them missing rather than representing them as zero.
+                dcgm_metrics = [np.nan] * 16
+
+            row = (
+                [
+                    sample_monotonic_time,
+                    sample_wall_time,
+                    gpu_uuid,
+                    free_val,
+                ]
+                + dcgm_metrics
+                + [gpu_id]
+            )
             window_monitored_metrics.loc[len(window_monitored_metrics)] = row
             temp.loc[len(temp)] = row
 
