@@ -11,12 +11,99 @@ import csv
 import math
 
 import os
+import shutil
 from pathlib import Path
 
 analyze_configuration = "risk" # can be Normal | risk
 
 MEMORY_GUARD_MIB = 512
 MEMORY_GUARD_FRACTION = 0.01
+
+
+TELEMETRY_BACKEND_DCGM = "dcgm"
+TELEMETRY_BACKEND_MEMORY_ONLY = "memory_only"
+
+
+def _dcgm_pressure_metrics_available(
+    timeout_s: float = 10.0,
+) -> bool:
+    dcgmi_path = shutil.which("dcgmi")
+
+    if dcgmi_path is None:
+        return False
+
+    try:
+        result = subprocess.run(
+            [
+                dcgmi_path,
+                "dmon",
+                "-e",
+                "1002,1003,1005",
+                "-c",
+                "1",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+        )
+    except (
+        OSError,
+        subprocess.SubprocessError,
+    ):
+        return False
+
+    if result.returncode != 0:
+        return False
+
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+
+        if (
+            not stripped
+            or stripped.startswith("#")
+            or stripped.startswith("ID")
+            or "GPU" not in stripped
+        ):
+            continue
+
+        fields = stripped.split("GPU", 1)[1].split()
+
+        # GPU id followed by SMACT, SMOCC, and DRAMA.
+        if len(fields) < 4:
+            continue
+
+        values = fields[1:4]
+
+        try:
+            numeric_values = [
+                float(value)
+                for value in values
+            ]
+        except ValueError:
+            continue
+
+        if all(
+            math.isfinite(value)
+            for value in numeric_values
+        ):
+            return True
+
+    return False
+
+
+def detect_telemetry_backend() -> str:
+    """
+    Select the telemetry backend based on metric availability.
+
+    The presence of the dcgmi executable is insufficient because
+    profiling fields may be unsupported on the installed GPUs.
+    """
+    if _dcgm_pressure_metrics_available():
+        return TELEMETRY_BACKEND_DCGM
+
+    return TELEMETRY_BACKEND_MEMORY_ONLY
 
 # ===== Helper functions for risk concept =======
 
