@@ -359,6 +359,90 @@ def collect_completed_run_summaries(
     return combined
 
 
+
+def generate_per_trace_comparisons(
+    *,
+    validation_frame: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    completed = validation_frame[
+        validation_frame["status"] == "complete"
+    ]
+
+    if completed.empty:
+        print("\nNo completed runs are available for plotting.")
+        return
+
+    plot_script = (
+        Path(__file__).resolve().parent
+        / "plot_policy_distributions.py"
+    )
+
+    solo_profiles = [
+        Path(
+            "evaluation/profiling/solo/extracted/"
+            "solo_profile_results_1gpu.csv"
+        ),
+        Path(
+            "evaluation/profiling/solo/extracted/"
+            "solo_profile_results_2gpu.csv"
+        ),
+    ]
+
+    for solo_path in solo_profiles:
+        if not solo_path.is_file():
+            raise FileNotFoundError(solo_path)
+
+    print("\n===== Generating per-trace comparisons =====")
+
+    for trace_name, group in completed.groupby(
+        "trace_name",
+        sort=True,
+    ):
+        job_metric_paths: list[Path] = []
+
+        for record in group.itertuples(index=False):
+            path = (
+                Path(record.experiment_root)
+                / "analysis"
+                / "job_metrics.csv"
+            )
+
+            if not path.is_file():
+                raise FileNotFoundError(
+                    f"Missing job metrics for completed run: {path}"
+                )
+
+            job_metric_paths.append(path)
+
+        trace_output_dir = (
+            output_dir
+            / "traces"
+            / str(trace_name)
+        )
+
+        command = [
+            sys.executable,
+            str(plot_script),
+            "--job-metrics",
+            *[str(path) for path in job_metric_paths],
+            "--solo-profiles",
+            *[str(path) for path in solo_profiles],
+            "--output-dir",
+            str(trace_output_dir),
+        ]
+
+        print(
+            f"Plotting {trace_name}: "
+            f"{len(job_metric_paths)} completed policies"
+        )
+
+        subprocess.run(
+            command,
+            check=True,
+        )
+
+
 def print_status_summary(frame: pd.DataFrame) -> None:
     print("\n===== Evaluation status =====")
 
@@ -444,6 +528,11 @@ def main() -> int:
         refresh_completed_summaries(frame)
 
     collect_completed_run_summaries(
+        validation_frame=frame,
+        output_dir=output_dir,
+    )
+
+    generate_per_trace_comparisons(
         validation_frame=frame,
         output_dir=output_dir,
     )
