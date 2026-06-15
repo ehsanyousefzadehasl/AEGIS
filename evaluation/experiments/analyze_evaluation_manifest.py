@@ -1515,6 +1515,403 @@ def plot_policy_recovery_costs(
     )
 
 
+
+def markdown_table(
+    frame: pd.DataFrame,
+    *,
+    columns: list[str],
+    rename: dict[str, str] | None = None,
+    decimals: int = 3,
+) -> str:
+    available = [
+        column for column in columns
+        if column in frame.columns
+    ]
+
+    if not available:
+        return "_No data available._"
+
+    table = frame[available].copy()
+
+    if rename:
+        table = table.rename(columns=rename)
+
+    for column in table.columns:
+        if pd.api.types.is_numeric_dtype(table[column]):
+            table[column] = table[column].map(
+                lambda value: (
+                    ""
+                    if pd.isna(value)
+                    else f"{float(value):.{decimals}f}"
+                )
+            )
+
+    return table.to_markdown(index=False)
+
+
+def relative_markdown_path(
+    *,
+    target: Path,
+    report_dir: Path,
+) -> str:
+    return target.relative_to(report_dir).as_posix()
+
+
+def generate_markdown_report(
+    *,
+    validation_frame: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    report_path = output_dir / "report.md"
+    lines: list[str] = []
+
+    lines.extend(
+        [
+            "# Final Representative Evaluation",
+            "",
+            "This report is generated automatically by "
+            "`analyze_evaluation_manifest.py`.",
+            "",
+            "## Evaluation status",
+            "",
+        ]
+    )
+
+    status = (
+        validation_frame.groupby(
+            ["trace_name", "status"],
+            dropna=False,
+        )
+        .size()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+
+    lines.append(
+        markdown_table(
+            status,
+            columns=list(status.columns),
+            decimals=0,
+        )
+    )
+
+    lines.extend(["", "## Aggregate comparison", ""])
+
+    aggregate_path = (
+        output_dir / "aggregate_policy_summary.csv"
+    )
+
+    if aggregate_path.is_file():
+        aggregate = pd.read_csv(aggregate_path)
+
+        lines.append(
+            markdown_table(
+                aggregate,
+                columns=[
+                    "run_label",
+                    "trace_count",
+                    "completion_fraction_mean",
+                    "makespan_s_vs_exclusive_geomean",
+                    "makespan_reduction_percent_from_geomean",
+                    "jct_mean_s_vs_exclusive_geomean",
+                    "jct_p95_s_vs_exclusive_geomean",
+                    "initial_queue_wait_mean_s_vs_exclusive_geomean",
+                    "initial_queue_wait_p95_s_vs_exclusive_geomean",
+                    "execution_span_mean_s_vs_exclusive_geomean",
+                ],
+                rename={
+                    "run_label": "Policy",
+                    "trace_count": "Traces",
+                    "completion_fraction_mean": "Completion",
+                    "makespan_s_vs_exclusive_geomean": (
+                        "Makespan / Exclusive"
+                    ),
+                    "makespan_reduction_percent_from_geomean": (
+                        "Makespan reduction (%)"
+                    ),
+                    "jct_mean_s_vs_exclusive_geomean": (
+                        "Mean JCT / Exclusive"
+                    ),
+                    "jct_p95_s_vs_exclusive_geomean": (
+                        "P95 JCT / Exclusive"
+                    ),
+                    "initial_queue_wait_mean_s_vs_exclusive_geomean": (
+                        "Mean wait / Exclusive"
+                    ),
+                    "initial_queue_wait_p95_s_vs_exclusive_geomean": (
+                        "P95 wait / Exclusive"
+                    ),
+                    "execution_span_mean_s_vs_exclusive_geomean": (
+                        "Execution span / Exclusive"
+                    ),
+                },
+            )
+        )
+    else:
+        lines.append("_Aggregate results are not available yet._")
+
+    aggregate_figure = (
+        output_dir
+        / "figures"
+        / "aggregate_policy_performance.png"
+    )
+
+    if aggregate_figure.is_file():
+        lines.extend(
+            [
+                "",
+                "![Aggregate policy performance]"
+                f"({relative_markdown_path(target=aggregate_figure, report_dir=output_dir)})",
+            ]
+        )
+
+    completed_traces = sorted(
+        validation_frame.loc[
+            validation_frame["status"] == "complete",
+            "trace_name",
+        ].dropna().unique()
+    )
+
+    for trace_name in completed_traces:
+        trace_dir = output_dir / "traces" / str(trace_name)
+
+        performance_path = (
+            trace_dir / "performance_summary.csv"
+        )
+
+        if not performance_path.is_file():
+            continue
+
+        performance = pd.read_csv(performance_path)
+
+        lines.extend(
+            [
+                "",
+                f"## Trace: {trace_name}",
+                "",
+                "### Performance summary",
+                "",
+            ]
+        )
+
+        lines.append(
+            markdown_table(
+                performance,
+                columns=[
+                    "run_label",
+                    "completion_fraction",
+                    "makespan_s",
+                    "initial_queue_wait_mean_s",
+                    "initial_queue_wait_p95_s",
+                    "jct_mean_s",
+                    "jct_p95_s",
+                    "execution_span_mean_s",
+                    "execution_span_p95_s",
+                    "successful_attempt_runtime_mean_s",
+                    "failed_attempt_count",
+                    "recovered_attempt_count",
+                ],
+                rename={
+                    "run_label": "Policy",
+                    "completion_fraction": "Completion",
+                    "makespan_s": "Makespan (s)",
+                    "initial_queue_wait_mean_s": "Mean wait (s)",
+                    "initial_queue_wait_p95_s": "P95 wait (s)",
+                    "jct_mean_s": "Mean JCT (s)",
+                    "jct_p95_s": "P95 JCT (s)",
+                    "execution_span_mean_s": (
+                        "Mean execution span (s)"
+                    ),
+                    "execution_span_p95_s": (
+                        "P95 execution span (s)"
+                    ),
+                    "successful_attempt_runtime_mean_s": (
+                        "Mean successful runtime (s)"
+                    ),
+                    "failed_attempt_count": "Failed attempts",
+                    "recovered_attempt_count": (
+                        "Recovered attempts"
+                    ),
+                },
+            )
+        )
+
+        figures = [
+            (
+                "Makespan",
+                trace_dir / "makespan_comparison.png",
+            ),
+            (
+                "Job completion time",
+                trace_dir / "jct_comparison.png",
+            ),
+            (
+                "Initial queue wait",
+                trace_dir / "queue_wait_comparison.png",
+            ),
+            (
+                "Execution span",
+                trace_dir / "execution_time_comparison.png",
+            ),
+            (
+                "Normalized JCT ECDF",
+                trace_dir / "normalized_jct_ecdf.png",
+            ),
+            (
+                "Completion progress",
+                trace_dir / "completion_progress.png",
+            ),
+        ]
+
+        for title, figure_path in figures:
+            if figure_path.is_file():
+                lines.extend(
+                    [
+                        "",
+                        f"### {title}",
+                        "",
+                        f"![{title}]"
+                        f"({relative_markdown_path(target=figure_path, report_dir=output_dir)})",
+                    ]
+                )
+
+        recovery_summary_path = (
+            trace_dir
+            / "recovery"
+            / "recovery_policy_summary.csv"
+        )
+
+        if recovery_summary_path.is_file():
+            recovery = pd.read_csv(
+                recovery_summary_path
+            )
+
+            lines.extend(
+                [
+                    "",
+                    "### Recovery cost",
+                    "",
+                ]
+            )
+
+            lines.append(
+                markdown_table(
+                    recovery,
+                    columns=[
+                        "run_label",
+                        "jobs_with_failed_attempts",
+                        "recovered_job_count",
+                        "recovery_stopped_job_count",
+                        "failed_attempt_count",
+                        "recovery_queue_wait_mean_s",
+                        "recovery_queue_wait_p95_s",
+                        "recovery_queue_wait_max_s",
+                        "total_failed_runtime_s",
+                        "total_recovery_gap_s",
+                        "total_recovery_overhead_s",
+                    ],
+                    rename={
+                        "run_label": "Policy",
+                        "jobs_with_failed_attempts": (
+                            "Jobs with failures"
+                        ),
+                        "recovered_job_count": "Recovered jobs",
+                        "recovery_stopped_job_count": (
+                            "Recovery stopped"
+                        ),
+                        "failed_attempt_count": (
+                            "Failed attempts"
+                        ),
+                        "recovery_queue_wait_mean_s": (
+                            "Mean recovery wait (s)"
+                        ),
+                        "recovery_queue_wait_p95_s": (
+                            "P95 recovery wait (s)"
+                        ),
+                        "recovery_queue_wait_max_s": (
+                            "Max recovery wait (s)"
+                        ),
+                        "total_failed_runtime_s": (
+                            "Lost runtime (s)"
+                        ),
+                        "total_recovery_gap_s": (
+                            "Failure-to-relaunch gap (s)"
+                        ),
+                        "total_recovery_overhead_s": (
+                            "Total recovery overhead (s)"
+                        ),
+                    },
+                )
+            )
+
+            recovery_figures = [
+                (
+                    "Recovered-job cost breakdown",
+                    trace_dir
+                    / "recovery"
+                    / "recovered_job_cost_breakdown.png",
+                ),
+                (
+                    "Policy recovery cost",
+                    trace_dir
+                    / "recovery"
+                    / "policy_recovery_cost.png",
+                ),
+            ]
+
+            for title, figure_path in recovery_figures:
+                if figure_path.is_file():
+                    lines.extend(
+                        [
+                            "",
+                            f"#### {title}",
+                            "",
+                            f"![{title}]"
+                            f"({relative_markdown_path(target=figure_path, report_dir=output_dir)})",
+                        ]
+                    )
+
+    incomplete = validation_frame[
+        validation_frame["status"] != "complete"
+    ]
+
+    if not incomplete.empty:
+        lines.extend(
+            [
+                "",
+                "## Pending or unsuccessful runs",
+                "",
+            ]
+        )
+
+        lines.append(
+            markdown_table(
+                incomplete,
+                columns=[
+                    "trace_name",
+                    "configuration_label",
+                    "status",
+                    "return_code",
+                    "timed_out",
+                ],
+                rename={
+                    "trace_name": "Trace",
+                    "configuration_label": "Configuration",
+                    "status": "Status",
+                    "return_code": "Return code",
+                    "timed_out": "Timed out",
+                },
+            )
+        )
+
+    report_path.write_text(
+        "\n".join(lines) + "\n",
+        encoding="utf-8",
+    )
+
+    print(f"Wrote: {report_path}")
+
+
 def print_status_summary(frame: pd.DataFrame) -> None:
     print("\n===== Evaluation status =====")
 
@@ -1620,6 +2017,11 @@ def main() -> int:
     )
 
     generate_recovery_analysis(
+        validation_frame=frame,
+        output_dir=output_dir,
+    )
+
+    generate_markdown_report(
         validation_frame=frame,
         output_dir=output_dir,
     )
