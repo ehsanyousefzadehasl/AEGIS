@@ -8,6 +8,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -443,6 +449,372 @@ def generate_per_trace_comparisons(
         )
 
 
+
+def save_figure(
+    figure: plt.Figure,
+    output_dir: Path,
+    stem: str,
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    figure.tight_layout()
+
+    for suffix in ["pdf", "png"]:
+        figure.savefig(
+            output_dir / f"{stem}.{suffix}",
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+    plt.close(figure)
+
+
+def generate_recovery_analysis(
+    *,
+    validation_frame: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    completed = validation_frame[
+        validation_frame["status"] == "complete"
+    ]
+
+    print("\n===== Generating recovery analysis =====")
+
+    for trace_name, group in completed.groupby(
+        "trace_name",
+        sort=True,
+    ):
+        frames: list[pd.DataFrame] = []
+
+        for record in group.itertuples(index=False):
+            job_metrics_path = (
+                Path(record.experiment_root)
+                / "analysis"
+                / "job_metrics.csv"
+            )
+
+            if not job_metrics_path.is_file():
+                raise FileNotFoundError(job_metrics_path)
+
+            frame = pd.read_csv(job_metrics_path).copy()
+            frame.insert(0, "trace_name", trace_name)
+            frame.insert(
+                1,
+                "configuration_label",
+                record.configuration_label,
+            )
+            frames.append(frame)
+
+        jobs = pd.concat(frames, ignore_index=True)
+
+        numeric_columns = [
+            "failed_attempt_count",
+            "recovered_attempt_count",
+            "recovery_stopped_count",
+            "failed_attempt_runtime_s",
+            "total_recovery_queue_wait_s",
+            "max_recovery_queue_wait_s",
+            "total_recovery_gap_s",
+            "max_recovery_gap_s",
+            "successful_attempt_runtime_s",
+            "jct_s",
+        ]
+
+        for column in numeric_columns:
+            jobs[column] = pd.to_numeric(
+                jobs[column],
+                errors="coerce",
+            ).fillna(0.0)
+
+        recovered = jobs[
+            jobs["recovered_attempt_count"] > 0
+        ].copy()
+
+        recovered["workload"] = recovered[
+            "task_file"
+        ].map(lambda value: Path(str(value)).name)
+
+        recovered["recovery_overhead_s"] = (
+            recovered["failed_attempt_runtime_s"]
+            + recovered["total_recovery_gap_s"]
+        )
+
+        detail_columns = [
+            "trace_name",
+            "configuration_label",
+            "run_label",
+            "task_id",
+            "task_file",
+            "workload",
+            "failed_attempt_count",
+            "recovered_attempt_count",
+            "recovery_stopped_count",
+            "failed_attempt_runtime_s",
+            "total_recovery_queue_wait_s",
+            "max_recovery_queue_wait_s",
+            "total_recovery_gap_s",
+            "max_recovery_gap_s",
+            "successful_attempt_runtime_s",
+            "recovery_overhead_s",
+            "jct_s",
+        ]
+
+        trace_output = (
+            output_dir
+            / "traces"
+            / str(trace_name)
+            / "recovery"
+        )
+        trace_output.mkdir(parents=True, exist_ok=True)
+
+        recovered[detail_columns].to_csv(
+            trace_output / "recovery_job_details.csv",
+            index=False,
+        )
+
+        summary_rows = []
+
+        for run_label, policy_jobs in jobs.groupby(
+            "run_label",
+            sort=True,
+        ):
+            policy_recovered = policy_jobs[
+                policy_jobs["recovered_attempt_count"] > 0
+            ]
+
+            recovered_count = len(policy_recovered)
+
+            queue_wait = policy_recovered[
+                "total_recovery_queue_wait_s"
+            ]
+            recovery_gap = policy_recovered[
+                "total_recovery_gap_s"
+            ]
+            lost_runtime = policy_recovered[
+                "failed_attempt_runtime_s"
+            ]
+
+            summary_rows.append(
+                {
+                    "trace_name": trace_name,
+                    "run_label": run_label,
+                    "submitted_job_count": len(policy_jobs),
+                    "jobs_with_failed_attempts": int(
+                        (
+                            policy_jobs["failed_attempt_count"] > 0
+                        ).sum()
+                    ),
+                    "recovered_job_count": recovered_count,
+                    "recovery_stopped_job_count": int(
+                        (
+                            policy_jobs["recovery_stopped_count"] > 0
+                        ).sum()
+                    ),
+                    "failed_attempt_count": int(
+                        policy_jobs[
+                            "failed_attempt_count"
+                        ].sum()
+                    ),
+                    "recovered_attempt_count": int(
+                        policy_jobs[
+                            "recovered_attempt_count"
+                        ].sum()
+                    ),
+                    "recovery_queue_wait_mean_s": (
+                        float(queue_wait.mean())
+                        if recovered_count
+                        else 0.0
+                    ),
+                    "recovery_queue_wait_p95_s": (
+                        float(queue_wait.quantile(0.95))
+                        if recovered_count
+                        else 0.0
+                    ),
+                    "recovery_queue_wait_max_s": (
+                        float(queue_wait.max())
+                        if recovered_count
+                        else 0.0
+                    ),
+                    "recovery_gap_mean_s": (
+                        float(recovery_gap.mean())
+                        if recovered_count
+                        else 0.0
+                    ),
+                    "recovery_gap_p95_s": (
+                        float(recovery_gap.quantile(0.95))
+                        if recovered_count
+                        else 0.0
+                    ),
+                    "total_failed_runtime_s": float(
+                        lost_runtime.sum()
+                    ),
+                    "total_recovery_queue_wait_s": float(
+                        queue_wait.sum()
+                    ),
+                    "total_recovery_gap_s": float(
+                        recovery_gap.sum()
+                    ),
+                    "total_recovery_overhead_s": float(
+                        (
+                            lost_runtime
+                            + recovery_gap
+                        ).sum()
+                    ),
+                }
+            )
+
+        summary = pd.DataFrame(summary_rows)
+
+        summary.to_csv(
+            trace_output / "recovery_policy_summary.csv",
+            index=False,
+        )
+
+        if recovered.empty:
+            print(
+                f"{trace_name}: no recovered jobs; "
+                "wrote empty recovery tables"
+            )
+            continue
+
+        plot_recovered_job_costs(
+            recovered=recovered,
+            output_dir=trace_output,
+        )
+
+        plot_policy_recovery_costs(
+            summary=summary,
+            output_dir=trace_output,
+        )
+
+        print(
+            f"{trace_name}: analyzed "
+            f"{len(recovered)} recovered jobs"
+        )
+
+
+def plot_recovered_job_costs(
+    *,
+    recovered: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    prepared = recovered.sort_values(
+        [
+            "run_label",
+            "recovery_overhead_s",
+        ],
+        ascending=[True, False],
+    ).copy()
+
+    prepared["label"] = (
+        prepared["run_label"].astype(str)
+        + " | "
+        + prepared["workload"].astype(str)
+    )
+
+    figure_height = max(
+        4.2,
+        0.35 * len(prepared) + 1.5,
+    )
+
+    figure, axis = plt.subplots(
+        figsize=(8.0, figure_height)
+    )
+
+    y = np.arange(len(prepared))
+
+    failed = prepared[
+        "failed_attempt_runtime_s"
+    ].to_numpy(dtype=float)
+    gap = prepared[
+        "total_recovery_gap_s"
+    ].to_numpy(dtype=float)
+    successful = prepared[
+        "successful_attempt_runtime_s"
+    ].to_numpy(dtype=float)
+
+    axis.barh(
+        y,
+        failed,
+        label="Failed-attempt runtime",
+    )
+    axis.barh(
+        y,
+        gap,
+        left=failed,
+        label="Failure-to-relaunch gap",
+    )
+    axis.barh(
+        y,
+        successful,
+        left=failed + gap,
+        label="Successful rerun runtime",
+    )
+
+    axis.set_yticks(y)
+    axis.set_yticklabels(prepared["label"])
+    axis.invert_yaxis()
+    axis.set_xlabel("Time (seconds)")
+    axis.set_ylabel("Recovered job")
+    axis.grid(True, axis="x", alpha=0.3)
+    axis.legend()
+
+    save_figure(
+        figure,
+        output_dir,
+        "recovered_job_cost_breakdown",
+    )
+
+
+def plot_policy_recovery_costs(
+    *,
+    summary: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    prepared = summary[
+        summary["recovered_job_count"] > 0
+    ].copy()
+
+    if prepared.empty:
+        return
+
+    prepared = prepared.sort_values("run_label")
+
+    x = np.arange(len(prepared))
+    width = 0.36
+
+    figure, axis = plt.subplots(figsize=(7.2, 4.4))
+
+    axis.bar(
+        x - width / 2,
+        prepared["total_failed_runtime_s"],
+        width,
+        label="Failed-attempt runtime",
+    )
+    axis.bar(
+        x + width / 2,
+        prepared["total_recovery_gap_s"],
+        width,
+        label="Failure-to-relaunch gap",
+    )
+
+    axis.set_xticks(x)
+    axis.set_xticklabels(
+        prepared["run_label"],
+        rotation=20,
+        ha="right",
+    )
+    axis.set_ylabel("Total time (seconds)")
+    axis.set_xlabel("Policy")
+    axis.grid(True, axis="y", alpha=0.3)
+    axis.legend()
+
+    save_figure(
+        figure,
+        output_dir,
+        "policy_recovery_cost",
+    )
+
+
 def print_status_summary(frame: pd.DataFrame) -> None:
     print("\n===== Evaluation status =====")
 
@@ -533,6 +905,11 @@ def main() -> int:
     )
 
     generate_per_trace_comparisons(
+        validation_frame=frame,
+        output_dir=output_dir,
+    )
+
+    generate_recovery_analysis(
         validation_frame=frame,
         output_dir=output_dir,
     )
