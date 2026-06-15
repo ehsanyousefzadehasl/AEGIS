@@ -468,6 +468,329 @@ def save_figure(
     plt.close(figure)
 
 
+
+def generate_per_trace_performance_tables(
+    *,
+    validation_frame: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    completed = validation_frame[
+        validation_frame["status"] == "complete"
+    ]
+
+    print("\n===== Generating performance tables and figures =====")
+
+    for trace_name, group in completed.groupby(
+        "trace_name",
+        sort=True,
+    ):
+        frames: list[pd.DataFrame] = []
+
+        for record in group.itertuples(index=False):
+            summary_path = (
+                Path(record.experiment_root)
+                / "analysis"
+                / "run_summary.csv"
+            )
+
+            if not summary_path.is_file():
+                raise FileNotFoundError(summary_path)
+
+            summary = pd.read_csv(summary_path).copy()
+
+            if summary.empty:
+                raise ValueError(
+                    f"{summary_path}: summary is empty"
+                )
+
+            summary.insert(
+                0,
+                "configuration_label",
+                record.configuration_label,
+            )
+            frames.append(summary)
+
+        performance = pd.concat(
+            frames,
+            ignore_index=True,
+        )
+
+        trace_output = (
+            output_dir
+            / "traces"
+            / str(trace_name)
+        )
+        trace_output.mkdir(parents=True, exist_ok=True)
+
+        metric_columns = [
+            "makespan_s",
+            "initial_queue_wait_mean_s",
+            "initial_queue_wait_p50_s",
+            "initial_queue_wait_p95_s",
+            "jct_mean_s",
+            "jct_p50_s",
+            "jct_p95_s",
+            "execution_span_mean_s",
+            "execution_span_p50_s",
+            "execution_span_p95_s",
+            "successful_attempt_runtime_mean_s",
+            "successful_attempt_runtime_p50_s",
+            "successful_attempt_runtime_p95_s",
+        ]
+
+        for column in metric_columns:
+            performance[column] = pd.to_numeric(
+                performance[column],
+                errors="coerce",
+            )
+
+        table_columns = [
+            "configuration_label",
+            "run_label",
+            "policy",
+            "estimator",
+            "submitted_job_count",
+            "completed_job_count",
+            "incomplete_job_count",
+            "completion_fraction",
+            "makespan_s",
+            "initial_queue_wait_mean_s",
+            "initial_queue_wait_p50_s",
+            "initial_queue_wait_p95_s",
+            "jct_mean_s",
+            "jct_p50_s",
+            "jct_p95_s",
+            "execution_span_mean_s",
+            "execution_span_p50_s",
+            "execution_span_p95_s",
+            "successful_attempt_runtime_mean_s",
+            "successful_attempt_runtime_p50_s",
+            "successful_attempt_runtime_p95_s",
+            "failed_attempt_count",
+            "recovered_attempt_count",
+            "recovery_stopped_job_count",
+            "total_failed_attempt_runtime_s",
+            "total_recovery_queue_wait_s",
+        ]
+
+        performance[table_columns].to_csv(
+            trace_output / "performance_summary.csv",
+            index=False,
+        )
+
+        exclusive = performance[
+            performance["run_label"] == "exclusive"
+        ]
+
+        if len(exclusive) != 1:
+            print(
+                f"{trace_name}: expected exactly one Exclusive "
+                f"run, found {len(exclusive)}; skipping normalization"
+            )
+            continue
+
+        normalized = performance.copy()
+
+        for column in metric_columns:
+            baseline = float(exclusive.iloc[0][column])
+
+            normalized[f"{column}_vs_exclusive"] = (
+                normalized[column] / baseline
+                if np.isfinite(baseline) and baseline > 0
+                else np.nan
+            )
+
+        normalized["makespan_reduction_percent"] = (
+            1.0
+            - normalized["makespan_s_vs_exclusive"]
+        ) * 100.0
+
+        normalized_columns = [
+            "configuration_label",
+            "run_label",
+            "completion_fraction",
+            "makespan_s",
+            "makespan_s_vs_exclusive",
+            "makespan_reduction_percent",
+            "initial_queue_wait_mean_s",
+            "initial_queue_wait_mean_s_vs_exclusive",
+            "initial_queue_wait_p95_s",
+            "initial_queue_wait_p95_s_vs_exclusive",
+            "jct_mean_s",
+            "jct_mean_s_vs_exclusive",
+            "jct_p95_s",
+            "jct_p95_s_vs_exclusive",
+            "execution_span_mean_s",
+            "execution_span_mean_s_vs_exclusive",
+            "execution_span_p95_s",
+            "execution_span_p95_s_vs_exclusive",
+            "successful_attempt_runtime_mean_s",
+            "successful_attempt_runtime_mean_s_vs_exclusive",
+            "failed_attempt_count",
+            "recovered_attempt_count",
+        ]
+
+        normalized[normalized_columns].to_csv(
+            trace_output
+            / "normalized_performance_summary.csv",
+            index=False,
+        )
+
+        plot_single_metric_bars(
+            frame=performance,
+            value_column="makespan_s",
+            y_label="Makespan (seconds)",
+            output_dir=trace_output,
+            output_stem="makespan_comparison",
+        )
+
+        plot_grouped_metric_bars(
+            frame=performance,
+            mean_column="jct_mean_s",
+            tail_column="jct_p95_s",
+            mean_label="Mean JCT",
+            tail_label="P95 JCT",
+            y_label="Job completion time (seconds)",
+            output_dir=trace_output,
+            output_stem="jct_comparison",
+        )
+
+        plot_grouped_metric_bars(
+            frame=performance,
+            mean_column="initial_queue_wait_mean_s",
+            tail_column="initial_queue_wait_p95_s",
+            mean_label="Mean wait",
+            tail_label="P95 wait",
+            y_label="Initial queue wait (seconds)",
+            output_dir=trace_output,
+            output_stem="queue_wait_comparison",
+        )
+
+        plot_grouped_metric_bars(
+            frame=performance,
+            mean_column="execution_span_mean_s",
+            tail_column="execution_span_p95_s",
+            mean_label="Mean execution span",
+            tail_label="P95 execution span",
+            y_label="Execution span (seconds)",
+            output_dir=trace_output,
+            output_stem="execution_time_comparison",
+        )
+
+        print(
+            f"{trace_name}: wrote performance tables and figures "
+            f"for {len(performance)} policies"
+        )
+
+
+def _ordered_policy_frame(
+    frame: pd.DataFrame,
+) -> pd.DataFrame:
+    order = {
+        "exclusive": 0,
+        "OR-MAGM": 1,
+        "EST-MAGM__horus": 2,
+        "HORUS__horus": 3,
+        "LUCID": 4,
+        "oracle-MAGM": 5,
+    }
+
+    prepared = frame.copy()
+    prepared["_order"] = (
+        prepared["run_label"]
+        .map(order)
+        .fillna(len(order))
+    )
+
+    return prepared.sort_values(
+        ["_order", "run_label"]
+    )
+
+
+def plot_single_metric_bars(
+    *,
+    frame: pd.DataFrame,
+    value_column: str,
+    y_label: str,
+    output_dir: Path,
+    output_stem: str,
+) -> None:
+    prepared = _ordered_policy_frame(frame)
+
+    figure, axis = plt.subplots(figsize=(7.2, 4.4))
+
+    x = np.arange(len(prepared))
+    values = prepared[value_column].to_numpy(dtype=float)
+
+    axis.bar(x, values)
+    axis.set_xticks(x)
+    axis.set_xticklabels(
+        prepared["run_label"],
+        rotation=20,
+        ha="right",
+    )
+    axis.set_ylabel(y_label)
+    axis.set_xlabel("Policy")
+    axis.set_ylim(bottom=0)
+    axis.grid(True, axis="y", alpha=0.3)
+
+    save_figure(
+        figure,
+        output_dir,
+        output_stem,
+    )
+
+
+def plot_grouped_metric_bars(
+    *,
+    frame: pd.DataFrame,
+    mean_column: str,
+    tail_column: str,
+    mean_label: str,
+    tail_label: str,
+    y_label: str,
+    output_dir: Path,
+    output_stem: str,
+) -> None:
+    prepared = _ordered_policy_frame(frame)
+
+    x = np.arange(len(prepared))
+    width = 0.36
+
+    figure, axis = plt.subplots(figsize=(7.2, 4.4))
+
+    axis.bar(
+        x - width / 2,
+        prepared[mean_column],
+        width,
+        label=mean_label,
+    )
+    axis.bar(
+        x + width / 2,
+        prepared[tail_column],
+        width,
+        label=tail_label,
+    )
+
+    axis.set_xticks(x)
+    axis.set_xticklabels(
+        prepared["run_label"],
+        rotation=20,
+        ha="right",
+    )
+    axis.set_ylabel(y_label)
+    axis.set_xlabel("Policy")
+    axis.set_ylim(bottom=0)
+    axis.grid(True, axis="y", alpha=0.3)
+    axis.legend()
+
+    save_figure(
+        figure,
+        output_dir,
+        output_stem,
+    )
+
+
 def generate_recovery_analysis(
     *,
     validation_frame: pd.DataFrame,
@@ -905,6 +1228,11 @@ def main() -> int:
     )
 
     generate_per_trace_comparisons(
+        validation_frame=frame,
+        output_dir=output_dir,
+    )
+
+    generate_per_trace_performance_tables(
         validation_frame=frame,
         output_dir=output_dir,
     )
