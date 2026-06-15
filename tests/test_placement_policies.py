@@ -2,7 +2,11 @@ import unittest
 
 import pandas as pd
 
-from placement.policies import select_est_bf, select_or_magm
+from placement.policies import (
+    GPU_MEMORY_GUARD_MIB,
+    select_est_bf,
+    select_or_magm,
+)
 
 
 class TestPlacementPolicies(unittest.TestCase):
@@ -24,12 +28,12 @@ class TestPlacementPolicies(unittest.TestCase):
             number_of_gpus_requested=1,
         )
 
-        self.assertEqual(list(result.index), ["1"])
+        self.assertEqual(list(result.index), ["2"])
 
     def test_select_est_bf_returns_none_when_not_enough_memory(self):
         gpus_with_metrics = pd.DataFrame(
             {
-                "GPU_mem_available": [7000, 7500],
+                "GPU_mem_available": [6400, 6500],
                 "smact": [0.10, 0.10],
                 "smocc": [0.10, 0.10],
                 "drama": [0.10, 0.10],
@@ -45,6 +49,31 @@ class TestPlacementPolicies(unittest.TestCase):
         )
 
         self.assertIsNone(result)
+
+    def test_select_est_bf_uses_configured_memory_guard(self):
+        required_mib = 6000 + GPU_MEMORY_GUARD_MIB
+
+        gpus_with_metrics = pd.DataFrame(
+            {
+                "GPU_mem_available": [
+                    required_mib - 1,
+                    required_mib,
+                ],
+                "smact": [0.10, 0.10],
+                "smocc": [0.10, 0.10],
+                "drama": [0.10, 0.10],
+            },
+            index=["0", "1"],
+        )
+
+        result = select_est_bf(
+            gpus_with_metrics=gpus_with_metrics,
+            gpu_memory_estimation=6000,
+            available_gpu_ids=["0", "1"],
+            number_of_gpus_requested=1,
+        )
+
+        self.assertEqual(list(result.index), ["1"])
 
     def test_select_or_magm_honors_recovery_min_free_override(self):
         gpus_with_metrics = pd.DataFrame(

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+GPU_MEMORY_GUARD_MIB = 512
+
 from placement.candidate_selection import RiskThresholds, build_candidate_gpus
 from runtime import gpu_allocations
 
@@ -15,7 +17,7 @@ def select_oracle_bf(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + 2048,
+        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -42,7 +44,7 @@ def select_oracle_magm(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + 2048,
+        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -69,7 +71,7 @@ def select_oracle_lug(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + 2048,
+        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -159,7 +161,7 @@ def select_est_magm(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + 2048,
+        min_free_mib=gpu_memory_estimation + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -185,7 +187,7 @@ def select_est_bf(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + 2048,
+        min_free_mib=gpu_memory_estimation + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -212,7 +214,7 @@ def select_est_lug(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + 2048,
+        min_free_mib=gpu_memory_estimation + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -275,7 +277,7 @@ def select_lucid(
     available_gpu_ids,
     number_of_gpus_requested: int,
     gpu_memory_capacity_mib: int = 40960,
-    memory_guard_mib: int = 2048,
+    memory_guard_mib: int = GPU_MEMORY_GUARD_MIB,
     gss_capacity: int = 2,
     max_jobs_per_gpu: int = 2,
 ):
@@ -363,7 +365,7 @@ def select_oracle_ff(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + 2048,
+        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
