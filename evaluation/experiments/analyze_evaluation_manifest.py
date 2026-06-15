@@ -1595,7 +1595,7 @@ def generate_markdown_report(
         )
     )
 
-    lines.extend(["", "## Aggregate comparison", ""])
+    lines.extend(["", "## Aggregate cross-trace comparison", ""])
 
     aggregate_path = (
         output_dir / "aggregate_policy_summary.csv"
@@ -1687,9 +1687,13 @@ def generate_markdown_report(
         lines.extend(
             [
                 "",
+                "---",
+                "",
                 f"## Trace: {trace_name}",
                 "",
-                "### Performance summary",
+                "Results below contain only runs from this trace.",
+                "",
+                "### Raw performance summary",
                 "",
             ]
         )
@@ -1735,6 +1739,69 @@ def generate_markdown_report(
                 },
             )
         )
+
+        normalized_path = (
+            trace_dir
+            / "normalized_performance_summary.csv"
+        )
+
+        if normalized_path.is_file():
+            normalized = pd.read_csv(normalized_path)
+
+            lines.extend(
+                [
+                    "",
+                    "### Normalized performance summary",
+                    "",
+                    "All ratios use Exclusive = 1.0 for this trace. "
+                    "Lower is better.",
+                    "",
+                ]
+            )
+
+            lines.append(
+                markdown_table(
+                    normalized,
+                    columns=[
+                        "run_label",
+                        "makespan_s_vs_exclusive",
+                        "makespan_reduction_percent",
+                        "jct_mean_s_vs_exclusive",
+                        "jct_p95_s_vs_exclusive",
+                        "initial_queue_wait_mean_s_vs_exclusive",
+                        "initial_queue_wait_p95_s_vs_exclusive",
+                        "execution_span_mean_s_vs_exclusive",
+                        "execution_span_p95_s_vs_exclusive",
+                    ],
+                    rename={
+                        "run_label": "Policy",
+                        "makespan_s_vs_exclusive": (
+                            "Makespan / Exclusive"
+                        ),
+                        "makespan_reduction_percent": (
+                            "Makespan reduction (%)"
+                        ),
+                        "jct_mean_s_vs_exclusive": (
+                            "Mean JCT / Exclusive"
+                        ),
+                        "jct_p95_s_vs_exclusive": (
+                            "P95 JCT / Exclusive"
+                        ),
+                        "initial_queue_wait_mean_s_vs_exclusive": (
+                            "Mean wait / Exclusive"
+                        ),
+                        "initial_queue_wait_p95_s_vs_exclusive": (
+                            "P95 wait / Exclusive"
+                        ),
+                        "execution_span_mean_s_vs_exclusive": (
+                            "Mean execution span / Exclusive"
+                        ),
+                        "execution_span_p95_s_vs_exclusive": (
+                            "P95 execution span / Exclusive"
+                        ),
+                    },
+                )
+            )
 
         figures = [
             (
