@@ -1,0 +1,34 @@
+version: 1
+experiment_name: final_representative_evaluation
+repetitions: 1
+runner:
+  base_config: config.yaml
+  results_dir: evaluation/experiments/results
+  delay_scale: 1.0
+  startup_wait_s: 10
+  eval_idle_exit_minutes: 5
+  run_timeout_minutes: 1440
+traces:
+- name: saturn
+  csv: evaluation/experiments/traces/representative/saturn_seed42_60jobs.execution.csv
+- name: venus
+  csv: evaluation/experiments/traces/representative/venus_seed42_60jobs.execution.csv
+configurations:
+- label: exclusive
+  policy: exclusive
+  estimator: None
+- label: aegis_estimator_free
+  policy: OR-MAGM
+  estimator: None
+- label: aegis_horus
+  policy: EST-MAGM
+  estimator: horus
+- label: horus_baseline
+  policy: HORUS
+  estimator: horus
+- label: lucid_baseline
+  policy: LUCID
+  estimator: None
+- label: oracle_upper_bound
+  policy: oracle-MAGM
+  estimator: None

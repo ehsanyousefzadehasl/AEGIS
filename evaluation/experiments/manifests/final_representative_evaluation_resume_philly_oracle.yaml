@@ -1,0 +1,17 @@
+version: 1
+experiment_name: final_representative_evaluation
+repetitions: 1
+runner:
+  base_config: config.yaml
+  results_dir: evaluation/experiments/results
+  delay_scale: 1.0
+  startup_wait_s: 10
+  eval_idle_exit_minutes: 5
+  run_timeout_minutes: 1440
+traces:
+- name: philly
+  csv: evaluation/experiments/traces/representative/philly_seed42_60jobs.execution.csv
+configurations:
+- label: oracle_upper_bound
+  policy: oracle-MAGM
+  estimator: None
