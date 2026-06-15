@@ -810,6 +810,89 @@ def geometric_mean(values: pd.Series) -> float:
     )
 
 
+def geometric_mean(values: pd.Series) -> float:
+    numeric = pd.to_numeric(
+        values,
+        errors="coerce",
+    ).dropna()
+
+    numeric = numeric[
+        np.isfinite(numeric) & (numeric > 0)
+    ]
+
+    if numeric.empty:
+        return np.nan
+
+    return float(
+        np.exp(np.log(numeric.to_numpy(dtype=float)).mean())
+    )
+
+
+CROSS_TRACE_METRICS = [
+    (
+        "makespan_s_vs_exclusive",
+        "Normalized makespan",
+        "normalized_makespan_by_trace",
+    ),
+    (
+        "jct_mean_s_vs_exclusive",
+        "Normalized mean JCT",
+        "normalized_mean_jct_by_trace",
+    ),
+    (
+        "jct_p95_s_vs_exclusive",
+        "Normalized P95 JCT",
+        "normalized_p95_jct_by_trace",
+    ),
+    (
+        "initial_queue_wait_mean_s_vs_exclusive",
+        "Normalized mean queue wait",
+        "normalized_mean_queue_wait_by_trace",
+    ),
+    (
+        "initial_queue_wait_p95_s_vs_exclusive",
+        "Normalized P95 queue wait",
+        "normalized_p95_queue_wait_by_trace",
+    ),
+    (
+        "execution_span_mean_s_vs_exclusive",
+        "Normalized mean execution span",
+        "normalized_mean_execution_span_by_trace",
+    ),
+]
+
+
+def build_cross_trace_metric_table(
+    *,
+    combined: pd.DataFrame,
+    value_column: str,
+) -> pd.DataFrame:
+    pivot = combined.pivot_table(
+        index="run_label",
+        columns="trace_name",
+        values=value_column,
+        aggfunc="first",
+    )
+
+    pivot = pivot.reset_index()
+
+    trace_columns = [
+        column
+        for column in pivot.columns
+        if column != "run_label"
+    ]
+
+    pivot["geomean"] = pivot[trace_columns].apply(
+        lambda row: geometric_mean(row),
+        axis=1,
+    )
+
+    return _ordered_policy_frame(pivot).drop(
+        columns=["_order"],
+        errors="ignore",
+    )
+
+
 def generate_cross_trace_analysis(
     *,
     validation_frame: pd.DataFrame,
@@ -819,28 +902,24 @@ def generate_cross_trace_analysis(
         validation_frame["status"] == "complete"
     ]
 
-    available_traces = sorted(
+    completed_trace_names = sorted(
         completed["trace_name"].dropna().unique()
     )
 
     frames: list[pd.DataFrame] = []
 
-    for trace_name in available_traces:
-        path = (
+    for trace_name in completed_trace_names:
+        summary_path = (
             output_dir
             / "traces"
             / str(trace_name)
             / "normalized_performance_summary.csv"
         )
 
-        if not path.is_file():
-            print(
-                f"{trace_name}: normalized performance table "
-                "is unavailable; skipping cross-trace inclusion"
-            )
+        if not summary_path.is_file():
             continue
 
-        frame = pd.read_csv(path).copy()
+        frame = pd.read_csv(summary_path).copy()
         frame.insert(0, "trace_name", trace_name)
         frames.append(frame)
 
@@ -862,18 +941,40 @@ def generate_cross_trace_analysis(
     )
     combined.to_csv(combined_path, index=False)
 
-    ratio_columns = [
-        "makespan_s_vs_exclusive",
-        "jct_mean_s_vs_exclusive",
-        "jct_p95_s_vs_exclusive",
-        "initial_queue_wait_mean_s_vs_exclusive",
-        "initial_queue_wait_p95_s_vs_exclusive",
-        "execution_span_mean_s_vs_exclusive",
-        "execution_span_p95_s_vs_exclusive",
-        "successful_attempt_runtime_mean_s_vs_exclusive",
-    ]
+    trace_count = int(
+        combined["trace_name"].nunique()
+    )
+
+    if trace_count < 2:
+        print(
+            "\nCross-trace aggregation skipped: "
+            f"only {trace_count} trace is complete."
+        )
+        return
+
+    tables_dir = output_dir / "cross_trace_tables"
+    figures_dir = output_dir / "figures"
+
+    tables_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     aggregate_rows = []
+
+    for value_column, label, output_stem in CROSS_TRACE_METRICS:
+        table = build_cross_trace_metric_table(
+            combined=combined,
+            value_column=value_column,
+        )
+
+        table_path = tables_dir / f"{output_stem}.csv"
+        table.to_csv(table_path, index=False)
+
+        plot_cross_trace_metric(
+            table=table,
+            metric_label=label,
+            output_dir=figures_dir,
+            output_stem=output_stem,
+        )
 
     for run_label, group in combined.groupby(
         "run_label",
@@ -892,16 +993,16 @@ def generate_cross_trace_analysis(
             ),
         }
 
-        for column in ratio_columns:
-            if column in group.columns:
-                row[
-                    f"{column}_geomean"
-                ] = geometric_mean(group[column])
+        for value_column, _, _ in CROSS_TRACE_METRICS:
+            row[
+                f"{value_column}_geomean"
+            ] = geometric_mean(
+                group[value_column]
+            )
 
-        makespan_ratio = row.get(
-            "makespan_s_vs_exclusive_geomean",
-            np.nan,
-        )
+        makespan_ratio = row[
+            "makespan_s_vs_exclusive_geomean"
+        ]
 
         row[
             "makespan_reduction_percent_from_geomean"
@@ -915,156 +1016,69 @@ def generate_cross_trace_analysis(
 
     aggregate = pd.DataFrame(aggregate_rows)
 
+    aggregate = _ordered_policy_frame(
+        aggregate
+    ).drop(
+        columns=["_order"],
+        errors="ignore",
+    )
+
     aggregate_path = (
         output_dir
         / "aggregate_policy_summary.csv"
     )
     aggregate.to_csv(aggregate_path, index=False)
 
-    figures_dir = output_dir / "figures"
-    figures_dir.mkdir(parents=True, exist_ok=True)
-
-    plot_cross_trace_grouped_bars(
-        frame=combined,
-        value_columns=[
-            (
-                "makespan_s_vs_exclusive",
-                "Normalized makespan",
-            ),
-        ],
-        y_label="Relative to Exclusive",
-        output_dir=figures_dir,
-        output_stem="normalized_makespan_by_trace",
-    )
-
-    plot_cross_trace_grouped_bars(
-        frame=combined,
-        value_columns=[
-            (
-                "jct_mean_s_vs_exclusive",
-                "Mean JCT",
-            ),
-            (
-                "jct_p95_s_vs_exclusive",
-                "P95 JCT",
-            ),
-        ],
-        y_label="Relative to Exclusive",
-        output_dir=figures_dir,
-        output_stem="normalized_jct_by_trace",
-    )
-
-    plot_cross_trace_grouped_bars(
-        frame=combined,
-        value_columns=[
-            (
-                "initial_queue_wait_mean_s_vs_exclusive",
-                "Mean wait",
-            ),
-            (
-                "initial_queue_wait_p95_s_vs_exclusive",
-                "P95 wait",
-            ),
-        ],
-        y_label="Relative to Exclusive",
-        output_dir=figures_dir,
-        output_stem="normalized_queue_wait_by_trace",
-    )
-
-    plot_cross_trace_grouped_bars(
-        frame=combined,
-        value_columns=[
-            (
-                "execution_span_mean_s_vs_exclusive",
-                "Mean execution span",
-            ),
-            (
-                "execution_span_p95_s_vs_exclusive",
-                "P95 execution span",
-            ),
-        ],
-        y_label="Relative to Exclusive",
-        output_dir=figures_dir,
-        output_stem="normalized_execution_span_by_trace",
-    )
-
-    plot_aggregate_policy_performance(
-        aggregate=aggregate,
-        output_dir=figures_dir,
-    )
-
     print(
         "\nWrote cross-trace analysis:"
         f"\n  {combined_path}"
         f"\n  {aggregate_path}"
+        f"\n  {tables_dir}"
     )
 
 
-def plot_cross_trace_grouped_bars(
+def plot_cross_trace_metric(
     *,
-    frame: pd.DataFrame,
-    value_columns: list[tuple[str, str]],
-    y_label: str,
+    table: pd.DataFrame,
+    metric_label: str,
     output_dir: Path,
     output_stem: str,
 ) -> None:
-    traces = sorted(
-        frame["trace_name"].astype(str).unique()
-    )
-
-    policies = list(
-        _ordered_policy_frame(frame)[
-            "run_label"
-        ].drop_duplicates()
-    )
-
-    combinations = [
-        (trace_name, column, label)
-        for trace_name in traces
-        for column, label in value_columns
+    value_columns = [
+        column
+        for column in table.columns
+        if column != "run_label"
     ]
 
-    x = np.arange(len(policies))
-    total_width = 0.8
-    width = total_width / max(len(combinations), 1)
-
-    figure, axis = plt.subplots(
-        figsize=(max(7.2, len(policies) * 1.25), 4.6)
+    x = np.arange(len(table))
+    total_width = 0.82
+    width = total_width / max(
+        len(value_columns),
+        1,
     )
 
-    for index, (
-        trace_name,
-        value_column,
-        metric_label,
-    ) in enumerate(combinations):
-        values = []
+    figure, axis = plt.subplots(
+        figsize=(
+            max(7.4, len(table) * 1.3),
+            4.7,
+        )
+    )
 
-        for policy in policies:
-            match = frame[
-                (frame["trace_name"].astype(str) == trace_name)
-                & (frame["run_label"] == policy)
-            ]
-
-            values.append(
-                float(match.iloc[0][value_column])
-                if len(match) == 1
-                else np.nan
-            )
-
+    for index, column in enumerate(value_columns):
         offset = (
             index
-            - (len(combinations) - 1) / 2
+            - (len(value_columns) - 1) / 2
         ) * width
 
         label = (
-            trace_name
-            if len(value_columns) == 1
-            else f"{trace_name}: {metric_label}"
+            "GeoMean"
+            if column == "geomean"
+            else str(column).capitalize()
         )
 
         axis.bar(
             x + offset,
-            values,
+            table[column],
             width,
             label=label,
         )
@@ -1075,13 +1089,14 @@ def plot_cross_trace_grouped_bars(
         linewidth=1.0,
         label="Exclusive baseline",
     )
+
     axis.set_xticks(x)
     axis.set_xticklabels(
-        policies,
+        table["run_label"],
         rotation=20,
         ha="right",
     )
-    axis.set_ylabel(y_label)
+    axis.set_ylabel(metric_label)
     axis.set_xlabel("Policy")
     axis.set_ylim(bottom=0)
     axis.grid(True, axis="y", alpha=0.3)
@@ -1093,79 +1108,6 @@ def plot_cross_trace_grouped_bars(
         output_stem,
     )
 
-
-def plot_aggregate_policy_performance(
-    *,
-    aggregate: pd.DataFrame,
-    output_dir: Path,
-) -> None:
-    prepared = _ordered_policy_frame(aggregate)
-
-    metrics = [
-        (
-            "makespan_s_vs_exclusive_geomean",
-            "Makespan",
-        ),
-        (
-            "jct_mean_s_vs_exclusive_geomean",
-            "Mean JCT",
-        ),
-        (
-            "initial_queue_wait_mean_s_vs_exclusive_geomean",
-            "Mean wait",
-        ),
-    ]
-
-    metrics = [
-        item
-        for item in metrics
-        if item[0] in prepared.columns
-    ]
-
-    x = np.arange(len(prepared))
-    total_width = 0.8
-    width = total_width / max(len(metrics), 1)
-
-    figure, axis = plt.subplots(
-        figsize=(max(7.2, len(prepared) * 1.25), 4.6)
-    )
-
-    for index, (column, label) in enumerate(metrics):
-        offset = (
-            index
-            - (len(metrics) - 1) / 2
-        ) * width
-
-        axis.bar(
-            x + offset,
-            prepared[column],
-            width,
-            label=label,
-        )
-
-    axis.axhline(
-        1.0,
-        linestyle="--",
-        linewidth=1.0,
-        label="Exclusive baseline",
-    )
-    axis.set_xticks(x)
-    axis.set_xticklabels(
-        prepared["run_label"],
-        rotation=20,
-        ha="right",
-    )
-    axis.set_ylabel("Geometric mean relative to Exclusive")
-    axis.set_xlabel("Policy")
-    axis.set_ylim(bottom=0)
-    axis.grid(True, axis="y", alpha=0.3)
-    axis.legend()
-
-    save_figure(
-        figure,
-        output_dir,
-        "aggregate_policy_performance",
-    )
 
 
 def generate_recovery_analysis(
@@ -1595,75 +1537,122 @@ def generate_markdown_report(
         )
     )
 
-    lines.extend(["", "## Aggregate cross-trace comparison", ""])
-
-    aggregate_path = (
-        output_dir / "aggregate_policy_summary.csv"
+    lines.extend(
+        [
+            "",
+            "## Cross-trace comparison",
+            "",
+        ]
     )
 
-    if aggregate_path.is_file():
-        aggregate = pd.read_csv(aggregate_path)
-
-        lines.append(
-            markdown_table(
-                aggregate,
-                columns=[
-                    "run_label",
-                    "trace_count",
-                    "completion_fraction_mean",
-                    "makespan_s_vs_exclusive_geomean",
-                    "makespan_reduction_percent_from_geomean",
-                    "jct_mean_s_vs_exclusive_geomean",
-                    "jct_p95_s_vs_exclusive_geomean",
-                    "initial_queue_wait_mean_s_vs_exclusive_geomean",
-                    "initial_queue_wait_p95_s_vs_exclusive_geomean",
-                    "execution_span_mean_s_vs_exclusive_geomean",
-                ],
-                rename={
-                    "run_label": "Policy",
-                    "trace_count": "Traces",
-                    "completion_fraction_mean": "Completion",
-                    "makespan_s_vs_exclusive_geomean": (
-                        "Makespan / Exclusive"
-                    ),
-                    "makespan_reduction_percent_from_geomean": (
-                        "Makespan reduction (%)"
-                    ),
-                    "jct_mean_s_vs_exclusive_geomean": (
-                        "Mean JCT / Exclusive"
-                    ),
-                    "jct_p95_s_vs_exclusive_geomean": (
-                        "P95 JCT / Exclusive"
-                    ),
-                    "initial_queue_wait_mean_s_vs_exclusive_geomean": (
-                        "Mean wait / Exclusive"
-                    ),
-                    "initial_queue_wait_p95_s_vs_exclusive_geomean": (
-                        "P95 wait / Exclusive"
-                    ),
-                    "execution_span_mean_s_vs_exclusive_geomean": (
-                        "Execution span / Exclusive"
-                    ),
-                },
-            )
-        )
-    else:
-        lines.append("_Aggregate results are not available yet._")
-
-    aggregate_figure = (
-        output_dir
-        / "figures"
-        / "aggregate_policy_performance.png"
+    completed_trace_count = int(
+        validation_frame.loc[
+            validation_frame["status"] == "complete",
+            "trace_name",
+        ].nunique()
     )
 
-    if aggregate_figure.is_file():
+    if completed_trace_count < 2:
         lines.extend(
             [
+                (
+                    "Cross-trace aggregation is not shown because "
+                    f"only {completed_trace_count} trace is complete."
+                ),
                 "",
-                "![Aggregate policy performance]"
-                f"({relative_markdown_path(target=aggregate_figure, report_dir=output_dir)})",
+                (
+                    "See the trace-specific raw and normalized "
+                    "results below."
+                ),
             ]
         )
+    else:
+        lines.extend(
+            [
+                (
+                    "Each table reports every completed trace "
+                    "separately. GeoMean summarizes normalized "
+                    "ratios across traces; lower is better."
+                ),
+                "",
+            ]
+        )
+
+        table_specs = [
+            (
+                "Normalized makespan",
+                "normalized_makespan_by_trace.csv",
+            ),
+            (
+                "Normalized mean JCT",
+                "normalized_mean_jct_by_trace.csv",
+            ),
+            (
+                "Normalized P95 JCT",
+                "normalized_p95_jct_by_trace.csv",
+            ),
+            (
+                "Normalized mean queue wait",
+                "normalized_mean_queue_wait_by_trace.csv",
+            ),
+            (
+                "Normalized P95 queue wait",
+                "normalized_p95_queue_wait_by_trace.csv",
+            ),
+            (
+                "Normalized mean execution span",
+                "normalized_mean_execution_span_by_trace.csv",
+            ),
+        ]
+
+        for title, filename in table_specs:
+            table_path = (
+                output_dir
+                / "cross_trace_tables"
+                / filename
+            )
+
+            if not table_path.is_file():
+                continue
+
+            table = pd.read_csv(table_path)
+
+            rename = {
+                "run_label": "Policy",
+                "geomean": "GeoMean",
+            }
+
+            for column in table.columns:
+                if column not in rename:
+                    rename[column] = str(column).capitalize()
+
+            lines.extend(
+                [
+                    f"### {title}",
+                    "",
+                    markdown_table(
+                        table,
+                        columns=list(table.columns),
+                        rename=rename,
+                    ),
+                    "",
+                ]
+            )
+
+            figure_path = (
+                output_dir
+                / "figures"
+                / filename.replace(".csv", ".png")
+            )
+
+            if figure_path.is_file():
+                lines.extend(
+                    [
+                        f"![{title}]"
+                        f"({relative_markdown_path(target=figure_path, report_dir=output_dir)})",
+                        "",
+                    ]
+                )
 
     completed_traces = sorted(
         validation_frame.loc[
