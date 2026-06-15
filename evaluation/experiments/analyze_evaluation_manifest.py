@@ -299,6 +299,66 @@ def refresh_completed_summaries(
         )
 
 
+
+def collect_completed_run_summaries(
+    *,
+    validation_frame: pd.DataFrame,
+    output_dir: Path,
+) -> pd.DataFrame:
+    rows: list[pd.DataFrame] = []
+
+    completed = validation_frame[
+        validation_frame["status"] == "complete"
+    ]
+
+    for record in completed.itertuples(index=False):
+        experiment_root = Path(record.experiment_root)
+        summary_path = (
+            experiment_root
+            / "analysis"
+            / "run_summary.csv"
+        )
+
+        if not summary_path.is_file():
+            raise FileNotFoundError(
+                f"Missing summary for completed run: "
+                f"{summary_path}"
+            )
+
+        summary = pd.read_csv(summary_path)
+
+        if summary.empty:
+            raise ValueError(
+                f"{summary_path}: summary is empty"
+            )
+
+        summary = summary.copy()
+        summary.insert(0, "trace_name", record.trace_name)
+        summary.insert(1, "repetition", record.repetition)
+        summary.insert(
+            2,
+            "configuration_label",
+            record.configuration_label,
+        )
+
+        rows.append(summary)
+
+    if rows:
+        combined = pd.concat(
+            rows,
+            ignore_index=True,
+        )
+    else:
+        combined = pd.DataFrame()
+
+    output_path = output_dir / "all_run_summaries.csv"
+    combined.to_csv(output_path, index=False)
+
+    print(f"Wrote: {output_path}")
+
+    return combined
+
+
 def print_status_summary(frame: pd.DataFrame) -> None:
     print("\n===== Evaluation status =====")
 
@@ -382,6 +442,11 @@ def main() -> int:
 
     if args.refresh:
         refresh_completed_summaries(frame)
+
+    collect_completed_run_summaries(
+        validation_frame=frame,
+        output_dir=output_dir,
+    )
 
     print(f"\nWrote: {output_path}")
 
