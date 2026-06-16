@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 
 from placement.policies import (
-    GPU_MEMORY_GUARD_MIB,
+    AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
     select_est_bf,
     select_or_magm,
 )
@@ -33,7 +33,7 @@ class TestPlacementPolicies(unittest.TestCase):
     def test_select_est_bf_returns_none_when_not_enough_memory(self):
         gpus_with_metrics = pd.DataFrame(
             {
-                "GPU_mem_available": [6400, 6500],
+                "GPU_mem_available": [5500, 5999],
                 "smact": [0.10, 0.10],
                 "smocc": [0.10, 0.10],
                 "drama": [0.10, 0.10],
@@ -51,7 +51,7 @@ class TestPlacementPolicies(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_select_est_bf_uses_configured_memory_guard(self):
-        required_mib = 6000 + GPU_MEMORY_GUARD_MIB
+        required_mib = 6000 + AVAILABLE_MEMORY_EXTRA_GUARD_MIB
 
         gpus_with_metrics = pd.DataFrame(
             {

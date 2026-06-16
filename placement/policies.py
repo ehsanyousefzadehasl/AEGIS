@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pandas as pd
 
-GPU_MEMORY_GUARD_MIB = 512
+# GPU_mem_available already excludes the telemetry-level guard.
+AVAILABLE_MEMORY_EXTRA_GUARD_MIB = 0
+
+# Lucid reasons from raw device capacity, so it must reserve memory itself.
+LUCID_MEMORY_GUARD_MIB = 512
 
 from placement.candidate_selection import RiskThresholds, build_candidate_gpus
 from runtime import gpu_allocations
@@ -17,7 +21,7 @@ def select_oracle_bf(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_requirement + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -44,7 +48,7 @@ def select_oracle_magm(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_requirement + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -71,7 +75,7 @@ def select_oracle_lug(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_requirement + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -161,7 +165,7 @@ def select_est_magm(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_estimation + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -187,7 +191,7 @@ def select_est_bf(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_estimation + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -214,7 +218,7 @@ def select_est_lug(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_estimation + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_estimation + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,
@@ -277,7 +281,7 @@ def select_lucid(
     available_gpu_ids,
     number_of_gpus_requested: int,
     gpu_memory_capacity_mib: int = 40960,
-    memory_guard_mib: int = GPU_MEMORY_GUARD_MIB,
+    memory_guard_mib: int = LUCID_MEMORY_GUARD_MIB,
     gss_capacity: int = 2,
     max_jobs_per_gpu: int = 2,
 ):
@@ -365,7 +369,7 @@ def select_oracle_ff(
 ):
     candidate_gpus = build_candidate_gpus(
         gpus_with_metrics=gpus_with_metrics,
-        min_free_mib=gpu_memory_requirement + GPU_MEMORY_GUARD_MIB,
+        min_free_mib=gpu_memory_requirement + AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
         available_gpu_ids=available_gpu_ids,
         risk_thresholds=risk_thresholds,
         use_utilization_gate=True,

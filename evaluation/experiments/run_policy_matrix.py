@@ -14,7 +14,10 @@ import copy
 
 import time
 
-from placement.policies import GPU_MEMORY_GUARD_MIB
+from placement.policies import (
+    AVAILABLE_MEMORY_EXTRA_GUARD_MIB,
+    LUCID_MEMORY_GUARD_MIB,
+)
 
 DEFAULT_CONFIG = "config.yaml"
 DEFAULT_RESULTS_DIR = "evaluation/experiments/results"
@@ -197,9 +200,14 @@ def main() -> int:
                 "expected_tasks": count_trace_tasks(args.trace_csv) if args.trace_csv else 0,
                 "estimator": estimator,
                 "run_label": run_label,
-                "gpu_memory_guard_mib": (
-                    GPU_MEMORY_GUARD_MIB
+                "available_memory_extra_guard_mib": (
+                    AVAILABLE_MEMORY_EXTRA_GUARD_MIB
                 ),
+                "lucid_memory_guard_mib": (
+                    LUCID_MEMORY_GUARD_MIB
+                ),
+                "telemetry_memory_guard_mib": 512,
+                "telemetry_memory_guard_fraction": 0.01,
                 "risk_thresholds": {
                     "smact": float(cfg.get("risk", {}).get("smact_threshold", 0.65)),
                     "smocc": float(cfg.get("risk", {}).get("smocc_threshold", 0.35)),
