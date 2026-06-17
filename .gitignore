@@ -154,3 +154,7 @@ evaluation/experiments/results/
 !evaluation/profiling/solo/legacy_rtx2080ti/extracted/
 !evaluation/profiling/solo/legacy_rtx2080ti/extracted/solo_profile_results_1gpu_latest_success.csv
 !evaluation/profiling/solo/legacy_rtx2080ti/extracted/legacy_yaml_metadata_preview.csv
+evaluation/profiling/solo/legacy_rtx2080ti/manifests/remaining/
+evaluation/profiling/solo/legacy_rtx2080ti/manifests/retry_failed_1gpu.txt
+evaluation/profiling/solo/legacy_rtx2080ti/manifests/shortlist_1gpu.txt
+evaluation/profiling/solo/legacy_rtx2080ti/manifests/shortlist_2gpu.txt
