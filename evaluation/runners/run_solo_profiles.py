@@ -137,15 +137,19 @@ def load_profile_manifest(path: str | None, repo_root: Path) -> dict[str, str]:
 
 def resolve_conda_prefix(conda_env: str) -> tuple[list[str], str]:
     env_text = str(conda_env).strip() or "tf"
+    conda_exe = os.environ.get("CONDA_EXE", "conda")
 
     if "/" in env_text or env_text.startswith("."):
-        return (["conda", "run", "--no-capture-output", "-p", env_text], env_text)
+        return ([conda_exe, "run", "--no-capture-output", "-p", env_text], env_text)
 
     default_prefix = f"/opt/miniconda3/envs/{env_text}"
     if Path(default_prefix).exists():
-        return (["conda", "run", "--no-capture-output", "-p", default_prefix], default_prefix)
+        return (
+            [conda_exe, "run", "--no-capture-output", "-p", default_prefix],
+            default_prefix,
+        )
 
-    return (["conda", "run", "--no-capture-output", "-n", env_text], env_text)
+    return ([conda_exe, "run", "--no-capture-output", "-n", env_text], env_text)
 
 
 def format_extra_args(template: str, placeholders: dict[str, str]) -> list[str]:
