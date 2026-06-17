@@ -1,0 +1,43 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/resnet18_cifar100_train.py --batch_size 32 --epochs 50 --data_root /data/eyousefzadeh/datasets/cifar100
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 494
+estimates:
+  horus_mib: 2231.6129
+  faketensor_mib: 53.99452972
+  gpumemnet_mib: 8000.0
+profile:
+  peak_memory_mib: 494
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: 200
+  source: rtx2080ti_first_memory_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 788
+    full_run_peak_memory_mib: 494
+    profile_window_peak_memory_mib: 494
+    end_to_end_time_s: 1747.2
+    profile_anchor: first-memory
+    profile_window_s: 200
+    gpu_model: NVIDIA GeForce RTX 2080 Ti
+    solo_run_id: 2026-06-16_17-34-04_8ce1d1db
+    nvidia_smi_sample_count_200s: 178
+  horus_gpu_util_mean: 32.7752808988764
+  horus_gpu_util_p95: 40.0
+  horus_gpu_util_max: 43.0
+  lucid_class: tiny
+  lucid_ss: 0
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: tiny
+  lucid_classifier_ss: 0
+  lucid_pred_proba_ss0: 0.82
+  lucid_pred_proba_ss1: 0.17
+  lucid_pred_proba_ss2: 0.01
+online_estimation:
+  summary_path: resnet18_cifar100.model
+  parser_arg_1: cifar100
+  parser_arg_2: 32

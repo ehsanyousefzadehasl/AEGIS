@@ -1,0 +1,37 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/xlnet_base_cased_wiki_train.py
+    --cache_dir /data/eyousefzadeh/cache/huggingface
+resources:
+  num_gpus: 2
+  gpu_memory_requirement_mib: 8988
+estimates:
+  horus_mib: 3661.7393
+  faketensor_mib: 40000.0
+  gpumemnet_mib: 16000.0
+profile:
+  peak_memory_mib: 8890
+  avg_smact: 0.8074918032786884
+  avg_smocc: 0.3057322404371584
+  avg_drama: 0.2052786885245901
+  profiling_duration_s: 200
+  source: solo_profile_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 9192
+    full_run_peak_memory_mib: 8988
+  horus_gpu_util_mean: 90.82513661202186
+  horus_gpu_util_p95: 100.0
+  horus_gpu_util_max: 100.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: jumbo
+  lucid_classifier_ss: 2
+  lucid_pred_proba_ss0: 0.0
+  lucid_pred_proba_ss1: 0.2
+  lucid_pred_proba_ss2: 0.8
+online_estimation:
+  summary_path: xlnet_base_cased.model
+  parser_arg_1: wiki
+  parser_arg_2: 8

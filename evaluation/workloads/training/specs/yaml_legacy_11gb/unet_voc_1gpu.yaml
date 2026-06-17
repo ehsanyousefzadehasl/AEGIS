@@ -1,0 +1,43 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/unet_voc_train.py --root /data/eyousefzadeh/datasets --download
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 5378
+estimates:
+  horus_mib: 2231.06
+  faketensor_mib: 3404.085
+  gpumemnet_mib: 8000.0
+profile:
+  peak_memory_mib: 5378
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: 200
+  source: rtx2080ti_first_memory_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 9910
+    full_run_peak_memory_mib: 5378
+    profile_window_peak_memory_mib: 5378
+    end_to_end_time_s: 4745.61
+    profile_anchor: first-memory
+    profile_window_s: 200
+    gpu_model: NVIDIA GeForce RTX 2080 Ti
+    solo_run_id: 2026-06-16_17-02-43_2e4aeb49
+    nvidia_smi_sample_count_200s: 179
+  horus_gpu_util_mean: 50.88268156424581
+  horus_gpu_util_p95: 100.0
+  horus_gpu_util_max: 100.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: jumbo
+  lucid_classifier_ss: 2
+  lucid_pred_proba_ss0: 0.0
+  lucid_pred_proba_ss1: 0.05
+  lucid_pred_proba_ss2: 0.95
+online_estimation:
+  summary_path: UNet.model
+  parser_arg_1: /data/eyousefzadeh/datasets
+  parser_arg_2: 8

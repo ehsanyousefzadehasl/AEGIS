@@ -1,0 +1,43 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/vgg16_imagenet_train.py --batch_size 32 --data_dir /data/eyousefzadeh/datasets/imagenet --meta_cache_dir /data/eyousefzadeh/cache/imagenet_meta
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 7072
+estimates:
+  horus_mib: 21525.8262
+  faketensor_mib: 3121.344643
+  gpumemnet_mib: 16000.0
+profile:
+  peak_memory_mib: 7072
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: 200
+  source: rtx2080ti_first_memory_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 6684
+    full_run_peak_memory_mib: 7072
+    profile_window_peak_memory_mib: 7072
+    end_to_end_time_s: 8274.19
+    profile_anchor: first-memory
+    profile_window_s: 200
+    gpu_model: NVIDIA GeForce RTX 2080 Ti
+    solo_run_id: 2026-06-16_18-40-00_370134c0
+    nvidia_smi_sample_count_200s: 178
+  horus_gpu_util_mean: 91.20224719101124
+  horus_gpu_util_p95: 95.0
+  horus_gpu_util_max: 96.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: jumbo
+  lucid_classifier_ss: 2
+  lucid_pred_proba_ss0: 0.0
+  lucid_pred_proba_ss1: 0.08
+  lucid_pred_proba_ss2: 0.92
+online_estimation:
+  summary_path: vgg_32.model
+  parser_arg_1: /data/eyousefzadeh/datasets/imagenet
+  parser_arg_2: 32

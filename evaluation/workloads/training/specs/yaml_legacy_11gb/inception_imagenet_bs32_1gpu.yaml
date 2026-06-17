@@ -1,0 +1,43 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/inception_imagenet_train.py --batch_size 32 --data_dir /data/eyousefzadeh/datasets/imagenet
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 4864
+estimates:
+  horus_mib: 5990.3652
+  faketensor_mib: 1590.304115
+  gpumemnet_mib: 8000.0
+profile:
+  peak_memory_mib: 4862
+  avg_smact: null
+  avg_smocc: null
+  avg_drama: null
+  profiling_duration_s: 200
+  source: rtx2080ti_first_memory_200s
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 5230
+    full_run_peak_memory_mib: 4864
+    profile_window_peak_memory_mib: 4862
+    end_to_end_time_s: 8284.12
+    profile_anchor: first-memory
+    profile_window_s: 200
+    gpu_model: NVIDIA GeForce RTX 2080 Ti
+    solo_run_id: 2026-06-16_13-41-55_da1aaa58
+    nvidia_smi_sample_count_200s: 179
+  horus_gpu_util_mean: 86.29608938547486
+  horus_gpu_util_p95: 90.0
+  horus_gpu_util_max: 92.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: jumbo
+  lucid_classifier_ss: 2
+  lucid_pred_proba_ss0: 0.0
+  lucid_pred_proba_ss1: 0.02
+  lucid_pred_proba_ss2: 0.98
+online_estimation:
+  summary_path: Inception_32.model
+  parser_arg_1: /data/eyousefzadeh/datasets/imagenet
+  parser_arg_2: 32
