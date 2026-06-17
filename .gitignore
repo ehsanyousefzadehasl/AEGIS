@@ -148,3 +148,9 @@ evaluation/lucid/results/**/*.jsonl
 !evaluation/experiments/traces/smoke_4jobs.csv
 
 evaluation/experiments/results/
+# Reproducible RTX 2080 Ti evaluation metadata
+!evaluation/profiling/solo/legacy_rtx2080ti/manifests/profile_args_1gpu_legacy.csv
+!evaluation/profiling/solo/legacy_rtx2080ti/manifests/profile_args_2gpu_legacy.csv
+!evaluation/profiling/solo/legacy_rtx2080ti/extracted/
+!evaluation/profiling/solo/legacy_rtx2080ti/extracted/solo_profile_results_1gpu_latest_success.csv
+!evaluation/profiling/solo/legacy_rtx2080ti/extracted/legacy_yaml_metadata_preview.csv
