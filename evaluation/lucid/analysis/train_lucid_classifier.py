@@ -25,6 +25,12 @@ FEATURES = {
         "avg_drama",
         "amp_enabled",
     ],
+    "legacy_nvidia_smi": [
+        "peak_memory_mib",
+        "memory_fraction",
+        "horus_gpu_util_mean",
+        "amp_enabled",
+    ],
     "extended": [
         "peak_memory_mib",
         "memory_fraction",
