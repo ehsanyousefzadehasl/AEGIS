@@ -15,11 +15,12 @@ import pandas as pd
 
 DISPLAY_NAMES = {
     "exclusive": "Exclusive",
-    "OR-MAGM": "AEGIS (estimator-free)",
-    "EST-MAGM__horus": "AEGIS + Horus",
-    "HORUS__horus": "Horus",
-    "LUCID": "Lucid",
-    "oracle-MAGM": "Oracle-MAGM",
+    "OR-MAGM": "AEGIS",
+    "EST-MAGM__horus": "AEGIS+HorusMem",
+    "HORUS__horus": "Horus-style",
+    "LUCID": "Lucid-style",
+    "oracle-MAGM": "Oracle-MFM",
+    "PROFILED-MAGM": "Profiled-MFM",
 }
 
 

@@ -18,6 +18,39 @@ import pandas as pd
 import yaml
 
 
+POLICY_DISPLAY_NAMES = {
+    "exclusive": "Exclusive",
+    "OR-MAGM": "AEGIS",
+    "EST-MAGM__horus": "AEGIS+HorusMem",
+    "HORUS__horus": "Horus-style",
+    "LUCID": "Lucid-style",
+    "oracle-MAGM": "Oracle-MFM",
+    "PROFILED-MAGM": "Profiled-MFM",
+}
+
+
+POLICY_DISPLAY_ORDER = {
+    "Exclusive": 0,
+    "Oracle-MFM": 1,
+    "AEGIS": 2,
+    "AEGIS+HorusMem": 3,
+    "Horus-style": 4,
+    "Lucid-style": 5,
+    "Profiled-MFM": 6,
+}
+
+
+def policy_display_name(run_label: object) -> str:
+    raw = str(run_label)
+    return POLICY_DISPLAY_NAMES.get(raw, raw.replace("MAGM", "MFM"))
+
+
+def policy_sort_order(run_label: object) -> int:
+    display = policy_display_name(run_label)
+    return POLICY_DISPLAY_ORDER.get(display, 100)
+
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -686,24 +719,16 @@ def generate_per_trace_performance_tables(
 def _ordered_policy_frame(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
-    order = {
-        "exclusive": 0,
-        "OR-MAGM": 1,
-        "EST-MAGM__horus": 2,
-        "HORUS__horus": 3,
-        "LUCID": 4,
-        "oracle-MAGM": 5,
-    }
-
     prepared = frame.copy()
-    prepared["_order"] = (
-        prepared["run_label"]
-        .map(order)
-        .fillna(len(order))
+    prepared["policy_display"] = prepared["run_label"].map(
+        policy_display_name
+    )
+    prepared["_order"] = prepared["run_label"].map(
+        policy_sort_order
     )
 
     return prepared.sort_values(
-        ["_order", "run_label"]
+        ["_order", "policy_display", "run_label"]
     )
 
 
@@ -725,7 +750,7 @@ def plot_single_metric_bars(
     axis.bar(x, values)
     axis.set_xticks(x)
     axis.set_xticklabels(
-        prepared["run_label"],
+        prepared["policy_display"],
         rotation=20,
         ha="right",
     )
@@ -774,7 +799,7 @@ def plot_grouped_metric_bars(
 
     axis.set_xticks(x)
     axis.set_xticklabels(
-        prepared["run_label"],
+        prepared["policy_display"],
         rotation=20,
         ha="right",
     )
@@ -1044,13 +1069,24 @@ def plot_cross_trace_metric(
     output_dir: Path,
     output_stem: str,
 ) -> None:
+    prepared = table.copy()
+    prepared["policy_display"] = prepared["run_label"].map(
+        policy_display_name
+    )
+    prepared["_order"] = prepared["run_label"].map(
+        policy_sort_order
+    )
+    prepared = prepared.sort_values(
+        ["_order", "policy_display", "run_label"]
+    )
+
     value_columns = [
         column
-        for column in table.columns
-        if column != "run_label"
+        for column in prepared.columns
+        if column not in {"run_label", "policy_display", "_order"}
     ]
 
-    x = np.arange(len(table))
+    x = np.arange(len(prepared))
     total_width = 0.82
     width = total_width / max(
         len(value_columns),
@@ -1059,7 +1095,7 @@ def plot_cross_trace_metric(
 
     figure, axis = plt.subplots(
         figsize=(
-            max(7.4, len(table) * 1.3),
+            max(7.4, len(prepared) * 1.3),
             4.7,
         )
     )
@@ -1078,7 +1114,7 @@ def plot_cross_trace_metric(
 
         axis.bar(
             x + offset,
-            table[column],
+            prepared[column],
             width,
             label=label,
         )
@@ -1092,7 +1128,7 @@ def plot_cross_trace_metric(
 
     axis.set_xticks(x)
     axis.set_xticklabels(
-        table["run_label"],
+        prepared["policy_display"],
         rotation=20,
         ha="right",
     )
@@ -1419,6 +1455,16 @@ def plot_policy_recovery_costs(
     if prepared.empty:
         return
 
+    prepared["policy_display"] = prepared["run_label"].map(
+        policy_display_name
+    )
+    prepared["_order"] = prepared["run_label"].map(
+        policy_sort_order
+    )
+    prepared = prepared.sort_values(
+        ["_order", "policy_display", "run_label"]
+    )
+
     prepared = prepared.sort_values("run_label")
 
     x = np.arange(len(prepared))
@@ -1441,7 +1487,7 @@ def plot_policy_recovery_costs(
 
     axis.set_xticks(x)
     axis.set_xticklabels(
-        prepared["run_label"],
+        prepared["policy_display"],
         rotation=20,
         ha="right",
     )
@@ -1616,6 +1662,11 @@ def generate_markdown_report(
                 continue
 
             table = pd.read_csv(table_path)
+            table_display = table.copy()
+            if "run_label" in table_display.columns:
+                table_display["run_label"] = table_display[
+                    "run_label"
+                ].map(policy_display_name)
 
             rename = {
                 "run_label": "Policy",
@@ -1631,8 +1682,8 @@ def generate_markdown_report(
                     f"### {title}",
                     "",
                     markdown_table(
-                        table,
-                        columns=list(table.columns),
+                        table_display,
+                        columns=list(table_display.columns),
                         rename=rename,
                     ),
                     "",
@@ -1672,6 +1723,11 @@ def generate_markdown_report(
             continue
 
         performance = pd.read_csv(performance_path)
+        performance_display = performance.copy()
+        if "run_label" in performance_display.columns:
+            performance_display["run_label"] = performance_display[
+                "run_label"
+            ].map(policy_display_name)
 
         lines.extend(
             [
@@ -1689,7 +1745,7 @@ def generate_markdown_report(
 
         lines.append(
             markdown_table(
-                performance,
+                performance_display,
                 columns=[
                     "run_label",
                     "completion_fraction",
@@ -1736,6 +1792,11 @@ def generate_markdown_report(
 
         if normalized_path.is_file():
             normalized = pd.read_csv(normalized_path)
+            normalized_display = normalized.copy()
+            if "run_label" in normalized_display.columns:
+                normalized_display["run_label"] = normalized_display[
+                    "run_label"
+                ].map(policy_display_name)
 
             lines.extend(
                 [
@@ -1750,7 +1811,7 @@ def generate_markdown_report(
 
             lines.append(
                 markdown_table(
-                    normalized,
+                    normalized_display,
                     columns=[
                         "run_label",
                         "makespan_s_vs_exclusive",
@@ -1794,27 +1855,27 @@ def generate_markdown_report(
 
         figures = [
             (
-                "Makespan",
+                "Normalized makespan by policy",
                 trace_dir / "makespan_comparison.png",
             ),
             (
-                "Job completion time",
+                "Job completion time by policy",
                 trace_dir / "jct_comparison.png",
             ),
             (
-                "Initial queue wait",
+                "Queueing time by policy",
                 trace_dir / "queue_wait_comparison.png",
             ),
             (
-                "Execution span",
+                "Execution time by policy",
                 trace_dir / "execution_time_comparison.png",
             ),
             (
-                "Normalized JCT ECDF",
+                "Per-job normalized JCT distribution",
                 trace_dir / "normalized_jct_ecdf.png",
             ),
             (
-                "Completion progress",
+                "Trace completion progress",
                 trace_dir / "completion_progress.png",
             ),
         ]
@@ -1841,6 +1902,11 @@ def generate_markdown_report(
             recovery = pd.read_csv(
                 recovery_summary_path
             )
+            recovery_display = recovery.copy()
+            if "run_label" in recovery_display.columns:
+                recovery_display["run_label"] = recovery_display[
+                    "run_label"
+                ].map(policy_display_name)
 
             lines.extend(
                 [
@@ -1852,7 +1918,7 @@ def generate_markdown_report(
 
             lines.append(
                 markdown_table(
-                    recovery,
+                    recovery_display,
                     columns=[
                         "run_label",
                         "jobs_with_failed_attempts",
