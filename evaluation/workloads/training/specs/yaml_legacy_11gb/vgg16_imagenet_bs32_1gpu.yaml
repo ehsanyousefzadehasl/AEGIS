@@ -1,7 +1,9 @@
 version: 1
 job:
   conda_env: tf
-  command: python evaluation/workloads/training/scripts/clean/vgg16_imagenet_train.py --batch_size 32 --data_dir /data/eyousefzadeh/datasets/imagenet --meta_cache_dir /data/eyousefzadeh/cache/imagenet_meta
+  command: python evaluation/workloads/training/scripts/clean/vgg16_imagenet_train.py
+    --batch_size 32 --data_dir /data/eyousefzadeh/datasets/imagenet --meta_cache_dir
+    /data/eyousefzadeh/cache/imagenet_meta
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 7072
@@ -26,12 +28,15 @@ profile:
     gpu_model: NVIDIA GeForce RTX 2080 Ti
     solo_run_id: 2026-06-16_18-40-00_370134c0
     nvidia_smi_sample_count_200s: 178
+    lucid_label_dataset: legacy_rtx2080ti_pairwise_calibration
+    lucid_label_features: legacy_nvidia_smi
+    lucid_label_gpu_capacity_mib: 11264
   horus_gpu_util_mean: 91.20224719101124
   horus_gpu_util_p95: 95.0
   horus_gpu_util_max: 96.0
   lucid_class: jumbo
   lucid_ss: 2
-  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_label_source: predicted_classifier_legacy_nvidia_smi
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
   lucid_pred_proba_ss0: 0.0

@@ -1,7 +1,8 @@
 version: 1
 job:
   conda_env: tf
-  command: python evaluation/workloads/training/scripts/clean/unet_voc_train.py --root /data/eyousefzadeh/datasets --download
+  command: python evaluation/workloads/training/scripts/clean/unet_voc_train.py --root
+    /data/eyousefzadeh/datasets --download
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 5378
@@ -26,12 +27,22 @@ profile:
     gpu_model: NVIDIA GeForce RTX 2080 Ti
     solo_run_id: 2026-06-16_17-02-43_2e4aeb49
     nvidia_smi_sample_count_200s: 179
+    lucid_label_dataset: legacy_rtx2080ti_pairwise_calibration
+    lucid_label_features: legacy_nvidia_smi
+    lucid_label_gpu_capacity_mib: 11264
+    lucid_pairwise_class: jumbo
+    lucid_pairwise_ss: 2
+    lucid_pairwise_label_source: insufficient_pairwise
+    lucid_pairwise_label_usable: false
+    lucid_num_pair_observations: 2
+    lucid_mean_normalized_speed: 0.7642334208589043
+    lucid_min_normalized_speed: 0.6218683929874456
   horus_gpu_util_mean: 50.88268156424581
   horus_gpu_util_p95: 100.0
   horus_gpu_util_max: 100.0
   lucid_class: jumbo
   lucid_ss: 2
-  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_label_source: low_coverage_pairwise
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
   lucid_pred_proba_ss0: 0.0

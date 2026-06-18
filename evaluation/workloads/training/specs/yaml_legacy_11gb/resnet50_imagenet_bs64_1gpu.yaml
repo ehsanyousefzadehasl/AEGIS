@@ -1,7 +1,9 @@
 version: 1
 job:
   conda_env: tf
-  command: python evaluation/workloads/training/scripts/clean/resnet50_imagenet_train.py --batch_size 64 --data_dir /data/eyousefzadeh/datasets/imagenet --meta_cache_dir /data/eyousefzadeh/cache/imagenet_meta
+  command: python evaluation/workloads/training/scripts/clean/resnet50_imagenet_train.py
+    --batch_size 64 --data_dir /data/eyousefzadeh/datasets/imagenet --meta_cache_dir
+    /data/eyousefzadeh/cache/imagenet_meta
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 6728
@@ -26,12 +28,22 @@ profile:
     gpu_model: NVIDIA GeForce RTX 2080 Ti
     solo_run_id: 2026-06-16_15-43-39_e270c872
     nvidia_smi_sample_count_200s: 178
+    lucid_label_dataset: legacy_rtx2080ti_pairwise_calibration
+    lucid_label_features: legacy_nvidia_smi
+    lucid_label_gpu_capacity_mib: 11264
+    lucid_pairwise_class: jumbo
+    lucid_pairwise_ss: 2
+    lucid_pairwise_label_source: insufficient_pairwise
+    lucid_pairwise_label_usable: false
+    lucid_num_pair_observations: 2
+    lucid_mean_normalized_speed: 0.8077081384990328
+    lucid_min_normalized_speed: 0.6772157863539752
   horus_gpu_util_mean: 88.90449438202248
   horus_gpu_util_p95: 94.0
   horus_gpu_util_max: 94.0
   lucid_class: jumbo
   lucid_ss: 2
-  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_label_source: low_coverage_pairwise
   lucid_classifier_class: jumbo
   lucid_classifier_ss: 2
   lucid_pred_proba_ss0: 0.0

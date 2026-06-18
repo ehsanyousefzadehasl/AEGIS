@@ -1,7 +1,8 @@
 version: 1
 job:
   conda_env: tf
-  command: python evaluation/workloads/training/scripts/clean/resnet18_cifar100_train.py --batch_size 128 --epochs 50 --data_root /data/eyousefzadeh/datasets/cifar100
+  command: python evaluation/workloads/training/scripts/clean/resnet18_cifar100_train.py
+    --batch_size 128 --epochs 50 --data_root /data/eyousefzadeh/datasets/cifar100
 resources:
   num_gpus: 1
   gpu_memory_requirement_mib: 514
@@ -26,12 +27,22 @@ profile:
     gpu_model: NVIDIA GeForce RTX 2080 Ti
     solo_run_id: 2026-06-16_14-37-40_87630634
     nvidia_smi_sample_count_200s: 179
+    lucid_label_dataset: legacy_rtx2080ti_pairwise_calibration
+    lucid_label_features: legacy_nvidia_smi
+    lucid_label_gpu_capacity_mib: 11264
+    lucid_pairwise_class: medium
+    lucid_pairwise_ss: 1
+    lucid_pairwise_label_source: insufficient_pairwise
+    lucid_pairwise_label_usable: false
+    lucid_num_pair_observations: 2
+    lucid_mean_normalized_speed: 0.928040590915052
+    lucid_min_normalized_speed: 0.9052194446706294
   horus_gpu_util_mean: 47.88826815642458
   horus_gpu_util_p95: 60.0
   horus_gpu_util_max: 64.0
-  lucid_class: tiny
-  lucid_ss: 0
-  lucid_label_source: tiny_profile_safeguard_after_classifier
+  lucid_class: medium
+  lucid_ss: 1
+  lucid_label_source: low_coverage_pairwise
   lucid_classifier_class: medium
   lucid_classifier_ss: 1
   lucid_pred_proba_ss0: 0.425
