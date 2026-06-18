@@ -7,6 +7,8 @@ class RiskThresholds:
     smact: float = 0.65
     smocc: float = 0.35
     drama: float = 0.50
+    gpu_utilization: float = 70.0
+    runtime_pressure_backend: str = "dcgm"
 
 
 def apply_memory_filter(
@@ -25,6 +27,26 @@ def apply_utilization_gate(
 ) -> pd.DataFrame:
     if not enabled:
         return candidate_gpus.copy()
+
+    backend = str(
+        getattr(risk_thresholds, "runtime_pressure_backend", "dcgm")
+    ).lower()
+
+    if backend in {"none", "memory_only", "memory-only"}:
+        return candidate_gpus.copy()
+
+    if backend in {"nvidia_smi", "nvidia-smi", "smi"}:
+        if "gpu_utilization" not in candidate_gpus.columns:
+            return candidate_gpus.copy()
+
+        util = pd.to_numeric(
+            candidate_gpus["gpu_utilization"],
+            errors="coerce",
+        ).fillna(0.0)
+
+        return candidate_gpus.loc[
+            util < float(risk_thresholds.gpu_utilization)
+        ].copy()
 
     temp_ = candidate_gpus
     return temp_.loc[

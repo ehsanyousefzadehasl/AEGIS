@@ -574,6 +574,12 @@ def summarize_Gmetrics_snapshot(data=None):
         return pd.DataFrame(columns=[
             "GPU_mem_available",
             "GPU_mem_total",
+            "gpu_utilization_mean",
+            "gpu_utilization_median",
+            "gpu_utilization_p95",
+            "gpu_utilization_ewma",
+            "gpu_utilization_risk",
+            "gpu_utilization",
             "window_samples",
             "ewma_alpha",
             "smact_mean",
@@ -598,7 +604,7 @@ def summarize_Gmetrics_snapshot(data=None):
 
     df = data.copy()
 
-    for c in ["free_gpu_memory", "smact", "smocc", "drama"]:
+    for c in ["free_gpu_memory", "gpu_utilization", "smact", "smocc", "drama"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     gpu_ids = gpu_uuids()
@@ -619,6 +625,11 @@ def summarize_Gmetrics_snapshot(data=None):
             analyzed[uuid] = {
                 "GPU_mem_available": np.nan,
                 "GPU_mem_total": total_mem,
+                "gpu_utilization_mean": np.nan,
+                "gpu_utilization_median": np.nan,
+                "gpu_utilization_p95": np.nan,
+                "gpu_utilization_ewma": np.nan,
+                "gpu_utilization_risk": np.nan,
                 "window_samples": 0,
                 "ewma_alpha": np.nan,
                 "smact_mean": np.nan,
@@ -645,6 +656,7 @@ def summarize_Gmetrics_snapshot(data=None):
         window_samples = len(g)
         alpha = _window_alpha(window_samples)
 
+        gpu_utilization_summary = _metric_window_summary(g["gpu_utilization"], alpha)
         smact_summary = _metric_window_summary(g["smact"], alpha)
         smocc_summary = _metric_window_summary(g["smocc"], alpha)
         drama_summary = _metric_window_summary(g["drama"], alpha)
@@ -652,6 +664,11 @@ def summarize_Gmetrics_snapshot(data=None):
         analyzed[uuid] = {
             "GPU_mem_available": free_mem,
             "GPU_mem_total": total_mem,
+            "gpu_utilization_mean": gpu_utilization_summary["mean"],
+            "gpu_utilization_median": gpu_utilization_summary["median"],
+            "gpu_utilization_p95": gpu_utilization_summary["p95"],
+            "gpu_utilization_ewma": gpu_utilization_summary["ewma"],
+            "gpu_utilization_risk": gpu_utilization_summary["risk"],
             "window_samples": window_samples,
             "ewma_alpha": alpha,
             "smact_mean": smact_summary["mean"],
@@ -674,6 +691,7 @@ def summarize_Gmetrics_snapshot(data=None):
     out = pd.DataFrame.from_dict(analyzed, orient="index")
 
     # Backward-compatible aliases for current placement code.
+    out["gpu_utilization"] = out["gpu_utilization_risk"]
     out["smact"] = out["smact_risk"]
     out["smocc"] = out["smocc_risk"]
     out["drama"] = out["drama_risk"]

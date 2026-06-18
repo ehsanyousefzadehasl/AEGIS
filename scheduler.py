@@ -81,6 +81,8 @@ risk_thresholds = RiskThresholds(
     smact=settings.risk_smact_threshold,
     smocc=settings.risk_smocc_threshold,
     drama=settings.risk_drama_threshold,
+    gpu_utilization=settings.gpu_utilization_threshold,
+    runtime_pressure_backend=settings.runtime_pressure_backend,
 )
 
 task_log_dir = os.path.join(recovery_dir, "task_logs")

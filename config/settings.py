@@ -20,6 +20,8 @@ class SchedulerSettings:
     risk_smact_threshold: float
     risk_smocc_threshold: float
     risk_drama_threshold: float
+    runtime_pressure_backend: str
+    gpu_utilization_threshold: float
 
 
 def load_scheduler_settings() -> SchedulerSettings:
@@ -93,4 +95,6 @@ def load_scheduler_settings() -> SchedulerSettings:
         risk_smact_threshold=float(risk_cfg.get("smact_threshold", 0.65)),
         risk_smocc_threshold=float(risk_cfg.get("smocc_threshold", 0.35)),
         risk_drama_threshold=float(risk_cfg.get("drama_threshold", 0.50)),
+        runtime_pressure_backend=str(risk_cfg.get("runtime_pressure_backend", "dcgm")),
+        gpu_utilization_threshold=float(risk_cfg.get("gpu_utilization_threshold", 70.0)),
     )
