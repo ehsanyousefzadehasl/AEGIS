@@ -1,0 +1,29 @@
+version: 1
+monitor:
+  window: 30
+mapper:
+  policy: exclusive
+  estimator: None
+recovery:
+  dir: /home/eyousefzadeh/data-local/AEGIS/test_logs_folder
+  bucket_mode: percentage_buckets_with_max_step
+  percentage_buckets:
+  - 0.25
+  - 0.5
+  - 0.75
+  fixed_bins_mib:
+  - 5120
+  - 8192
+  - 12288
+  - 16384
+  - 20480
+  - 24576
+  - 30720
+  - 35840
+  max_step_mib: 8192
+risk:
+  runtime_pressure_backend: none
+  gpu_utilization_threshold: 70.0
+  smact_threshold: 0.65
+  smocc_threshold: 0.35
+  drama_threshold: 0.5
