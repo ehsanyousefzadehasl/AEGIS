@@ -1,71 +1,38 @@
-# version your configs so you can evolve the schema safely
 version: 1
-
-# monitoring patience
 monitor:
   window: 30
-
-# mapping configuration
 mapper:
-  # one of:     
-  # exclusive, round-robin
-  # oracle-FF, oracle-MAGM, oracle-BF, oracle-least_GPU_utiltized
-  # most-GMem-available-RR, least_GPU_utilized-RR, 
-  # estimate-most-GMem-available (estimators needs to be set for the experiment first)
-
-  # PROFILED-* uses metrics from each workload YAML profile: block
-  # estimator is ignored unless the selected policy needs it
-  
   policy: exclusive
-  #policy: exclusive
-  #policy: oracle-FF
-  #policy: oracle-BF
-  #policy: oracle-MAGM    
-  #policy: oracle-LUG
-  #policy: OR-RR
-  #policy: OR-MAGM
-  #policy: OR-LUG
-  #policy: EST-BF
-  #policy: EST-MAGM
-  #policy: EST-LUG
-  #policy: ONLINE-EST-BF
-  #policy: ONLINE-EST-MAGM
-  #policy: ONLINE-EST-LUG
-  #policy: PROFILED-BF
-  #policy: PROFILED-MAGM
-  #policy: PROFILED-LUG
-  #policy: LUCID
-  # knobs for each policy (ignored when not applicable)
   estimator: None
-  # estimator: None
-  # estimator: horus
-  # estimator: faketensor
-  # estimator: GPUMemNet
-
 recovery:
   dir: /home/eyousefzadeh/data-local/AEGIS/test_logs_folder
-  # dir: "/home/ehyo/rad-scheduler/04-Oracle-BF"
-  # dir: "/home/ehyo/rad-scheduler/03-Oracle-FF"
-  # dir: "/home/ehyo/rad-scheduler/06-Oracle-LUG"
-  # dir: "/home/ehyo/rad-scheduler/07-OR-RR"
-  # dir: "/home/ehyo/rad-scheduler/08-OR-MAGM"
-  # dir: "/home/ehyo/rad-scheduler/09-OR-LUG"
-  # dir: /home/ehyo/rad-scheduler/Exclusive
-
   bucket_mode: percentage_buckets_with_max_step
-  # bucket_mode: fixed_bins
-
-  percentage_buckets: [0.25, 0.50, 0.75]
-
-  # candidate retry floors, in MiB
-  fixed_bins_mib: [5120, 8192, 12288, 16384, 20480, 24576, 30720, 35840]
-
+  percentage_buckets:
+  - 0.25
+  - 0.5
+  - 0.75
+  fixed_bins_mib:
+  - 5120
+  - 8192
+  - 12288
+  - 16384
+  - 20480
+  - 24576
+  - 30720
+  - 35840
   max_step_mib: 8192
-
-
 risk:
   runtime_pressure_backend: nvidia_smi
   gpu_utilization_threshold: 70.0
   smact_threshold: 0.65
   smocc_threshold: 0.35
-  drama_threshold: 0.50
+  drama_threshold: 0.5
+gpu_ids:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
