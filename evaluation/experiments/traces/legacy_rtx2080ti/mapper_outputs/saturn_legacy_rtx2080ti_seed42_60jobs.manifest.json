@@ -1,0 +1,203 @@
+{
+  "configuration": {
+    "config_path": "/data/eyousefzadeh/dl-trace-mapper/examples/configs/local/saturn_legacy_rtx2080ti_seed42_60jobs.yaml",
+    "duration_matching": "nearest_quantile",
+    "gpu_demand_matching": "exact",
+    "maximum_peak_memory_per_gpu_mib": null,
+    "minimum_jobs_by_gpu_count": {},
+    "preserve_arrivals": true,
+    "requested_job_count": 60,
+    "seed": 42,
+    "selection_method": "representative",
+    "simulation": {
+      "enabled": true,
+      "server_gpu_count": 4
+    },
+    "source_cluster": "saturn",
+    "source_format": "helios",
+    "supported_gpu_counts": [
+      1
+    ],
+    "unsupported_gpu_policy": "filter"
+  },
+  "exclusive_simulation": {
+    "arrival_span_s": 2750.0,
+    "jct_mean_s": 17750.897666666664,
+    "jct_p50_s": 14930.38,
+    "jct_p95_s": 32436.592,
+    "jct_p99_s": 35982.6496,
+    "job_count": 60,
+    "makespan_s": 39646.89000000001,
+    "scheduling_model": "arrival_order_earliest_available_exclusive_gpus",
+    "server_gpu_count": 4,
+    "waiting_mean_s": 15265.243333333334,
+    "waiting_p50_s": 13421.489999999998,
+    "waiting_p95_s": 29989.012499999997,
+    "waiting_p99_s": 31272.286700000004
+  },
+  "inputs": {
+    "source_trace_path": "/data/eyousefzadeh/dl-trace-mapper/data/raw/helios/saturn/cluster_log.csv",
+    "source_trace_sha256": "f991918de22dd88fd87ed4f4d8b3b8beb34a19a57007037298c08e48d56c2377",
+    "workload_catalog_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_inputs/legacy_11gb_workload_catalog.csv",
+    "workload_catalog_sha256": "f752e6b085f6d4805a49ca97cc0f4e3d877092206c507a944194e8aa90f1ab6e"
+  },
+  "manifest_version": 1,
+  "mapping": {
+    "catalog_workload_count_after_memory_filter": 36,
+    "catalog_workload_count_before_memory_filter": 36,
+    "catalog_workload_count_excluded_by_memory": 0,
+    "mapped_job_count": 60,
+    "runtime_quantile_distance_max": 0.014043583535109039,
+    "runtime_quantile_distance_mean": 0.007021791767554493,
+    "runtime_quantile_distance_p50": 0.007021791767554478,
+    "runtime_quantile_distance_p95": 0.013559322033898313,
+    "unique_workload_count": 36,
+    "workload_usage": {
+      "efficientnet_cifar100_bs128_20e_1gpu": 1,
+      "efficientnet_cifar100_bs128_50e_1gpu": 2,
+      "efficientnet_cifar100_bs32_20e_1gpu": 2,
+      "efficientnet_cifar100_bs32_50e_1gpu": 1,
+      "efficientnet_cifar100_bs64_20e_1gpu": 1,
+      "efficientnet_cifar100_bs64_50e_1gpu": 2,
+      "efficientnet_imagenet_bs32_1gpu": 2,
+      "efficientnet_imagenet_bs64_1gpu": 1,
+      "inception_imagenet_bs32_1gpu": 1,
+      "inception_imagenet_bs64_1gpu": 2,
+      "mnist_bs32_1gpu": 2,
+      "mobilenet_cifar100_bs128_20e_1gpu": 1,
+      "mobilenet_cifar100_bs128_50e_1gpu": 2,
+      "mobilenet_cifar100_bs32_20e_1gpu": 1,
+      "mobilenet_cifar100_bs32_50e_1gpu": 2,
+      "mobilenet_cifar100_bs64_20e_1gpu": 2,
+      "mobilenet_cifar100_bs64_50e_1gpu": 2,
+      "mobilenet_imagenet_bs32_1gpu": 2,
+      "mobilenet_imagenet_bs64_1gpu": 1,
+      "resnet18_cifar100_bs128_20e_1gpu": 1,
+      "resnet18_cifar100_bs128_50e_1gpu": 2,
+      "resnet18_cifar100_bs32_20e_1gpu": 1,
+      "resnet18_cifar100_bs32_50e_1gpu": 1,
+      "resnet18_cifar100_bs64_20e_1gpu": 2,
+      "resnet18_cifar100_bs64_50e_1gpu": 2,
+      "resnet34_cifar100_bs128_20e_1gpu": 2,
+      "resnet34_cifar100_bs128_50e_1gpu": 2,
+      "resnet34_cifar100_bs32_20e_1gpu": 2,
+      "resnet34_cifar100_bs32_50e_1gpu": 2,
+      "resnet34_cifar100_bs64_20e_1gpu": 2,
+      "resnet34_cifar100_bs64_50e_1gpu": 2,
+      "resnet50_imagenet_bs32_1gpu": 2,
+      "resnet50_imagenet_bs64_1gpu": 2,
+      "unet_voc_1gpu": 2,
+      "vgg16_imagenet_bs32_1gpu": 2,
+      "xception_imagenet_bs32_1gpu": 1
+    }
+  },
+  "output": {
+    "exclusive_job_metrics_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.exclusive_jobs.csv",
+    "exclusive_summary_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.exclusive_summary.json",
+    "execution_trace_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.execution.csv",
+    "execution_trace_sha256": "f68872d3e1d2344aca9d16f2a13de531a1301f2f8717b6891fadbf48209b6b7d",
+    "trace_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.csv",
+    "trace_sha256": "b6d00204ba355842b97e13093adcd5c7ed7b4af67c04d313195b7933c1daec17"
+  },
+  "selection": {
+    "candidate_window_count": 19559,
+    "eligible_end_index_exclusive": 42134,
+    "eligible_job_count": 280158,
+    "eligible_start_index": 42074,
+    "first_source_job_id": "3245144",
+    "last_source_job_id": "3245646",
+    "minimum_jobs_by_gpu_count": {},
+    "original_first_submit_time_s": 1111597.0,
+    "original_last_submit_time_s": 1114347.0,
+    "representativeness": {
+      "acceptance_constraints": {
+        "maximum_gpu_fraction_deviation": 0.05,
+        "maximum_runtime_cdf_deviation": 0.1
+      },
+      "components": {
+        "burst_fraction_distance": 0.031716745550724956,
+        "gpu_demand_distance": 0.0,
+        "gpu_service_distance": 0.0,
+        "interarrival_distance": 0.011370571869399914,
+        "runtime_cdf_distance": 0.03992443549711236
+      },
+      "selected_maximum_gpu_fraction_deviation": 0.0,
+      "selected_maximum_runtime_cdf_deviation": 0.08727503765732203,
+      "selected_profile": {
+        "duration_p50_s": 11.5,
+        "duration_p95_s": 6869.049999999991,
+        "gpu_demand_fractions": {
+          "1": 1.0
+        },
+        "gpu_service_fractions": {
+          "1": 1.0
+        },
+        "interarrival_p50_s": 4.0,
+        "interarrival_p95_s": 216.39999999999998,
+        "job_count": 60,
+        "runtime_cdf": {
+          "under_10m": 0.7666666666666667,
+          "under_1d": 1.0,
+          "under_1h": 0.9333333333333333,
+          "under_6h": 1.0
+        },
+        "supported_gpu_counts": [
+          1
+        ],
+        "total_gpu_service_s": 67367.0,
+        "zero_interarrival_fraction": 0.3333333333333333
+      },
+      "target_profile": {
+        "duration_p50_s": 176.0,
+        "duration_p95_s": 8543.0,
+        "gpu_demand_fractions": {
+          "1": 1.0
+        },
+        "gpu_service_fractions": {
+          "1": 1.0
+        },
+        "interarrival_p50_s": 4.0,
+        "interarrival_p95_s": 213.0,
+        "job_count": 280158,
+        "runtime_cdf": {
+          "under_10m": 0.6793916290093447,
+          "under_1d": 0.9970409554608471,
+          "under_1h": 0.8811456392464252,
+          "under_6h": 0.9827240342949336
+        },
+        "supported_gpu_counts": [
+          1
+        ],
+        "total_gpu_service_s": 676674271.0,
+        "zero_interarrival_fraction": 0.2849499211159417
+      },
+      "total_score": 0.017833504075405553,
+      "weights": {
+        "burst_fraction": 0.05,
+        "gpu_demand": 0.25,
+        "gpu_service": 0.15,
+        "interarrival": 0.2,
+        "runtime_cdf": 0.35
+      }
+    },
+    "requested_job_count": 60,
+    "selected_arrival_span_s": 2750.0,
+    "selected_jobs_by_gpu_count": {
+      "1": 60
+    },
+    "selection_method": "best_representative_contiguous_eligible_window",
+    "source_job_count": 406982,
+    "supported_gpu_counts": [
+      1
+    ]
+  },
+  "source_counts": {
+    "eligible_job_count": 280158,
+    "normalized_job_count": 406982,
+    "unsupported_job_count": 126824
+  },
+  "tool": {
+    "name": "dl-trace-mapper",
+    "version": "0.1.0"
+  }
+}
