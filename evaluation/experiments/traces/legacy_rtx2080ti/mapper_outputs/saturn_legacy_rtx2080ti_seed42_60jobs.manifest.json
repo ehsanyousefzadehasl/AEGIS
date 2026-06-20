@@ -11,7 +11,7 @@
     "selection_method": "representative",
     "simulation": {
       "enabled": true,
-      "server_gpu_count": 4
+      "server_gpu_count": 8
     },
     "source_cluster": "saturn",
     "source_format": "helios",
@@ -22,18 +22,18 @@
   },
   "exclusive_simulation": {
     "arrival_span_s": 2750.0,
-    "jct_mean_s": 17750.897666666664,
-    "jct_p50_s": 14930.38,
-    "jct_p95_s": 32436.592,
-    "jct_p99_s": 35982.6496,
+    "jct_mean_s": 8065.939166666667,
+    "jct_p50_s": 7561.7300000000005,
+    "jct_p95_s": 15973.110499999999,
+    "jct_p99_s": 18581.9004,
     "job_count": 60,
-    "makespan_s": 39646.89000000001,
+    "makespan_s": 21798.260000000002,
     "scheduling_model": "arrival_order_earliest_available_exclusive_gpus",
-    "server_gpu_count": 4,
-    "waiting_mean_s": 15265.243333333334,
-    "waiting_p50_s": 13421.489999999998,
-    "waiting_p95_s": 29989.012499999997,
-    "waiting_p99_s": 31272.286700000004
+    "server_gpu_count": 8,
+    "waiting_mean_s": 5580.284833333334,
+    "waiting_p50_s": 4989.63,
+    "waiting_p95_s": 13257.948999999999,
+    "waiting_p99_s": 13904.6778
   },
   "inputs": {
     "source_trace_path": "/data/eyousefzadeh/dl-trace-mapper/data/raw/helios/saturn/cluster_log.csv",
