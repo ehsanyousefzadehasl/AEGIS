@@ -125,7 +125,7 @@ def build_launch_command(
         f"exec 3>&1 ; "
         f"{{ time ( "
         f"{{ "
-        f"conda run --no-capture-output -p /opt/miniconda3/envs/tf {clean_command} & pid=$! ; "
+        f"conda run --no-capture-output -p /home/eyousefzadeh/miniconda3/envs/tf {clean_command} & pid=$! ; "
         f"echo '__PID__:'\"$pid\" >&3 ; "
         f"wait $pid ; rc=$? ; "
         f"if [ $rc -eq 0 ]; then "

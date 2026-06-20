@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
+from pathlib import Path
 import subprocess
 from typing import Optional
 
@@ -57,6 +59,19 @@ def _extract_python_command(lines: list[str]) -> str:
     raise ValueError("Could not find python command in task profile")
 
 
+def _resolve_conda_env_path(env_name: str) -> str:
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix and Path(conda_prefix).name == env_name:
+        return conda_prefix
+
+    conda_exe = os.environ.get("CONDA_EXE")
+    if conda_exe:
+        conda_root = Path(conda_exe).resolve().parents[1]
+        return str(conda_root / "envs" / env_name)
+
+    return str(Path.home() / "miniconda3" / "envs" / env_name)
+
+
 def _safe_int_at(lines: list[str], idx: int) -> Optional[int]:
     if idx < 0 or idx >= len(lines):
         return None
@@ -85,7 +100,7 @@ def _load_yaml_format_job_spec(task_path: str, estimator_name: str) -> JobSpec:
     resource_profile_data = data.get("profile", {})
 
     env_name = job.get("conda_env", "tf")
-    env_path = f"/opt/miniconda3/envs/{env_name}"
+    env_path = _resolve_conda_env_path(env_name)
     command_to_execute = job["command"]
 
     num_gpus_requested = resources.get("num_gpus")
@@ -142,7 +157,7 @@ def load_job_spec(task_path: str, estimator_name: str) -> JobSpec:
     lines = _read_task_lines(task_path)
 
     env_name = _extract_env_name(lines)
-    env_path = f"/opt/miniconda3/envs/{env_name}"
+    env_path = _resolve_conda_env_path(env_name)
     command_to_execute = _extract_python_command(lines)
 
     num_gpus_requested = _safe_int_at(lines, 7)
