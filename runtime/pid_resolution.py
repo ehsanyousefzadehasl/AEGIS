@@ -12,7 +12,11 @@ from telemetry import gpu_state
 def _proc_children_once(pid: int) -> list[int]:
     proc_children_helper = "/usr/bin/proc_children_helper"
     try:
-        out = subprocess.check_output([proc_children_helper, str(pid)], text=True)
+        out = subprocess.check_output(
+            [proc_children_helper, str(pid)],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
         return [int(x) for x in out.split() if x.isdigit()]
     except Exception:
         print("could not read children")
