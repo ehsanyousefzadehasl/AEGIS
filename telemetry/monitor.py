@@ -205,77 +205,75 @@ def gpu_uuids():
 # This function's responsibility is to show the list of available GPUs
 # Made sure that the MPS daemon process is not considered as being active
 # This function is used for implementing exclusive assignment of GPUs to tasks 
-# def gpus_activeness():
-#     """
-#     Analyzing 'nvidia-smi pmon -c 1' command and figuring GPUs status
-#     """
-#     gpus = gpu_uuids()
-
-#     # reversing keys and values in gpu_uuids dictionary
-#     # to be able to find the corresponding uuid
-#     tmp_gpus = {value: key for key, value in gpus.items()}    
-#     activity_dict = dict.fromkeys(tmp_gpus, 0)
-
-#     # active GPUs
-#     active_GPUs = dict()
-#     out = execute_command("nvidia-smi pmon -c 1")
-#     out = out.split("\n")
-
-#     for line in out:
-#         if line.startswith("#"):
-#             pass
-#         elif len(line) != 0:
-#             tmp_list = line.strip().split()
-#             if tmp_list[1] != '-' and tmp_list[7] != 'nvidia-cuda-mps':
-#                 print(tmp_list[7])
-#                 if tmp_list[0] in active_GPUs:
-#                     active_GPUs[tmp_list[0]].append(tmp_list[1])
-#                 else:
-#                     active_GPUs[tmp_list[0]] = [tmp_list[1]]
-    
-#     for active_gpu_index in active_GPUs:
-#         activity_dict[active_gpu_index] = 1
-
-#     out_dict = dict()
-
-#     for index in tmp_gpus:
-#         tmp = tmp_gpus[index]
-#         out_dict[tmp] = activity_dict[index]
-
-#     return out_dict
-
 def gpus_activeness():
     """
-    Parse `nvidia-smi pmon -c 1` and return {gpu_uuid: 0|1}, ignoring MPS daemons.
-    0 = idle, 1 = has non-MPS process.
+    Return {gpu_uuid: 0|1}.
+
+    RTX/Turing path:
+        Use pmon client-process visibility, ignoring MPS daemons.
+
+    GTX/Pascal MPS path:
+        Client processes can be hidden behind nvidia-cuda-mps-server, so pmon
+        may report no Python process even when the GPU is occupied. For these
+        GPUs, use device memory relative to the observed MPS-idle baseline.
     """
-    gpus = gpu_uuids()                           # {uuid: "0"/"1"/...}
+    gpus = gpu_uuids()
     id_by_uuid = {u: str(i) for u, i in gpus.items()}
+
+    legacy_gtx_gpu_uuids = {
+        "GPU-1c6317b1-1524-facb-b296-af9236965e45",
+        "GPU-323af678-54fb-3c08-ae09-02f5f27c6ed6",
+        "GPU-f9167b1e-3128-ca9e-6851-91863ac9987e",
+        "GPU-341c9e18-417a-7e7c-3eec-c0a83d472ac0",
+    }
+
+    gtx_mps_idle_baseline_mib = 215
+    gtx_mps_idle_tolerance_mib = 64
+    gtx_active_threshold_mib = gtx_mps_idle_baseline_mib + gtx_mps_idle_tolerance_mib
+
     active_gpu_indices = set()
 
     out = execute_command("nvidia-smi pmon -c 1")
-    if not out:
-        # fail-safe: assume all idle
-        return {u: 0 for u in gpus.keys()}
+    if out:
+        for line in out.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            toks = line.split()
+            if len(toks) < 3:
+                continue
 
-    for line in out.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        toks = line.split()
-        if len(toks) < 3:
-            continue
-        gpu_idx, pid = toks[0], toks[1]
-        cmd = toks[-1].rstrip(",")               # last token is command (strip trailing comma)
+            gpu_idx, pid = toks[0], toks[1]
+            cmd = toks[-1].rstrip(",")
 
-        # mark active only for real PIDs and non-MPS commands
-        if pid != "-" and cmd not in {"nvidia-cuda-mps", "nvidia-cuda-mps-control"}:
-            active_gpu_indices.add(gpu_idx)
+            if pid != "-" and cmd not in {"nvidia-cuda-mps", "nvidia-cuda-mps-control"}:
+                active_gpu_indices.add(gpu_idx)
 
-    # build uuid -> 0/1 map
+    memory_used_by_uuid = {}
+    mem_out = execute_command(
+        "nvidia-smi --query-gpu=uuid,memory.used --format=csv,noheader,nounits"
+    )
+    if mem_out:
+        for line in mem_out.splitlines():
+            parts = [part.strip() for part in line.split(",")]
+            if len(parts) != 2:
+                continue
+            uuid, used_mib = parts
+            try:
+                memory_used_by_uuid[uuid] = float(used_mib)
+            except ValueError:
+                continue
+
     activity = {}
     for uuid, idx in id_by_uuid.items():
-        activity[uuid] = 1 if idx in active_gpu_indices else 0
+        if uuid in legacy_gtx_gpu_uuids:
+            used_mib = memory_used_by_uuid.get(uuid)
+            activity[uuid] = int(
+                used_mib is not None and used_mib > gtx_active_threshold_mib
+            )
+        else:
+            activity[uuid] = 1 if idx in active_gpu_indices else 0
+
     return activity
 
 

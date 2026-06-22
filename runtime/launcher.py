@@ -9,6 +9,55 @@ import time
 
 PID_SENTINEL = "__PID__:"
 
+LEGACY_RTX_GPU_UUIDS = {
+    "GPU-ea93b842-ff46-a040-3e86-9292c61a6654",
+    "GPU-2bd2c45d-9e92-653b-8ea2-406dc6ad138f",
+    "GPU-3b3c2291-7688-7cd4-ec0a-cdb638dd10e7",
+    "GPU-a4f5bfcd-5a1a-e006-fcb4-cc25d681f4ea",
+}
+
+LEGACY_GTX_GPU_UUIDS = {
+    "GPU-1c6317b1-1524-facb-b296-af9236965e45",
+    "GPU-323af678-54fb-3c08-ae09-02f5f27c6ed6",
+    "GPU-f9167b1e-3128-ca9e-6851-91863ac9987e",
+    "GPU-341c9e18-417a-7e7c-3eec-c0a83d472ac0",
+}
+
+
+def legacy_mps_dirs_for_cuda_visible_devices(cuda_visible_devices: object) -> tuple[str | None, str | None]:
+    """Return generation-specific MPS pipe/log dirs for Zeus legacy GPUs.
+
+    Pascal GTX 1080 Ti clients are hidden behind the MPS server in nvidia-smi,
+    and mixed RTX/GTX MPS daemons caused attachment/visibility issues. We use
+    separate MPS daemons per generation and choose the pipe from the assigned
+    GPU UUID.
+    """
+    devices = str(cuda_visible_devices)
+    assigned = [part.strip() for part in devices.split(",") if part.strip()]
+
+    if not assigned:
+        return None, None
+
+    if all(gpu in LEGACY_GTX_GPU_UUIDS for gpu in assigned):
+        return "/tmp/nvidia-mps-gtx", "/tmp/nvidia-log-gtx"
+
+    if all(gpu in LEGACY_RTX_GPU_UUIDS for gpu in assigned):
+        return "/tmp/nvidia-mps-rtx", "/tmp/nvidia-log-rtx"
+
+    # Mixed-generation multi-GPU jobs are intentionally not supported in this
+    # legacy MPS setup. Keep the caller's environment unchanged.
+    return None, None
+
+
+def mps_env_exports(cuda_visible_devices: object) -> str:
+    pipe_dir, log_dir = legacy_mps_dirs_for_cuda_visible_devices(cuda_visible_devices)
+    if pipe_dir is None or log_dir is None:
+        return ""
+    return (
+        f"export CUDA_MPS_PIPE_DIRECTORY={shlex.quote(pipe_dir)} ; "
+        f"export CUDA_MPS_LOG_DIRECTORY={shlex.quote(log_dir)} ; "
+    )
+
 def launch_and_get_pid(cmd: str, timeout_s: float = 10.0) -> int | None:
     p = subprocess.Popen(
         ["bash", "-lc", cmd],
@@ -122,6 +171,7 @@ def build_launch_command(
     command = (
         f"cd {shlex.quote(dir)} ; "
         f"export CUDA_VISIBLE_DEVICES={shlex.quote(str(cuda_visible_devices))} ; "
+        f"{mps_env_exports(cuda_visible_devices)}"
         f"exec 3>&1 ; "
         f"{{ time ( "
         f"{{ "

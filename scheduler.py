@@ -132,6 +132,9 @@ def run_scheduler(policy=policy, estimator=estimator):
                     "validity",
                     "gpu_seen_at",
                     "window_seconds",
+                    "activity_backend",
+                    "dispatch_memory_used_mib",
+                    "activity_memory_delta_mib",
                 ]
             ].to_string(),
         )
