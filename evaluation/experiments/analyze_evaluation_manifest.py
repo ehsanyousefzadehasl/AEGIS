@@ -24,14 +24,14 @@ POLICY_DISPLAY_NAMES = {
     "EST-MAGM__horus": "AEGIS+HorusMem",
     "HORUS__horus": "Horus-style",
     "LUCID": "Lucid-style",
-    "oracle-MAGM": "Oracle-MFM",
+    "oracle-MAGM": "AEGIS+PeakMem",
     "PROFILED-MAGM": "Profiled-MFM",
 }
 
 
 POLICY_DISPLAY_ORDER = {
     "Exclusive": 0,
-    "Oracle-MFM": 1,
+    "AEGIS+PeakMem": 1,
     "AEGIS": 2,
     "AEGIS+HorusMem": 3,
     "Horus-style": 4,

@@ -19,7 +19,7 @@ DISPLAY_NAMES = {
     "EST-MAGM__horus": "AEGIS+HorusMem",
     "HORUS__horus": "Horus-style",
     "LUCID": "Lucid-style",
-    "oracle-MAGM": "Oracle-MFM",
+    "oracle-MAGM": "AEGIS+PeakMem",
     "PROFILED-MAGM": "Profiled-MFM",
 }
 
