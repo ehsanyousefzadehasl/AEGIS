@@ -321,15 +321,36 @@ def _ema_last(series, alpha=0.2):
     """Return last value of EMA for a pandas Series."""
     return series.ewm(alpha=alpha, adjust=False).mean().iloc[-1]
 
-def gpu_mem_usage():
-    # uuid, used, total, free (MiB)
+def gpu_smi_snapshot():
+    """Return current nvidia-smi telemetry by GPU UUID."""
     o = execute_command(
-        "nvidia-smi --query-gpu=uuid,memory.used,memory.total,memory.free --format=csv,noheader,nounits"
+        "nvidia-smi --query-gpu=uuid,utilization.gpu,memory.used,memory.total,memory.free --format=csv,noheader,nounits"
     )
     result = {}
-    for uuid, used, total, free in csv.reader(io.StringIO(o)):
-        result[uuid.strip()] = int(free)
+    for row in csv.reader(io.StringIO(o)):
+        if len(row) != 5:
+            continue
+
+        uuid, util, used, total, free = [x.strip() for x in row]
+        try:
+            result[uuid] = {
+                "gpu_utilization": float(util),
+                "memory_used_mib": int(float(used)),
+                "memory_total_mib": int(float(total)),
+                "free_gpu_memory": int(float(free)),
+            }
+        except ValueError:
+            continue
+
     return result
+
+
+def gpu_mem_usage():
+    # Backward-compatible helper: uuid -> free memory (MiB)
+    return {
+        uuid: values["free_gpu_memory"]
+        for uuid, values in gpu_smi_snapshot().items()
+    }
 
 
 def gpu_mem_total():
@@ -479,7 +500,11 @@ def monitor_logger(window = 30):
         # gather
         # === gather ===
         gpus = gpu_uuids()             # dict: uuid -> id
-        free_mem = gpu_mem_usage()           # dict: uuid -> [mem_used, mem_cap, util]
+        smi_snapshot = gpu_smi_snapshot()
+        free_mem = {
+            uuid: row["free_gpu_memory"]
+            for uuid, row in smi_snapshot.items()
+        }
         if backend == TELEMETRY_BACKEND_DCGM:
             dcgm = dcgmi_monitor()
         else:
@@ -505,8 +530,17 @@ def monitor_logger(window = 30):
                     continue
             else:
                 # The 16 DCGM fields are unavailable on this platform.
-                # Keep them missing rather than representing them as zero.
-                dcgm_metrics = [np.nan] * 16
+                # Keep DCGM-only fields missing, but populate the first
+                # metric slot (gpu_utilization) from nvidia-smi so the
+                # legacy runtime-pressure gate has a real signal.
+                smi_util = smi_snapshot.get(
+                    gpu_uuid,
+                    {},
+                ).get(
+                    "gpu_utilization",
+                    np.nan,
+                )
+                dcgm_metrics = [smi_util] + [np.nan] * 15
 
             row = (
                 [

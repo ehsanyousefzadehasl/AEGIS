@@ -42,9 +42,15 @@ def apply_utilization_gate(
         util = pd.to_numeric(
             candidate_gpus["gpu_utilization"],
             errors="coerce",
-        ).fillna(0.0)
+        )
 
-        return candidate_gpus.loc[
+        # Fail closed for the nvidia-smi backend: missing utilization means
+        # the runtime pressure signal is unavailable, not that the GPU is idle.
+        valid = util.notna()
+        candidates = candidate_gpus.loc[valid].copy()
+        util = util.loc[candidates.index]
+
+        return candidates.loc[
             util < float(risk_thresholds.gpu_utilization)
         ].copy()
 
