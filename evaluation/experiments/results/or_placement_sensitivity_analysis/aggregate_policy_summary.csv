@@ -1,0 +1,5 @@
+run_label,trace_count,completion_fraction_mean,makespan_s_vs_exclusive_geomean,jct_mean_s_vs_exclusive_geomean,jct_p95_s_vs_exclusive_geomean,total_queue_wait_mean_s_vs_exclusive_geomean,total_queue_wait_p95_s_vs_exclusive_geomean,total_execution_time_mean_s_vs_exclusive_geomean,total_execution_time_p95_s_vs_exclusive_geomean,makespan_reduction_percent_from_geomean,policy_display
+exclusive,3,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0,Exclusive
+OR-MAGM,3,1.0,0.7299591801895617,0.6125742049601697,0.59775936962119,0.49383012204398563,0.5461206365786507,1.5497890998333714,1.9711649704888397,27.004081981043825,AEGIS - EstimatorFree
+OR-LUG,3,1.0,0.7552588491642364,0.5867370638791932,0.6191934581577254,0.44907363218910573,0.5557688202182547,1.6826916885426801,2.1595667511623895,24.474115083576365,OR-LUG
+OR-RR,3,1.0,0.775842082450021,0.6348672035799346,0.6360411081765079,0.5007212621164606,0.5734214813737856,1.6860093395027398,1.9927871167794373,22.415791754997905,OR-RR

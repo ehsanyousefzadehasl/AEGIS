@@ -1,0 +1,6 @@
+trace_name,run_label,submitted_job_count,jobs_with_failed_attempts,recovered_job_count,recovery_stopped_job_count,failed_attempt_count,recovered_attempt_count,recovery_queue_wait_mean_s,recovery_queue_wait_p95_s,recovery_queue_wait_max_s,recovery_gap_mean_s,recovery_gap_p95_s,total_failed_runtime_s,total_recovery_queue_wait_s,total_recovery_gap_s,total_recovery_overhead_s
+saturn,aegis_lug_no_thresholds,60,6,6,0,6,6,4255.4777485,5716.8979982500005,5761.081991,4255.507571833333,5716.929604999999,208.387521,25532.866491,25533.045431,25741.432952
+saturn,aegis_lug_thresholded,60,5,5,0,5,5,4224.5831146,6485.1157564000005,6818.117965,4224.6113636,6485.144236599999,460.2861430000001,21122.915573,21123.056818,21583.342961000002
+saturn,aegis_magm_no_thresholds,60,6,6,0,6,6,3973.8385301666663,6496.05720775,7298.936239,3973.8664054999995,6496.084365,204.652903,23843.031181,23843.198432999998,24047.851336
+saturn,aegis_magm_thresholded,60,3,3,0,3,3,3035.8021086666668,4209.9184704,4293.593463,3035.8305546666666,4209.945505799999,126.04666,9107.406326,9107.491664,9233.538324
+saturn,exclusive,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

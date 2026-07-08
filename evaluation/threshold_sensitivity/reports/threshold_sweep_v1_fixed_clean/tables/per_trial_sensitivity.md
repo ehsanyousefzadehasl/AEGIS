@@ -1,0 +1,7 @@
+| trial_id                                 |   settings |   best_throughput_gain |   worst_throughput_gain |   median_throughput_gain |   best_max_slowdown |   worst_max_slowdown |   total_reject_retries |
+|:-----------------------------------------|-----------:|-----------------------:|------------------------:|-------------------------:|--------------------:|---------------------:|-----------------------:|
+| imagenet_diverse_reverse_5jobs           |        122 |                 1.6633 |                  0.9987 |                   1.6542 |              0.999  |               2.5535 |                  12051 |
+| imagenet_diverse_5jobs                   |        122 |                 1.6752 |                  0.9966 |                   1.6699 |              1.0001 |               2.4481 |                   7487 |
+| cifar_llama_imagenet_4jobs               |        122 |                 2.372  |                  1.0802 |                   2.3006 |              0.9942 |               1.4275 |                   5564 |
+| mixed_imagenet_cifar_llama_4jobs         |        122 |                 2.1026 |                  1.0462 |                   1.6637 |              0.989  |               1.4177 |                  15155 |
+| mixed_reverse_llama_cifar_imagenet_4jobs |        122 |                 2.7208 |                  1.0376 |                   2.6359 |              0.9895 |               1.1841 |                   4818 |

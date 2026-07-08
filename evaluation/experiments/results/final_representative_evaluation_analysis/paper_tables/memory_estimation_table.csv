@@ -1,0 +1,4 @@
+Memory mode,Makespan,Mean queue,Mean exec.,OOMs,Recovered,Mean failed-attempt time
+Estimator-free,0.730,0.484,1.632,12,12,22.6s
+PeakMem,0.712,0.442,1.785,0,0,0.0s
+HorusMem,0.733,0.517,1.477,3,3,24.3s

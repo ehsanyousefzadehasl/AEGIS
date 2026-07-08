@@ -1,0 +1,7 @@
+trace_name,run_label,submitted_job_count,jobs_with_failed_attempts,recovered_job_count,recovery_stopped_job_count,failed_attempt_count,recovered_attempt_count,recovery_queue_wait_mean_s,recovery_queue_wait_p95_s,recovery_queue_wait_max_s,recovery_gap_mean_s,recovery_gap_p95_s,total_failed_runtime_s,total_recovery_queue_wait_s,total_recovery_gap_s,total_recovery_overhead_s
+philly,EST-MAGM__horus,60,1,1,0,1,1,4108.159017,4108.159017,4108.159017,4108.192925,4108.192925,27.593599,4108.159017,4108.192925,4135.786524
+philly,HORUS__horus,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+philly,LUCID,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+philly,OR-MAGM,60,3,3,0,3,3,2608.288055333333,4822.689089099999,5184.108337,2608.3169256666665,4822.7208014,30.435317999999995,7824.864165999999,7824.950777,7855.386095000001
+philly,exclusive,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+philly,oracle-MAGM,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
