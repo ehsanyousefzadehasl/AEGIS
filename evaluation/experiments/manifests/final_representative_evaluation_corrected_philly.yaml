@@ -16,14 +16,10 @@ traces:
     csv: evaluation/experiments/traces/representative/philly_seed42_60jobs.execution.csv
 
 configurations:
-  - label: aegis_horus
+  - label: aegis_faketensor
     policy: EST-MAGM
-    estimator: horus
+    estimator: faketensor
 
-  - label: lucid_baseline
-    policy: LUCID
-    estimator: None
-
-  - label: oracle_upper_bound
-    policy: oracle-MAGM
-    estimator: None
+  - label: aegis_gpumemnet
+    policy: EST-MAGM
+    estimator: GPUMemNet

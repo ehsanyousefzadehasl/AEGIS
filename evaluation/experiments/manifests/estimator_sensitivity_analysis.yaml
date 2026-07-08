@@ -1,85 +1,84 @@
 name: estimator_sensitivity_analysis
-description: >
-  Analysis-only manifest for AEGIS memory-estimator sensitivity.
-  Raw run directories remain under evaluation/experiments/results.
-  All AEGIS variants use the same runtime pressure filter and MAGM-style
-  placement; only the memory-feasibility input changes.
+description: 'Analysis-only manifest for AEGIS memory-estimator sensitivity. Raw run
+  directories remain under evaluation/experiments/results. All AEGIS variants use
+  the same runtime pressure filter and MAGM-style placement; only the memory-feasibility
+  input changes.
 
+  '
 runs:
-  # Philly: complete estimator-sensitivity set.
-  - trace: philly
-    estimator: peakmem
-    label: AEGIS+PeakMem
-    root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__oracle_upper_bound
-
-  - trace: philly
-    estimator: horus
-    label: AEGIS+HorusMem
-    root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_horus
-
-  - trace: philly
-    estimator: faketensor
-    label: AEGIS+FakeTensorMem
-    root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_faketensor
-
-  - trace: philly
-    estimator: gpumemnet
-    label: AEGIS+GPUMemNet
-    root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_gpumemnet
-
-  # Saturn: GPUMemNet still missing/running.
-  - trace: saturn
-    estimator: peakmem
-    label: AEGIS+PeakMem
-    root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__oracle_upper_bound
-
-  - trace: saturn
-    estimator: horus
-    label: AEGIS+HorusMem
-    root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_horus
-
-  - trace: saturn
-    estimator: faketensor
-    label: AEGIS+FakeTensorMem
-    root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_faketensor
-
-  # Add when available:
-  # - trace: saturn
-  #   estimator: gpumemnet
-  #   label: AEGIS+GPUMemNet
-  #   root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_gpumemnet
-
-  # Venus: FakeTensorMem and GPUMemNet still missing/running.
-  - trace: venus
-    estimator: peakmem
-    label: AEGIS+PeakMem
-    root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__oracle_upper_bound
-
-  - trace: venus
-    estimator: horus
-    label: AEGIS+HorusMem
-    root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_horus
-
-  # Add when available:
-  # - trace: venus
-  #   estimator: faketensor
-  #   label: AEGIS+FakeTensorMem
-  #   root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_faketensor
-  #
-  # - trace: venus
-  #   estimator: gpumemnet
-  #   label: AEGIS+GPUMemNet
-  #   root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_gpumemnet
-
+- trace: philly
+  estimator: peakmem
+  label: AEGIS+PeakMem
+  root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__oracle_upper_bound
+- trace: philly
+  estimator: horus
+  label: AEGIS+HorusMem
+  root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_horus
+- trace: philly
+  estimator: faketensor
+  label: AEGIS+FakeTensorMem
+  root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_faketensor
+- trace: philly
+  estimator: gpumemnet
+  label: AEGIS+GPUMemNet
+  root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_gpumemnet
+- trace: saturn
+  estimator: peakmem
+  label: AEGIS+PeakMem
+  root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__oracle_upper_bound
+- trace: saturn
+  estimator: horus
+  label: AEGIS+HorusMem
+  root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_horus
+- trace: saturn
+  estimator: faketensor
+  label: AEGIS+FakeTensorMem
+  root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_faketensor
+- trace: venus
+  estimator: peakmem
+  label: AEGIS+PeakMem
+  root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__oracle_upper_bound
+- trace: venus
+  estimator: horus
+  label: AEGIS+HorusMem
+  root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_horus
+- kind: estimator
+  trace: saturn
+  estimator: gpumemnet
+  label: AEGIS+GPUMemNet
+  root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_gpumemnet
+- kind: estimator
+  trace: venus
+  estimator: faketensor
+  label: AEGIS+FakeTensorMem
+  root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_faketensor
+- kind: estimator
+  trace: venus
+  estimator: gpumemnet
+  label: AEGIS+GPUMemNet
+  root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_gpumemnet
+- kind: estimator
+  trace: philly
+  estimator: estimator_free
+  label: AEGIS-EstimatorFree
+  root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__aegis_estimator_free
+- kind: estimator
+  trace: saturn
+  estimator: estimator_free
+  label: AEGIS-EstimatorFree
+  root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__aegis_estimator_free
+- kind: estimator
+  trace: venus
+  estimator: estimator_free
+  label: AEGIS-EstimatorFree
+  root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__aegis_estimator_free
 baselines:
-  - trace: philly
-    label: Exclusive
-    root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__exclusive
-
-  - trace: saturn
-    label: Exclusive
-    root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__exclusive
-
-  - trace: venus
-    label: Exclusive
-    root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__exclusive
+- trace: philly
+  label: Exclusive
+  root: evaluation/experiments/results/final_representative_evaluation__philly__rep01__exclusive
+- trace: saturn
+  label: Exclusive
+  root: evaluation/experiments/results/final_representative_evaluation__saturn__rep01__exclusive
+- trace: venus
+  label: Exclusive
+  root: evaluation/experiments/results/final_representative_evaluation__venus__rep01__exclusive

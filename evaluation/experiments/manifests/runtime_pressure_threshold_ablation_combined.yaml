@@ -1,0 +1,53 @@
+experiment_name: runtime_pressure_threshold_ablation_combined
+repetitions: 1
+
+runner:
+  base_config: config.yaml
+  results_dir: evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_view
+  delay_scale: 1.0
+  startup_wait_s: 10
+  eval_idle_exit_minutes: 5
+  run_timeout_minutes: 1440
+
+traces:
+  - name: philly
+    csv: evaluation/experiments/traces/representative/philly_seed42_60jobs.execution.csv
+  - name: saturn
+    csv: evaluation/experiments/traces/representative/saturn_seed42_60jobs.execution.csv
+  - name: venus
+    csv: evaluation/experiments/traces/representative/venus_seed42_60jobs.execution.csv
+
+configurations:
+  - label: exclusive
+    policy: exclusive
+    estimator: None
+
+  - label: aegis_magm_thresholded
+    policy: OR-MAGM
+    estimator: None
+    risk_smact_threshold: 0.65
+    risk_smocc_threshold: 0.35
+    risk_drama_threshold: 0.50
+
+  - label: aegis_lug_thresholded
+    policy: OR-LUG
+    estimator: None
+    risk_smact_threshold: 0.65
+    risk_smocc_threshold: 0.35
+    risk_drama_threshold: 0.50
+
+  - label: aegis_magm_no_thresholds
+    policy: OR-MAGM
+    estimator: None
+    risk_smact_threshold: 999.0
+    risk_smocc_threshold: 999.0
+    risk_drama_threshold: 999.0
+
+  - label: aegis_lug_no_thresholds
+    policy: OR-LUG
+    estimator: None
+    risk_smact_threshold: 999.0
+    risk_smocc_threshold: 999.0
+    risk_drama_threshold: 999.0
+
+version: 1
