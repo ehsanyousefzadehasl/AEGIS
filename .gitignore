@@ -150,3 +150,28 @@ evaluation/lucid/results/**/*.jsonl
 evaluation/experiments/results/
 
 !evaluation/threshold_sensitivity/manifests/threshold_stress_v1.csv
+# Curated generated reports kept for paper/artifact navigation.
+!evaluation/experiments/results/final_representative_evaluation_analysis/
+!evaluation/experiments/results/final_representative_evaluation_analysis/report.md
+!evaluation/experiments/results/final_representative_evaluation_analysis/figures/
+!evaluation/experiments/results/final_representative_evaluation_analysis/figures/*.png
+
+!evaluation/experiments/results/or_placement_sensitivity_analysis/
+!evaluation/experiments/results/or_placement_sensitivity_analysis/report.md
+!evaluation/experiments/results/or_placement_sensitivity_analysis/figures/
+!evaluation/experiments/results/or_placement_sensitivity_analysis/figures/*.png
+
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/report.md
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/figures/
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/figures/*.png
+
+!evaluation/experiments/results/estimator_sensitivity_analysis/
+!evaluation/experiments/results/estimator_sensitivity_analysis/report.md
+!evaluation/experiments/results/estimator_sensitivity_analysis/figures/
+!evaluation/experiments/results/estimator_sensitivity_analysis/figures/*.png
+
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/report.md
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/figures/
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/figures/*.png
