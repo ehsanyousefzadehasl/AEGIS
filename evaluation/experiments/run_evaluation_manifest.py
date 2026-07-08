@@ -106,6 +106,22 @@ def main() -> int:
                     ),
                 ]
 
+                if "risk_smact_threshold" in configuration:
+                    command.extend([
+                        "--risk-smact-threshold",
+                        str(configuration["risk_smact_threshold"]),
+                    ])
+                if "risk_smocc_threshold" in configuration:
+                    command.extend([
+                        "--risk-smocc-threshold",
+                        str(configuration["risk_smocc_threshold"]),
+                    ])
+                if "risk_drama_threshold" in configuration:
+                    command.extend([
+                        "--risk-drama-threshold",
+                        str(configuration["risk_drama_threshold"]),
+                    ])
+
                 if args.launch:
                     command.append("--launch")
                 else:

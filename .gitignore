@@ -148,3 +148,5 @@ evaluation/lucid/results/**/*.jsonl
 !evaluation/experiments/traces/smoke_4jobs.csv
 
 evaluation/experiments/results/
+
+!evaluation/threshold_sensitivity/manifests/threshold_stress_v1.csv

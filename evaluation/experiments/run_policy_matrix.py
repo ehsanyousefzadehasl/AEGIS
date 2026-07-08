@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import signal
 import sys
 from pathlib import Path
 
@@ -59,6 +60,24 @@ def parse_args() -> argparse.Namespace:
         default=["horus"],
         help="Estimators to use for estimator-based policies.",
     )
+    p.add_argument(
+        "--risk-smact-threshold",
+        type=float,
+        default=None,
+        help="Override risk.smact_threshold in the generated run config.",
+    )
+    p.add_argument(
+        "--risk-smocc-threshold",
+        type=float,
+        default=None,
+        help="Override risk.smocc_threshold in the generated run config.",
+    )
+    p.add_argument(
+        "--risk-drama-threshold",
+        type=float,
+        default=None,
+        help="Override risk.drama_threshold in the generated run config.",
+    )
     return p.parse_args()
 
 
@@ -92,6 +111,7 @@ def run_command(
             command,
             cwd=str(cwd),
             env=env,
+            start_new_session=True,
             stdout=out,
             stderr=err,
             text=True,
@@ -113,6 +133,7 @@ def start_process(
         command,
         cwd=str(cwd),
         env=env,
+        start_new_session=True,
         stdout=out,
         stderr=err,
         text=True,
@@ -177,6 +198,14 @@ def main() -> int:
             cfg.setdefault("mapper", {})
             cfg["mapper"]["policy"] = policy
             cfg["mapper"]["estimator"] = estimator
+
+            cfg.setdefault("risk", {})
+            if args.risk_smact_threshold is not None:
+                cfg["risk"]["smact_threshold"] = float(args.risk_smact_threshold)
+            if args.risk_smocc_threshold is not None:
+                cfg["risk"]["smocc_threshold"] = float(args.risk_smocc_threshold)
+            if args.risk_drama_threshold is not None:
+                cfg["risk"]["drama_threshold"] = float(args.risk_drama_threshold)
 
             runtime_dir = run_dir / "runtime"
             runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -289,11 +318,17 @@ def main() -> int:
                         timed_out = False
                     except subprocess.TimeoutExpired:
                         timed_out = True
-                        proc.terminate()
+                        try:
+                            os.killpg(proc.pid, signal.SIGTERM)
+                        except ProcessLookupError:
+                            pass
                         try:
                             return_code = proc.wait(timeout=30)
                         except subprocess.TimeoutExpired:
-                            proc.kill()
+                            try:
+                                os.killpg(proc.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
                             return_code = proc.wait()
 
                     metadata["return_code"] = return_code
