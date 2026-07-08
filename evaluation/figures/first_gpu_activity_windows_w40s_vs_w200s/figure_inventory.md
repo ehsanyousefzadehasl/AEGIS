@@ -2,15 +2,3 @@
 
 - `threshold_window_stability_curve.pdf`
 - `threshold_window_stability_curve.png`
-- `risk_component_ablation_curve.pdf`
-- `risk_component_ablation_curve.png`
-- `per_workload_risk_error_heatmap.pdf`
-- `per_workload_risk_error_heatmap.png`
-- `per_workload_mean_error_heatmap.pdf`
-- `per_workload_mean_error_heatmap.png`
-- `per_workload_median_error_heatmap.pdf`
-- `per_workload_median_error_heatmap.png`
-- `per_workload_p95_error_heatmap.pdf`
-- `per_workload_p95_error_heatmap.png`
-- `per_workload_ewma_error_heatmap.pdf`
-- `per_workload_ewma_error_heatmap.png`

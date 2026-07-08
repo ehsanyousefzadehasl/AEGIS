@@ -1,0 +1,59 @@
+\begin{table}
+\caption{Training workloads used in the evaluation. Time and peak memory are measured from successful solo runs. BS denotes batch size.}
+\label{tab:appendix-workloads}
+\begin{tabular}{lllccccc}
+\toprule
+Family & Model & Dataset & BS & GPUs & Config & Time (min) & Peak mem. (GB) \\
+\midrule
+CNN & EfficientNet-B0 & CIFAR-100 & 128 & 1 & 20 epochs & 4.500000 & 0.840000 \\
+CNN & EfficientNet-B0 & CIFAR-100 & 128 & 1 & 50 epochs & 11.330000 & 0.840000 \\
+CNN & EfficientNet-B0 & CIFAR-100 & 32 & 1 & 20 epochs & 17.510000 & 0.650000 \\
+CNN & EfficientNet-B0 & CIFAR-100 & 32 & 1 & 50 epochs & 43.590000 & 0.650000 \\
+CNN & EfficientNet-B0 & CIFAR-100 & 64 & 1 & 20 epochs & 8.960000 & 0.710000 \\
+CNN & EfficientNet-B0 & CIFAR-100 & 64 & 1 & 50 epochs & 22.840000 & 0.710000 \\
+CNN & EfficientNet-B0 & ImageNet & 128 & 1 & -- & 27.370000 & 12.430000 \\
+CNN & EfficientNet-B0 & ImageNet & 32 & 1 & -- & 36.450000 & 3.670000 \\
+CNN & EfficientNet-B0 & ImageNet & 64 & 1 & -- & 28.250000 & 6.570000 \\
+CNN & Inception & ImageNet & 128 & 1 & -- & 49.650000 & 17.540000 \\
+CNN & Inception & ImageNet & 32 & 1 & -- & 55.910000 & 5.120000 \\
+CNN & Inception & ImageNet & 64 & 1 & -- & 51.310000 & 9.190000 \\
+CNN & MobileNet & CIFAR-100 & 128 & 1 & 20 epochs & 3.250000 & 0.620000 \\
+CNN & MobileNet & CIFAR-100 & 128 & 1 & 50 epochs & 9.530000 & 0.620000 \\
+CNN & MobileNet & CIFAR-100 & 32 & 1 & 20 epochs & 15.000000 & 0.580000 \\
+CNN & MobileNet & CIFAR-100 & 32 & 1 & 50 epochs & 33.980000 & 0.580000 \\
+CNN & MobileNet & CIFAR-100 & 64 & 1 & 20 epochs & 6.910000 & 0.590000 \\
+CNN & MobileNet & CIFAR-100 & 64 & 1 & 50 epochs & 16.110000 & 0.590000 \\
+CNN & MobileNet & ImageNet & 128 & 1 & -- & 25.810000 & 11.330000 \\
+CNN & MobileNet & ImageNet & 32 & 1 & -- & 27.770000 & 3.280000 \\
+CNN & MobileNet & ImageNet & 64 & 1 & -- & 25.600000 & 6.020000 \\
+CNN & ResNet18 & CIFAR-100 & 128 & 1 & 20 epochs & 2.080000 & 0.830000 \\
+CNN & ResNet18 & CIFAR-100 & 128 & 1 & 50 epochs & 5.060000 & 0.830000 \\
+CNN & ResNet18 & CIFAR-100 & 32 & 1 & 20 epochs & 7.670000 & 0.770000 \\
+CNN & ResNet18 & CIFAR-100 & 32 & 1 & 50 epochs & 19.120000 & 0.770000 \\
+CNN & ResNet18 & CIFAR-100 & 64 & 1 & 20 epochs & 3.990000 & 0.780000 \\
+CNN & ResNet18 & CIFAR-100 & 64 & 1 & 50 epochs & 10.010000 & 0.780000 \\
+CNN & ResNet34 & CIFAR-100 & 128 & 1 & 20 epochs & 3.150000 & 1.050000 \\
+CNN & ResNet34 & CIFAR-100 & 128 & 1 & 50 epochs & 8.060000 & 1.050000 \\
+CNN & ResNet34 & CIFAR-100 & 32 & 1 & 20 epochs & 12.390000 & 0.980000 \\
+CNN & ResNet34 & CIFAR-100 & 32 & 1 & 50 epochs & 32.020000 & 0.980000 \\
+CNN & ResNet34 & CIFAR-100 & 64 & 1 & 20 epochs & 6.170000 & 0.990000 \\
+CNN & ResNet34 & CIFAR-100 & 64 & 1 & 50 epochs & 16.710000 & 0.990000 \\
+CNN & ResNet50 & ImageNet & 128 & 1 & -- & 31.110000 & 12.930000 \\
+CNN & ResNet50 & ImageNet & 32 & 1 & -- & 34.790000 & 3.850000 \\
+CNN & ResNet50 & ImageNet & 64 & 1 & -- & 32.450000 & 6.950000 \\
+CNN & VGG16 & ImageNet & 128 & 1 & -- & 44.470000 & 21.160000 \\
+CNN & VGG16 & ImageNet & 32 & 1 & -- & 50.550000 & 6.520000 \\
+CNN & VGG16 & ImageNet & 64 & 1 & -- & 46.730000 & 11.500000 \\
+CNN & Xception & ImageNet & 128 & 1 & -- & 47.560000 & 20.510000 \\
+CNN & Xception & ImageNet & 32 & 1 & -- & 49.920000 & 5.780000 \\
+CNN & Xception & ImageNet & 64 & 1 & -- & 49.030000 & 10.720000 \\
+Segmentation & U-Net & PASCAL VOC & -- & 1 & -- & 31.300000 & 5.500000 \\
+Detection & Mask R-CNN & MS COCO & 8 & 1 & -- & 109.410000 & 29.230000 \\
+Recommendation & DLRM & Criteo 1TB & 32768 & 1 & -- & 24.500000 & 1.330000 \\
+Transformer & BERT-base & WikiText-2 & 32 & 1 & -- & 14.770000 & 19.400000 \\
+Transformer & BERT-large & WikiText-2 & 8 & 1 & -- & 44.750000 & 12.320000 \\
+Transformer & GPT2-XL & WikiText-2 & 2 & 1 & -- & 239.960000 & 39.240000 \\
+LLM & Llama3-width-8-layer & WikiText-2 & 1 & 1 & -- & 38.470000 & 28.040000 \\
+\bottomrule
+\end{tabular}
+\end{table}
