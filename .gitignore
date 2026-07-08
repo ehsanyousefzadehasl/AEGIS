@@ -180,3 +180,10 @@ evaluation/experiments/results/
 !evaluation/experiments/results/estimator_sensitivity_analysis/estimator_sensitivity_report.md
 !evaluation/experiments/results/estimator_sensitivity_analysis/figures/
 !evaluation/experiments/results/estimator_sensitivity_analysis/figures/*.png
+
+# Allow nested curated report figures, including per-trace subfolders.
+!evaluation/experiments/results/final_representative_evaluation_analysis/**/*.png
+!evaluation/experiments/results/or_placement_sensitivity_analysis/**/*.png
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/*.png
+!evaluation/experiments/results/estimator_sensitivity_analysis/**/*.png
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/**/*.png
