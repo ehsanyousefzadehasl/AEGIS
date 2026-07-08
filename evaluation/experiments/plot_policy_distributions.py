@@ -17,6 +17,8 @@ DISPLAY_NAMES = {
     "exclusive": "Exclusive",
     "OR-MAGM": "AEGIS",
     "EST-MAGM__horus": "AEGIS+HorusMem",
+    "EST-MAGM__faketensor": "AEGIS+FakeTensorMem",
+    "EST-MAGM__GPUMemNet": "AEGIS+GPUMemNet",
     "HORUS__horus": "Horus-style",
     "LUCID": "Lucid-style",
     "oracle-MAGM": "AEGIS+PeakMem",

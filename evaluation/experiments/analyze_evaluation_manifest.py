@@ -20,32 +20,49 @@ import yaml
 
 POLICY_DISPLAY_NAMES = {
     "exclusive": "Exclusive",
-    "OR-MAGM": "AEGIS",
-    "EST-MAGM__horus": "AEGIS+HorusMem",
-    "HORUS__horus": "Horus-style",
-    "LUCID": "Lucid-style",
-    "oracle-MAGM": "AEGIS+PeakMem",
+    "oracle-MAGM": "AEGIS + ProfiledPeakMem",
+    "OR-MAGM": "AEGIS - EstimatorFree",
+    "EST-MAGM__horus": "AEGIS + AnalyticalMemEst",
+    "HORUS__horus": "Horus",
+    "LUCID": "Lucid",
     "PROFILED-MAGM": "Profiled-MFM",
 }
 
 
 POLICY_DISPLAY_ORDER = {
     "Exclusive": 0,
-    "AEGIS+PeakMem": 1,
-    "AEGIS": 2,
-    "AEGIS+HorusMem": 3,
-    "Horus-style": 4,
-    "Lucid-style": 5,
+    "AEGIS + ProfiledPeakMem": 1,
+    "AEGIS - EstimatorFree": 2,
+    "AEGIS + AnalyticalMemEst": 3,
+    "Horus": 4,
+    "Lucid": 5,
     "Profiled-MFM": 6,
 }
 
 
 def policy_display_name(run_label: object) -> str:
     raw = str(run_label)
-    return POLICY_DISPLAY_NAMES.get(raw, raw.replace("MAGM", "MFM"))
+    display_names = {
+        **POLICY_DISPLAY_NAMES,
+        "aegis_magm_thresholded": "AEGIS-MAGM",
+        "aegis_lug_thresholded": "AEGIS-LUG",
+        "aegis_magm_no_thresholds": "AEGIS-MAGM no thresholds",
+        "aegis_lug_no_thresholds": "AEGIS-LUG no thresholds",
+    }
+    return display_names.get(raw, raw.replace("MAGM", "MFM"))
 
 
 def policy_sort_order(run_label: object) -> int:
+    raw = str(run_label)
+    explicit_order = {
+        "exclusive": 0,
+        "aegis_magm_thresholded": 1,
+        "aegis_lug_thresholded": 2,
+        "aegis_magm_no_thresholds": 3,
+        "aegis_lug_no_thresholds": 4,
+    }
+    if raw in explicit_order:
+        return explicit_order[raw]
     display = policy_display_name(run_label)
     return POLICY_DISPLAY_ORDER.get(display, 100)
 
@@ -379,6 +396,8 @@ def collect_completed_run_summaries(
             "configuration_label",
             record.configuration_label,
         )
+        if "run_label" in summary.columns:
+            summary["run_label"] = record.configuration_label
 
         rows.append(summary)
 
@@ -438,6 +457,13 @@ def generate_per_trace_comparisons(
         "trace_name",
         sort=True,
     ):
+        trace_output_dir = (
+            output_dir
+            / "traces"
+            / str(trace_name)
+        )
+        trace_output_dir.mkdir(parents=True, exist_ok=True)
+
         job_metric_paths: list[Path] = []
 
         for record in group.itertuples(index=False):
@@ -452,13 +478,17 @@ def generate_per_trace_comparisons(
                     f"Missing job metrics for completed run: {path}"
                 )
 
-            job_metric_paths.append(path)
+            jobs = pd.read_csv(path).copy()
+            jobs["configuration_label"] = record.configuration_label
+            jobs["run_label"] = record.configuration_label
 
-        trace_output_dir = (
-            output_dir
-            / "traces"
-            / str(trace_name)
-        )
+            relabeled_path = (
+                trace_output_dir
+                / f"job_metrics__{record.configuration_label}.csv"
+            )
+            jobs.to_csv(relabeled_path, index=False)
+            job_metric_paths.append(relabeled_path)
+
 
         command = [
             sys.executable,
@@ -541,6 +571,8 @@ def generate_per_trace_performance_tables(
                 "configuration_label",
                 record.configuration_label,
             )
+            if "run_label" in summary.columns:
+                summary["run_label"] = record.configuration_label
             frames.append(summary)
 
         performance = pd.concat(
@@ -557,15 +589,15 @@ def generate_per_trace_performance_tables(
 
         metric_columns = [
             "makespan_s",
-            "initial_queue_wait_mean_s",
-            "initial_queue_wait_p50_s",
-            "initial_queue_wait_p95_s",
+            "total_queue_wait_mean_s",
+            "total_queue_wait_p50_s",
+            "total_queue_wait_p95_s",
             "jct_mean_s",
             "jct_p50_s",
             "jct_p95_s",
-            "execution_span_mean_s",
+            "total_execution_time_mean_s",
             "execution_span_p50_s",
-            "execution_span_p95_s",
+            "total_execution_time_p95_s",
             "successful_attempt_runtime_mean_s",
             "successful_attempt_runtime_p50_s",
             "successful_attempt_runtime_p95_s",
@@ -587,15 +619,15 @@ def generate_per_trace_performance_tables(
             "incomplete_job_count",
             "completion_fraction",
             "makespan_s",
-            "initial_queue_wait_mean_s",
-            "initial_queue_wait_p50_s",
-            "initial_queue_wait_p95_s",
+            "total_queue_wait_mean_s",
+            "total_queue_wait_p50_s",
+            "total_queue_wait_p95_s",
             "jct_mean_s",
             "jct_p50_s",
             "jct_p95_s",
-            "execution_span_mean_s",
+            "total_execution_time_mean_s",
             "execution_span_p50_s",
-            "execution_span_p95_s",
+            "total_execution_time_p95_s",
             "successful_attempt_runtime_mean_s",
             "successful_attempt_runtime_p50_s",
             "successful_attempt_runtime_p95_s",
@@ -645,18 +677,18 @@ def generate_per_trace_performance_tables(
             "makespan_s",
             "makespan_s_vs_exclusive",
             "makespan_reduction_percent",
-            "initial_queue_wait_mean_s",
-            "initial_queue_wait_mean_s_vs_exclusive",
-            "initial_queue_wait_p95_s",
-            "initial_queue_wait_p95_s_vs_exclusive",
+            "total_queue_wait_mean_s",
+            "total_queue_wait_mean_s_vs_exclusive",
+            "total_queue_wait_p95_s",
+            "total_queue_wait_p95_s_vs_exclusive",
             "jct_mean_s",
             "jct_mean_s_vs_exclusive",
             "jct_p95_s",
             "jct_p95_s_vs_exclusive",
-            "execution_span_mean_s",
-            "execution_span_mean_s_vs_exclusive",
-            "execution_span_p95_s",
-            "execution_span_p95_s_vs_exclusive",
+            "total_execution_time_mean_s",
+            "total_execution_time_mean_s_vs_exclusive",
+            "total_execution_time_p95_s",
+            "total_execution_time_p95_s_vs_exclusive",
             "successful_attempt_runtime_mean_s",
             "successful_attempt_runtime_mean_s_vs_exclusive",
             "failed_attempt_count",
@@ -690,19 +722,19 @@ def generate_per_trace_performance_tables(
 
         plot_grouped_metric_bars(
             frame=performance,
-            mean_column="initial_queue_wait_mean_s",
-            tail_column="initial_queue_wait_p95_s",
+            mean_column="total_queue_wait_mean_s",
+            tail_column="total_queue_wait_p95_s",
             mean_label="Mean wait",
             tail_label="P95 wait",
             y_label="Initial queue wait (seconds)",
             output_dir=trace_output,
-            output_stem="queue_wait_comparison",
+            output_stem="total_queue_wait_comparison",
         )
 
         plot_grouped_metric_bars(
             frame=performance,
-            mean_column="execution_span_mean_s",
-            tail_column="execution_span_p95_s",
+            mean_column="total_execution_time_mean_s",
+            tail_column="total_execution_time_p95_s",
             mean_label="Mean execution span",
             tail_label="P95 execution span",
             y_label="Execution span (seconds)",
@@ -870,19 +902,24 @@ CROSS_TRACE_METRICS = [
         "normalized_p95_jct_by_trace",
     ),
     (
-        "initial_queue_wait_mean_s_vs_exclusive",
-        "Normalized mean queue wait",
-        "normalized_mean_queue_wait_by_trace",
+        "total_queue_wait_mean_s_vs_exclusive",
+        "Normalized mean total queue wait",
+        "normalized_mean_total_queue_wait_by_trace",
     ),
     (
-        "initial_queue_wait_p95_s_vs_exclusive",
-        "Normalized P95 queue wait",
-        "normalized_p95_queue_wait_by_trace",
+        "total_queue_wait_p95_s_vs_exclusive",
+        "Normalized P95 total queue wait",
+        "normalized_p95_total_queue_wait_by_trace",
     ),
     (
-        "execution_span_mean_s_vs_exclusive",
-        "Normalized mean execution span",
-        "normalized_mean_execution_span_by_trace",
+        "total_execution_time_mean_s_vs_exclusive",
+        "Normalized mean total execution time",
+        "normalized_mean_total_execution_time_by_trace",
+    ),
+    (
+        "total_execution_time_p95_s_vs_exclusive",
+        "Normalized P95 total execution time",
+        "normalized_p95_total_execution_time_by_trace",
     ),
 ]
 
@@ -1095,10 +1132,27 @@ def plot_cross_trace_metric(
 
     figure, axis = plt.subplots(
         figsize=(
-            max(7.4, len(prepared) * 1.3),
-            4.7,
+            max(8.4, len(prepared) * 1.45),
+            5.3,
         )
     )
+
+    color_cycle = [
+        "#0072B2",  # blue
+        "#E69F00",  # orange
+        "#009E73",  # bluish green
+        "#D55E00",  # vermillion
+        "#CC79A7",  # reddish purple
+        "#56B4E9",  # sky blue
+    ]
+    hatch_cycle = [
+        "",
+        "//",
+        "\\\\",
+        "xx",
+        "..",
+        "--",
+    ]
 
     for index, column in enumerate(value_columns):
         offset = (
@@ -1117,26 +1171,46 @@ def plot_cross_trace_metric(
             prepared[column],
             width,
             label=label,
+            color=color_cycle[index % len(color_cycle)],
+            edgecolor="black",
+            linewidth=0.9,
+            hatch=hatch_cycle[index % len(hatch_cycle)],
         )
 
     axis.axhline(
         1.0,
         linestyle="--",
-        linewidth=1.0,
+        linewidth=1.6,
+        color="black",
         label="Exclusive baseline",
     )
 
     axis.set_xticks(x)
     axis.set_xticklabels(
         prepared["policy_display"],
-        rotation=20,
+        rotation=25,
         ha="right",
+        fontsize=13,
     )
-    axis.set_ylabel(metric_label)
-    axis.set_xlabel("Policy")
+    axis.set_ylabel(metric_label, fontsize=15)
+    axis.set_xlabel("Policy", fontsize=15)
     axis.set_ylim(bottom=0)
-    axis.grid(True, axis="y", alpha=0.3)
-    axis.legend()
+    axis.tick_params(axis="y", labelsize=13, width=1.3)
+    axis.tick_params(axis="x", width=1.3)
+    axis.grid(True, axis="y", alpha=0.30, linestyle=":")
+
+    for spine in axis.spines.values():
+        spine.set_linewidth(1.3)
+
+    axis.legend(
+        fontsize=11,
+        frameon=True,
+        ncols=min(len(value_columns) + 1, 4),
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.24),
+    )
+
+    figure.subplots_adjust(top=0.78)
 
     save_figure(
         figure,
@@ -1144,6 +1218,398 @@ def plot_cross_trace_metric(
         output_stem,
     )
 
+
+
+def plot_queue_execution_tradeoff(
+    *,
+    output_dir: Path,
+) -> None:
+    tables_dir = output_dir / "cross_trace_tables"
+    figures_dir = output_dir / "figures"
+
+    queue_mean_path = tables_dir / "normalized_mean_total_queue_wait_by_trace.csv"
+    queue_p95_path = tables_dir / "normalized_p95_total_queue_wait_by_trace.csv"
+    execution_mean_path = (
+        tables_dir / "normalized_mean_total_execution_time_by_trace.csv"
+    )
+    execution_p95_path = (
+        tables_dir / "normalized_p95_total_execution_time_by_trace.csv"
+    )
+
+    required_paths = [
+        queue_mean_path,
+        queue_p95_path,
+        execution_mean_path,
+        execution_p95_path,
+    ]
+    missing_paths = [
+        path
+        for path in required_paths
+        if not path.is_file()
+    ]
+    if missing_paths:
+        print(
+            "Skipping queue/execution trade-off figure; "
+            "missing required tables: "
+            + ", ".join(str(path) for path in missing_paths)
+        )
+        return
+
+    def load_geomean(
+        csv_path: Path,
+        value_name: str,
+    ) -> pd.DataFrame:
+        frame = pd.read_csv(csv_path)
+        required_columns = {
+            "run_label",
+            "policy_display",
+            "geomean",
+        }
+        missing_columns = required_columns - set(frame.columns)
+        if missing_columns:
+            raise ValueError(
+                f"{csv_path}: missing columns "
+                f"{sorted(missing_columns)}"
+            )
+
+        return frame[
+            [
+                "run_label",
+                "policy_display",
+                "geomean",
+            ]
+        ].rename(
+            columns={
+                "geomean": value_name,
+            }
+        )
+
+    def merge_mean_and_p95(
+        *,
+        mean_path: Path,
+        p95_path: Path,
+    ) -> pd.DataFrame:
+        mean_frame = load_geomean(mean_path, "Mean")
+        p95_frame = load_geomean(p95_path, "p95")
+
+        merged = mean_frame.merge(
+            p95_frame[
+                [
+                    "run_label",
+                    "p95",
+                ]
+            ],
+            on="run_label",
+            how="inner",
+        )
+        merged["_order"] = merged["policy_display"].map(
+            POLICY_DISPLAY_ORDER
+        ).fillna(100)
+
+        return merged.sort_values(
+            [
+                "_order",
+                "policy_display",
+                "run_label",
+            ]
+        )
+
+    queue_frame = merge_mean_and_p95(
+        mean_path=queue_mean_path,
+        p95_path=queue_p95_path,
+    )
+    execution_frame = merge_mean_and_p95(
+        mean_path=execution_mean_path,
+        p95_path=execution_p95_path,
+    )
+
+    figure, axes = plt.subplots(
+        1,
+        2,
+        figsize=(13.5, 5.2),
+        sharey=False,
+    )
+
+    bar_specs = [
+        ("Mean", "#0072B2", ""),
+        ("p95", "#D55E00", "//"),
+    ]
+
+    def draw_panel(
+        *,
+        axis: plt.Axes,
+        frame: pd.DataFrame,
+        title: str,
+        y_label: str,
+    ) -> None:
+        x = np.arange(len(frame))
+        width = 0.36
+
+        for index, (column, color, hatch) in enumerate(bar_specs):
+            offset = (
+                index
+                - (len(bar_specs) - 1) / 2
+            ) * width
+
+            axis.bar(
+                x + offset,
+                frame[column],
+                width,
+                label=column,
+                color=color,
+                edgecolor="black",
+                linewidth=0.9,
+                hatch=hatch,
+            )
+
+        axis.axhline(
+            1.0,
+            linestyle="--",
+            linewidth=1.5,
+            color="black",
+            label="Exclusive baseline",
+        )
+
+        axis.set_title(title, fontsize=16)
+        axis.set_ylabel(y_label, fontsize=15)
+        axis.set_xticks(x)
+        axis.set_xticklabels(
+            frame["policy_display"],
+            rotation=28,
+            ha="right",
+            fontsize=11,
+        )
+        axis.set_ylim(bottom=0)
+        axis.grid(
+            True,
+            axis="y",
+            linestyle=":",
+            alpha=0.30,
+        )
+        axis.tick_params(
+            axis="both",
+            width=1.3,
+            labelsize=12,
+        )
+
+        for spine in axis.spines.values():
+            spine.set_linewidth(1.3)
+
+    draw_panel(
+        axis=axes[0],
+        frame=queue_frame,
+        title="Total queue time",
+        y_label="Normalized total queue time",
+    )
+    draw_panel(
+        axis=axes[1],
+        frame=execution_frame,
+        title="Execution span",
+        y_label="Normalized total execution time",
+    )
+
+    handles, labels = axes[1].get_legend_handles_labels()
+    unique = dict(zip(labels, handles))
+
+    figure.legend(
+        unique.values(),
+        unique.keys(),
+        loc="upper center",
+        ncols=3,
+        frameon=True,
+        bbox_to_anchor=(0.5, 1.04),
+        fontsize=12,
+    )
+
+    figure.tight_layout(rect=(0, 0, 1, 0.96))
+
+    save_figure(
+        figure,
+        figures_dir,
+        "normalized_total_queue_execution_tradeoff",
+    )
+
+
+def plot_cross_trace_mean_with_p95_markers(
+    *,
+    output_dir: Path,
+    mean_stem: str,
+    p95_stem: str,
+    output_stem: str,
+    y_label: str,
+) -> None:
+    tables_dir = output_dir / "cross_trace_tables"
+    figures_dir = output_dir / "figures"
+
+    mean_path = tables_dir / f"{mean_stem}.csv"
+    p95_path = tables_dir / f"{p95_stem}.csv"
+
+    missing_paths = [
+        path
+        for path in [mean_path, p95_path]
+        if not path.is_file()
+    ]
+    if missing_paths:
+        print(
+            f"Skipping {output_stem}; missing required tables: "
+            + ", ".join(str(path) for path in missing_paths)
+        )
+        return
+
+    mean_table = pd.read_csv(mean_path).copy()
+    p95_table = pd.read_csv(p95_path).copy()
+
+    if "policy_display" not in mean_table.columns:
+        mean_table["policy_display"] = mean_table["run_label"].map(
+            policy_display_name
+        )
+    if "policy_display" not in p95_table.columns:
+        p95_table["policy_display"] = p95_table["run_label"].map(
+            policy_display_name
+        )
+
+    mean_table["_order"] = mean_table["policy_display"].map(
+        POLICY_DISPLAY_ORDER
+    ).fillna(100)
+
+    mean_table = mean_table.sort_values(
+        [
+            "_order",
+            "policy_display",
+            "run_label",
+        ]
+    )
+
+    p95_lookup = p95_table.set_index("run_label")
+
+    value_columns = [
+        column
+        for column in mean_table.columns
+        if column not in {
+            "run_label",
+            "policy_display",
+            "_order",
+        }
+    ]
+
+    x = np.arange(len(mean_table))
+    total_width = 0.82
+    width = total_width / max(
+        len(value_columns),
+        1,
+    )
+
+    figure, axis = plt.subplots(
+        figsize=(
+            max(8.4, len(mean_table) * 1.45),
+            5.4,
+        )
+    )
+
+    color_cycle = [
+        "#0072B2",  # blue
+        "#E69F00",  # orange
+        "#009E73",  # bluish green
+        "#D55E00",  # vermillion
+        "#CC79A7",  # reddish purple
+        "#56B4E9",  # sky blue
+    ]
+    hatch_cycle = [
+        "",
+        "//",
+        "\\\\",
+        "xx",
+        "..",
+        "--",
+    ]
+
+    for index, column in enumerate(value_columns):
+        offset = (
+            index
+            - (len(value_columns) - 1) / 2
+        ) * width
+
+        label = (
+            "GeoMean"
+            if column == "geomean"
+            else str(column).capitalize()
+        )
+
+        bar_x = x + offset
+        mean_values = mean_table[column].to_numpy(dtype=float)
+
+        axis.bar(
+            bar_x,
+            mean_values,
+            width,
+            label=f"{label} mean",
+            color=color_cycle[index % len(color_cycle)],
+            edgecolor="black",
+            linewidth=0.9,
+            hatch=hatch_cycle[index % len(hatch_cycle)],
+        )
+
+        p95_values = []
+        for run_label in mean_table["run_label"]:
+            if run_label not in p95_lookup.index:
+                p95_values.append(np.nan)
+            else:
+                p95_values.append(
+                    float(p95_lookup.loc[run_label, column])
+                )
+
+        axis.scatter(
+            bar_x,
+            p95_values,
+            marker="D",
+            s=42,
+            color="black",
+            edgecolor="white",
+            linewidth=0.7,
+            zorder=5,
+            label="p95" if index == 0 else None,
+        )
+
+    axis.axhline(
+        1.0,
+        linestyle="--",
+        linewidth=1.6,
+        color="black",
+        label="Exclusive baseline",
+    )
+
+    axis.set_xticks(x)
+    axis.set_xticklabels(
+        mean_table["policy_display"],
+        rotation=25,
+        ha="right",
+        fontsize=13,
+    )
+    axis.set_ylabel(y_label, fontsize=15)
+    axis.set_xlabel("Policy", fontsize=15)
+    axis.set_ylim(bottom=0)
+    axis.tick_params(axis="y", labelsize=13, width=1.3)
+    axis.tick_params(axis="x", width=1.3)
+    axis.grid(True, axis="y", alpha=0.30, linestyle=":")
+
+    for spine in axis.spines.values():
+        spine.set_linewidth(1.3)
+
+    axis.legend(
+        fontsize=11,
+        frameon=True,
+        ncols=3,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.24),
+    )
+
+    figure.subplots_adjust(top=0.78)
+
+    save_figure(
+        figure,
+        figures_dir,
+        output_stem,
+    )
 
 
 def generate_recovery_analysis(
@@ -1180,6 +1646,8 @@ def generate_recovery_analysis(
                 "configuration_label",
                 record.configuration_label,
             )
+            if "run_label" in frame.columns:
+                frame["run_label"] = record.configuration_label
             frames.append(frame)
 
         jobs = pd.concat(frames, ignore_index=True)
@@ -1638,16 +2106,20 @@ def generate_markdown_report(
                 "normalized_p95_jct_by_trace.csv",
             ),
             (
-                "Normalized mean queue wait",
-                "normalized_mean_queue_wait_by_trace.csv",
+                "Normalized mean total queue wait",
+                "normalized_mean_total_queue_wait_by_trace.csv",
             ),
             (
-                "Normalized P95 queue wait",
-                "normalized_p95_queue_wait_by_trace.csv",
+                "Normalized P95 total queue wait",
+                "normalized_p95_total_queue_wait_by_trace.csv",
             ),
             (
-                "Normalized mean execution span",
-                "normalized_mean_execution_span_by_trace.csv",
+                "Normalized mean total execution time",
+                "normalized_mean_total_execution_time_by_trace.csv",
+            ),
+            (
+                "Normalized P95 total execution time",
+                "normalized_p95_total_execution_time_by_trace.csv",
             ),
         ]
 
@@ -1705,6 +2177,42 @@ def generate_markdown_report(
                     ]
                 )
 
+    lines.extend(
+        [
+            "",
+            "## Cross-trace queue and execution-time summary",
+            "",
+            "Total queue time is initial queue wait plus recovery queue wait. "
+            "Total execution time is the sum of all attempt runtimes, including failed attempts before recovery.",
+            "",
+        ]
+    )
+
+    marker_figures = [
+        (
+            output_dir / "figures" / "normalized_jct_mean_bars_p95_markers_by_trace.png",
+            "Normalized JCT with P95 markers",
+        ),
+        (
+            output_dir / "figures" / "normalized_total_queue_wait_mean_bars_p95_markers_by_trace.png",
+            "Normalized total queue wait with P95 markers",
+        ),
+        (
+            output_dir / "figures" / "normalized_total_execution_time_mean_bars_p95_markers_by_trace.png",
+            "Normalized total execution time with P95 markers",
+        ),
+    ]
+
+    for figure_path, title in marker_figures:
+        if figure_path.is_file():
+            lines.extend(
+                [
+                    f"![{title}]"
+                    f"({relative_markdown_path(target=figure_path, report_dir=output_dir)})",
+                    "",
+                ]
+            )
+
     completed_traces = sorted(
         validation_frame.loc[
             validation_frame["status"] == "complete",
@@ -1750,12 +2258,12 @@ def generate_markdown_report(
                     "run_label",
                     "completion_fraction",
                     "makespan_s",
-                    "initial_queue_wait_mean_s",
-                    "initial_queue_wait_p95_s",
+                    "total_queue_wait_mean_s",
+                    "total_queue_wait_p95_s",
                     "jct_mean_s",
                     "jct_p95_s",
-                    "execution_span_mean_s",
-                    "execution_span_p95_s",
+                    "total_execution_time_mean_s",
+                    "total_execution_time_p95_s",
                     "successful_attempt_runtime_mean_s",
                     "failed_attempt_count",
                     "recovered_attempt_count",
@@ -1764,15 +2272,15 @@ def generate_markdown_report(
                     "run_label": "Policy",
                     "completion_fraction": "Completion",
                     "makespan_s": "Makespan (s)",
-                    "initial_queue_wait_mean_s": "Mean wait (s)",
-                    "initial_queue_wait_p95_s": "P95 wait (s)",
+                    "total_queue_wait_mean_s": "Mean total wait (s)",
+                    "total_queue_wait_p95_s": "P95 total wait (s)",
                     "jct_mean_s": "Mean JCT (s)",
                     "jct_p95_s": "P95 JCT (s)",
-                    "execution_span_mean_s": (
-                        "Mean execution span (s)"
+                    "total_execution_time_mean_s": (
+                        "Mean total execution time (s)"
                     ),
-                    "execution_span_p95_s": (
-                        "P95 execution span (s)"
+                    "total_execution_time_p95_s": (
+                        "P95 total execution time (s)"
                     ),
                     "successful_attempt_runtime_mean_s": (
                         "Mean successful runtime (s)"
@@ -1818,10 +2326,10 @@ def generate_markdown_report(
                         "makespan_reduction_percent",
                         "jct_mean_s_vs_exclusive",
                         "jct_p95_s_vs_exclusive",
-                        "initial_queue_wait_mean_s_vs_exclusive",
-                        "initial_queue_wait_p95_s_vs_exclusive",
-                        "execution_span_mean_s_vs_exclusive",
-                        "execution_span_p95_s_vs_exclusive",
+                        "total_queue_wait_mean_s_vs_exclusive",
+                        "total_queue_wait_p95_s_vs_exclusive",
+                        "total_execution_time_mean_s_vs_exclusive",
+                        "total_execution_time_p95_s_vs_exclusive",
                     ],
                     rename={
                         "run_label": "Policy",
@@ -1837,17 +2345,17 @@ def generate_markdown_report(
                         "jct_p95_s_vs_exclusive": (
                             "P95 JCT / Exclusive"
                         ),
-                        "initial_queue_wait_mean_s_vs_exclusive": (
+                        "total_queue_wait_mean_s_vs_exclusive": (
                             "Mean wait / Exclusive"
                         ),
-                        "initial_queue_wait_p95_s_vs_exclusive": (
+                        "total_queue_wait_p95_s_vs_exclusive": (
                             "P95 wait / Exclusive"
                         ),
-                        "execution_span_mean_s_vs_exclusive": (
-                            "Mean execution span / Exclusive"
+                        "total_execution_time_mean_s_vs_exclusive": (
+                            "Mean total execution time / Exclusive"
                         ),
-                        "execution_span_p95_s_vs_exclusive": (
-                            "P95 execution span / Exclusive"
+                        "total_execution_time_p95_s_vs_exclusive": (
+                            "P95 total execution time / Exclusive"
                         ),
                     },
                 )
@@ -1864,7 +2372,7 @@ def generate_markdown_report(
             ),
             (
                 "Queueing time by policy",
-                trace_dir / "queue_wait_comparison.png",
+                trace_dir / "total_queue_wait_comparison.png",
             ),
             (
                 "Execution time by policy",
@@ -2135,6 +2643,34 @@ def main() -> int:
 
     generate_cross_trace_analysis(
         validation_frame=frame,
+        output_dir=output_dir,
+    )
+
+    plot_cross_trace_mean_with_p95_markers(
+        output_dir=output_dir,
+        mean_stem="normalized_mean_jct_by_trace",
+        p95_stem="normalized_p95_jct_by_trace",
+        output_stem="normalized_jct_mean_bars_p95_markers_by_trace",
+        y_label="Normalized JCT",
+    )
+
+    plot_cross_trace_mean_with_p95_markers(
+        output_dir=output_dir,
+        mean_stem="normalized_mean_total_queue_wait_by_trace",
+        p95_stem="normalized_p95_total_queue_wait_by_trace",
+        output_stem="normalized_total_queue_wait_mean_bars_p95_markers_by_trace",
+        y_label="Normalized total queue wait",
+    )
+
+    plot_cross_trace_mean_with_p95_markers(
+        output_dir=output_dir,
+        mean_stem="normalized_mean_total_execution_time_by_trace",
+        p95_stem="normalized_p95_total_execution_time_by_trace",
+        output_stem="normalized_total_execution_time_mean_bars_p95_markers_by_trace",
+        y_label="Normalized total execution time",
+    )
+
+    plot_queue_execution_tradeoff(
         output_dir=output_dir,
     )
 

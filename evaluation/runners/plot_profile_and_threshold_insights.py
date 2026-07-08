@@ -395,39 +395,137 @@ def prepare_window_stability(stability: pd.DataFrame, reference_window: float) -
 def plot_window_stability_curve(
     stability: pd.DataFrame,
     output_dir: Path,
-    formats: list[str],
+    formats: Sequence[str],
+    *,
     reference_window: float,
-    decision_window: float,
+    decision_window: float | None = None,
 ) -> list[Path]:
     data = prepare_window_stability(stability, reference_window)
+
     if data.empty:
-        return []
-
-    label_fontsize = 15
-    tick_fontsize = 13
-    legend_fontsize = 12
-
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
-
-    for metric in RISK_METRICS:
-        metric_data = data[data["metric"] == metric].sort_values("summary_window_seconds")
-        metric_data = metric_data[metric_data["summary_window_seconds"] != float(reference_window)]
-        if metric_data.empty:
-            continue
-
-        ax.plot(
-            metric_data["summary_window_seconds"],
-            metric_data["mean_abs_error"],
-            marker="o",
-            label=metric.replace("_risk", "").upper(),
+        raise ValueError(
+            "No window-stability rows after filtering. "
+            f"input columns={list(stability.columns)}"
         )
 
-    ax.axvline(float(decision_window), linestyle="--", linewidth=1.2, label="decision window")
-    ax.set_xlabel("Post-first-GPU-activity window (s)", fontsize=label_fontsize)
-    ax.set_ylabel(f"Mean absolute error vs {reference_window:g}s", fontsize=label_fontsize)
-    ax.tick_params(axis="both", labelsize=tick_fontsize)
-    ax.grid(True, alpha=0.3)
-    ax.legend(fontsize=legend_fontsize)
+    fig, ax = plt.subplots(figsize=(6.4, 3.0))
+
+    # The CSV stores one row per metric/statistic/window. We plot the most
+    # paper-relevant pressure summaries with distinct markers and line styles.
+    preferred_metrics = [
+        ("smact_risk", "SMACT pressure", "s", "--", "#1F77B4"),
+        ("smocc_risk", "SMOCC pressure", "^", "-.", "#2CA02C"),
+        ("drama_risk", "DRAMA pressure", "D", ":", "#9467BD"),
+    ]
+
+    available = set(data["metric"].astype(str).tolist())
+
+    plotted = False
+
+    for metric, label, marker, linestyle, color in preferred_metrics:
+        if metric not in available:
+            continue
+
+        metric_rows = data[data["metric"].astype(str) == metric].copy()
+        metric_rows = metric_rows.sort_values("summary_window_seconds")
+
+        ax.plot(
+            metric_rows["summary_window_seconds"],
+            metric_rows["mean_abs_error"],
+            marker=marker,
+            linestyle=linestyle,
+            linewidth=2.2,
+            markersize=5.8,
+            color=color,
+            label=label,
+        )
+        plotted = True
+
+    # Fallback: if the exact preferred metric names are not available, plot the
+    # first four *_mean metrics so the artifact still regenerates.
+    if not plotted:
+        fallback_metrics = [
+            m for m in sorted(available)
+            if str(m).endswith("_risk")
+        ][:4]
+
+        style_cycle = [
+            ("o", "-", "#0072B2"),
+            ("s", "--", "#D55E00"),
+            ("^", "-.", "#009E73"),
+            ("D", ":", "#CC79A7"),
+        ]
+
+        for idx, metric in enumerate(fallback_metrics):
+            marker, linestyle, color = style_cycle[idx % len(style_cycle)]
+            metric_rows = data[data["metric"].astype(str) == metric].copy()
+            metric_rows = metric_rows.sort_values("summary_window_seconds")
+            ax.plot(
+                metric_rows["summary_window_seconds"],
+                metric_rows["mean_abs_error"],
+                marker=marker,
+                linestyle=linestyle,
+                linewidth=2.2,
+                markersize=5.8,
+                color=color,
+                label=str(metric).replace("_", " "),
+            )
+            plotted = True
+
+    if not plotted:
+        raise ValueError(
+            "No usable metrics found for window-stability plot. "
+            f"available metrics={sorted(available)}"
+        )
+
+    ax.set_xlabel("Activity-anchored window (s)", fontsize=13)
+    ax.set_ylabel("Mean absolute error", fontsize=13)
+
+    # Show the first evaluated window after 0 s, but avoid crowding the
+    # early-axis labels. The 10 s point remains plotted but is not labeled.
+    evaluated_windows = sorted(
+        pd.to_numeric(data["summary_window_seconds"], errors="coerce")
+        .dropna()
+        .unique()
+        .tolist()
+    )
+    tick_values = [0.0, 5.0, 20.0, 30.0, 60.0, 120.0, 200.0]
+    tick_values = [v for v in tick_values if v <= max(evaluated_windows)]
+    ax.set_xticks(tick_values)
+    ax.set_xticklabels(
+        [str(int(v)) if float(v).is_integer() else f"{v:g}" for v in tick_values],
+        fontsize=11,
+    )
+    ax.set_xlim(left=0.0, right=max(evaluated_windows) * 1.03)
+
+    ax.grid(True, axis="both", linestyle=":", alpha=0.30)
+
+    selected_window = 30.0
+    ax.axvline(
+        selected_window,
+        color="#444444",
+        linestyle="--",
+        linewidth=1.6,
+        alpha=0.85,
+        label="Selected 30 s",
+        zorder=1,
+    )
+
+    ax.tick_params(axis="both", labelsize=12, width=1.2)
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
+
+    ax.legend(
+        loc="upper right",
+        frameon=True,
+        fontsize=10.0,
+        borderpad=0.35,
+        labelspacing=0.30,
+        handlelength=2.2,
+    )
+
+    fig.subplots_adjust(top=0.95, right=0.98)
 
     return save_figure(fig, output_dir, "threshold_window_stability_curve", formats)
 

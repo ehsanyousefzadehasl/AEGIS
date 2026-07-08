@@ -349,6 +349,11 @@ def summarize_jobs(
                 "final_successful_launch_at": final_successful_launch_at,
                 "completed_at": completed_at,
                 "initial_queue_wait_s": waiting_s,
+                "total_queue_wait_s": (
+                    (waiting_s or 0.0) + sum(recovery_queue_waits)
+                    if waiting_s is not None
+                    else None
+                ),
                 "jct_s": jct_s,
                 "execution_span_s": execution_span_s,
                 "successful_attempt_runtime_s": successful_attempt_runtime_s,
@@ -370,6 +375,7 @@ def summarize_jobs(
                     for attempt in task_attempts
                 ),
                 "total_attempt_runtime_s": sum(attempt_runtimes),
+                "total_execution_time_s": sum(attempt_runtimes),
                 "failed_attempt_runtime_s": sum(
                     float(attempt["attempt_runtime_s"])
                     for attempt in failed_attempts
@@ -511,8 +517,10 @@ def summarize_run(
 
     metrics = {
         "initial_queue_wait": "initial_queue_wait_s",
+        "total_queue_wait": "total_queue_wait_s",
         "jct": "jct_s",
         "execution_span": "execution_span_s",
+        "total_execution_time": "total_execution_time_s",
         "successful_attempt_runtime": "successful_attempt_runtime_s",
         "recovery_queue_wait": "total_recovery_queue_wait_s",
         "recovery_gap": "total_recovery_gap_s",

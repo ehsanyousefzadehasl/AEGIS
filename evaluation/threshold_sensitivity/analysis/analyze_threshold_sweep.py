@@ -373,11 +373,19 @@ def pick_threshold_row(summary: pd.DataFrame, tau: tuple[float, float, float]) -
 
 
 def plot_paper_threshold_tradeoff(summary: pd.DataFrame, figs: Path) -> Path | None:
+    """Create the main paper threshold trade-off figure.
+
+    The figure uses representative operating points rather than the full grid,
+    so it remains readable in the paper while showing the trend from strict
+    admission to near-admit-all behavior.
+    """
     selected = [
-        ("Strict admission", (0.10, 0.05, 0.10)),
-        ("Safe admission", (0.50, 0.20, 0.40)),
-        ("Selected knee", (0.65, 0.35, 0.50)),
-        ("Near admit-all", (1.00, 1.00, 0.95)),
+        ("Strict", (0.10, 0.05, 0.10)),
+        ("Conservative", (0.50, 0.20, 0.40)),
+        ("Selected", (0.65, 0.35, 0.50)),
+        ("Permissive", (0.80, 0.65, 0.60)),
+        ("Very permissive", (0.95, 0.95, 0.95)),
+        ("Admit-all", (1.00, 1.00, 1.00)),
     ]
 
     rows = []
@@ -393,6 +401,7 @@ def plot_paper_threshold_tradeoff(summary: pd.DataFrame, figs: Path) -> Path | N
                 "label": f"{tau[0]:.2f}/{tau[1]:.2f}/{tau[2]:.2f}",
                 "mean_throughput_gain": float(r["mean_throughput_gain"]),
                 "max_slowdown": float(r["max_slowdown"]),
+                "mean_slowdown": float(r["mean_slowdown"]),
                 "reject_retry_count": int(r["reject_retry_count"]),
             }
         )
@@ -408,63 +417,246 @@ def plot_paper_threshold_tradeoff(summary: pd.DataFrame, figs: Path) -> Path | N
     fig, (ax_top, ax_bottom) = plt.subplots(
         nrows=2,
         ncols=1,
-        figsize=(8.5, 5.2),
+        figsize=(9.2, 6.2),
         sharex=True,
         gridspec_kw={"height_ratios": [2.2, 1.0]},
     )
 
     ax_slow = ax_top.twinx()
 
+    throughput_color = "#0072B2"  # blue, color-blind friendly
+    mean_slowdown_color = "#009E73"  # bluish green, color-blind friendly
+    worst_slowdown_color = "#D55E00"  # vermillion, color-blind friendly
+    selected_color = "#000000"
+    bar_color = "#B0B0B0"
+
     ax_top.plot(
         x,
         paper["mean_throughput_gain"],
         marker="o",
-        linewidth=2.0,
-        markersize=6,
+        linestyle="-",
+        linewidth=3.0,
+        markersize=8.0,
+        color=throughput_color,
         label="Mean throughput gain",
+    )
+    ax_slow.plot(
+        x,
+        paper["mean_slowdown"],
+        marker="^",
+        linestyle="-.",
+        linewidth=3.0,
+        markersize=7.5,
+        color=mean_slowdown_color,
+        label="Mean slowdown",
     )
     ax_slow.plot(
         x,
         paper["max_slowdown"],
         marker="s",
         linestyle="--",
-        linewidth=2.0,
-        markersize=5.5,
+        linewidth=3.0,
+        markersize=7.5,
+        color=worst_slowdown_color,
         label="Worst slowdown",
     )
 
-    ax_top.set_ylabel("Throughput gain")
-    ax_slow.set_ylabel("Worst slowdown")
+    selected_idx = paper.index[paper["name"] == "Selected"].tolist()
+    if selected_idx:
+        sx = selected_idx[0]
+        ax_top.axvline(sx, linestyle=":", linewidth=2.2, color=selected_color)
+        ax_bottom.axvline(sx, linestyle=":", linewidth=2.2, color=selected_color)
+
+    ax_top.set_ylabel("Throughput gain", fontsize=15)
+    ax_slow.set_ylabel("Slowdown", fontsize=15)
     ax_top.set_ylim(bottom=0)
     ax_slow.set_ylim(bottom=0)
     ax_top.grid(axis="y", linestyle=":", alpha=0.35)
 
     lines1, labels1 = ax_top.get_legend_handles_labels()
     lines2, labels2 = ax_slow.get_legend_handles_labels()
-    ax_top.legend(lines1 + lines2, labels1 + labels2, loc="upper left", frameon=True)
+    ax_top.legend(lines1 + lines2, labels1 + labels2, loc="upper left", frameon=True, fontsize=13)
 
-    ax_bottom.bar(x, paper["reject_retry_count"])
-    ax_bottom.set_ylabel("Admission\ndeferrals")
+    ax_bottom.bar(x, paper["reject_retry_count"], color=bar_color, edgecolor="black", linewidth=1.0)
+    ax_bottom.set_ylabel("Admission\ndeferrals", fontsize=15)
     ax_bottom.set_ylim(bottom=0)
     ax_bottom.grid(axis="y", linestyle=":", alpha=0.35)
 
     ax_bottom.set_xticks(list(x))
     ax_bottom.set_xticklabels(
-        [f"{n}\n{l}" for n, l in zip(paper["name"], paper["label"])],
-        rotation=0,
-        ha="center",
-        fontsize=8,
+        [f"{n}\n({l})" for n, l in zip(paper["name"], paper["label"])],
+        rotation=30,
+        ha="right",
+        fontsize=13,
     )
 
-    ax_top.set_title("Admission-threshold tradeoff")
+    # ax_top.set_title("Admission-threshold trade-off", fontsize=16)
+    ax_top.tick_params(axis="both", labelsize=13, width=1.4)
+    ax_slow.tick_params(axis="y", labelsize=13, width=1.4)
+    ax_bottom.tick_params(axis="both", labelsize=13, width=1.4)
+    for ax in (ax_top, ax_slow, ax_bottom):
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.4)
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.33)
     fig.savefig(fig_path, dpi=300)
+    fig.savefig(fig_path.with_suffix(".pdf"))
+    plt.close(fig)
+
+    return fig_path
+
+
+
+
+def plot_paper_threshold_slowdown_tails(summary: pd.DataFrame, figs: Path) -> Path | None:
+    """Create companion paper threshold figure with throughput and slowdown tails.
+
+    This uses the same representative threshold settings as
+    plot_paper_threshold_tradeoff(), so the figures are directly comparable.
+    It keeps throughput gain in the top panel and adds P95 slowdown alongside
+    mean and worst slowdown.
+    """
+    selected = [
+        ("Strict", (0.10, 0.05, 0.10)),
+        ("Conservative", (0.50, 0.20, 0.40)),
+        ("Selected", (0.65, 0.35, 0.50)),
+        ("Permissive", (0.80, 0.65, 0.60)),
+        ("Very permissive", (0.95, 0.95, 0.95)),
+        ("Admit-all", (1.00, 1.00, 1.00)),
+    ]
+
+    rows = []
+    for name, tau in selected:
+        r = pick_threshold_row(summary, tau)
+        if r is None:
+            print(f"warning: missing threshold setting {name}: {tau}")
+            continue
+
+        rows.append(
+            {
+                "name": name,
+                "label": f"{tau[0]:.2f}/{tau[1]:.2f}/{tau[2]:.2f}",
+                "mean_throughput_gain": float(r["mean_throughput_gain"]),
+                "mean_slowdown": float(r["mean_slowdown"]),
+                "p95_slowdown": float(r["p95_slowdown_mean"]),
+                "max_slowdown": float(r["max_slowdown"]),
+                "reject_retry_count": int(r["reject_retry_count"]),
+            }
+        )
+
+    if len(rows) < 2:
+        return None
+
+    paper = pd.DataFrame(rows)
+    x = range(len(paper))
+
+    fig_path = figs / "paper_threshold_tradeoff_tails_with_deferrals.png"
+
+    fig, (ax_top, ax_bottom) = plt.subplots(
+        nrows=2,
+        ncols=1,
+        figsize=(9.2, 6.2),
+        sharex=True,
+        gridspec_kw={"height_ratios": [2.2, 1.0]},
+    )
+
+    ax_slow = ax_top.twinx()
+
+    throughput_color = "#0072B2"      # blue, color-blind friendly
+    mean_slowdown_color = "#009E73"   # bluish green, color-blind friendly
+    p95_slowdown_color = "#CC79A7"    # reddish purple, color-blind friendly
+    worst_slowdown_color = "#D55E00"  # vermillion, color-blind friendly
+    selected_color = "#000000"
+    bar_color = "#B0B0B0"
+
+    ax_top.plot(
+        x,
+        paper["mean_throughput_gain"],
+        marker="o",
+        linestyle="-",
+        linewidth=3.0,
+        markersize=8.0,
+        color=throughput_color,
+        label="Mean throughput gain",
+    )
+    ax_slow.plot(
+        x,
+        paper["mean_slowdown"],
+        marker="^",
+        linestyle="-.",
+        linewidth=3.0,
+        markersize=7.5,
+        color=mean_slowdown_color,
+        label="Mean slowdown",
+    )
+    ax_slow.plot(
+        x,
+        paper["p95_slowdown"],
+        marker="D",
+        linestyle=":",
+        linewidth=3.0,
+        markersize=7.0,
+        color=p95_slowdown_color,
+        label="P95 slowdown",
+    )
+    ax_slow.plot(
+        x,
+        paper["max_slowdown"],
+        marker="s",
+        linestyle="--",
+        linewidth=3.0,
+        markersize=7.5,
+        color=worst_slowdown_color,
+        label="Worst slowdown",
+    )
+
+    selected_idx = paper.index[paper["name"] == "Selected"].tolist()
+    if selected_idx:
+        sx = selected_idx[0]
+        ax_top.axvline(sx, linestyle=":", linewidth=2.2, color=selected_color)
+        ax_bottom.axvline(sx, linestyle=":", linewidth=2.2, color=selected_color)
+
+    ax_top.set_ylabel("Throughput gain", fontsize=15)
+    ax_slow.set_ylabel("Slowdown", fontsize=15)
+    ax_top.set_ylim(bottom=0)
+    ax_slow.set_ylim(bottom=0)
+    ax_top.grid(axis="y", linestyle=":", alpha=0.35)
+
+    lines1, labels1 = ax_top.get_legend_handles_labels()
+    lines2, labels2 = ax_slow.get_legend_handles_labels()
+    ax_top.legend(lines1 + lines2, labels1 + labels2, loc="upper left", frameon=True, fontsize=13)
+
+    ax_bottom.bar(x, paper["reject_retry_count"], color=bar_color, edgecolor="black", linewidth=1.0)
+    ax_bottom.set_ylabel("Placement\\ndeferrals", fontsize=15)
+    ax_bottom.set_ylim(bottom=0)
+    ax_bottom.grid(axis="y", linestyle=":", alpha=0.35)
+
+    ax_bottom.set_xticks(list(x))
+    ax_bottom.set_xticklabels(
+        [f"{n}\n({l})" for n, l in zip(paper["name"], paper["label"])],
+        rotation=30,
+        ha="right",
+        fontsize=13,
+    )
+
+    ax_top.tick_params(axis="both", labelsize=13, width=1.4)
+    ax_slow.tick_params(axis="y", labelsize=13, width=1.4)
+    ax_bottom.tick_params(axis="both", labelsize=13, width=1.4)
+    for ax in (ax_top, ax_slow, ax_bottom):
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.4)
+
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.33)
+    fig.savefig(fig_path, dpi=300)
+    fig.savefig(fig_path.with_suffix(".pdf"))
     plt.close(fig)
 
     return fig_path
 
 
 def main() -> int:
+
     args = parse_args()
 
     sweep_root = Path(args.sweep_root)
@@ -530,6 +722,7 @@ def main() -> int:
     seq_fig = plot_per_sequence(trials, ranked, figs, args.max_slowdown_budget)
     rej_fig = plot_rejections(ranked, figs)
     paper_fig = plot_paper_threshold_tradeoff(summary, figs)
+    paper_tail_fig = plot_paper_threshold_slowdown_tails(summary, figs)
 
     best = ranked.iloc[0]
     report_lines = [
@@ -568,6 +761,9 @@ def main() -> int:
     if paper_fig is not None:
         report_lines.append("- `figures/paper_threshold_tradeoff_with_deferrals.png`")
 
+    if paper_tail_fig is not None:
+        report_lines.append("- `figures/paper_threshold_tradeoff_tails_with_deferrals.png`")
+
     (out / "report.md").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
 
     print(f"wrote {trials_path}")
@@ -583,6 +779,9 @@ def main() -> int:
 
     if paper_fig is not None:
         print(f"wrote {paper_fig}")
+
+    if paper_tail_fig is not None:
+        print(f"wrote {paper_tail_fig}")
 
     print(f"wrote {out / 'report.md'}")
 
