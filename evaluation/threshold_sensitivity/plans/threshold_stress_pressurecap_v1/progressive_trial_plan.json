@@ -1,0 +1,32 @@
+[
+  {
+    "trial_id": "pressurecap_heavyfirst_4",
+    "gpu_id": "0",
+    "cuda_visible_devices": "0",
+    "job_sequence": [
+      "evaluation/workloads/training/specs/yaml_threshold_short/vgg16_imagenet_bs64_maxbatches1200.yaml",
+      "evaluation/workloads/training/specs/yaml_threshold_short/xception_imagenet_bs32_maxbatches1200.yaml",
+      "evaluation/workloads/training/specs/yaml_threshold_short/vgg16_imagenet_bs32_maxbatches1200.yaml",
+      "evaluation/workloads/training/specs/yaml_threshold_short/resnet50_imagenet_bs128_maxbatches1200.yaml"
+    ],
+    "num_stages": 4,
+    "mock_smact_risk": "",
+    "mock_smocc_risk": "",
+    "mock_drama_risk": ""
+  },
+  {
+    "trial_id": "pressurecap_reverse_4",
+    "gpu_id": "0",
+    "cuda_visible_devices": "0",
+    "job_sequence": [
+      "evaluation/workloads/training/specs/yaml_threshold_short/resnet50_imagenet_bs128_maxbatches1200.yaml",
+      "evaluation/workloads/training/specs/yaml_threshold_short/vgg16_imagenet_bs32_maxbatches1200.yaml",
+      "evaluation/workloads/training/specs/yaml_threshold_short/xception_imagenet_bs32_maxbatches1200.yaml",
+      "evaluation/workloads/training/specs/yaml_threshold_short/vgg16_imagenet_bs64_maxbatches1200.yaml"
+    ],
+    "num_stages": 4,
+    "mock_smact_risk": "",
+    "mock_smocc_risk": "",
+    "mock_drama_risk": ""
+  }
+]

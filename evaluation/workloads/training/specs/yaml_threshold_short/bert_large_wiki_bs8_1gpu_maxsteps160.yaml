@@ -1,0 +1,37 @@
+version: 1
+job:
+  conda_env: tf
+  command: python evaluation/workloads/training/scripts/clean/bert_large_wiki_train.py
+    --max_steps 160 --report_every 50
+resources:
+  num_gpus: 1
+  gpu_memory_requirement_mib: 12620
+estimates:
+  horus_mib: 13349.4346
+  faketensor_mib: 40000
+  gpumemnet_mib: 24000
+profile:
+  peak_memory_mib: 12620
+  avg_smact: 0.7255112781954887
+  avg_smocc: 0.228578947368421
+  avg_drama: 0.1224887218045113
+  profiling_duration_s: 160
+  source: bert_large_short_maxsteps160
+  extra_metrics:
+    original_gpu_memory_requirement_mib: 12622
+    full_run_peak_memory_mib: 12620
+  horus_gpu_util_mean: 75.18796992481202
+  horus_gpu_util_p95: 100.0
+  horus_gpu_util_max: 100.0
+  lucid_class: jumbo
+  lucid_ss: 2
+  lucid_label_source: predicted_classifier_lucid_faithful
+  lucid_classifier_class: jumbo
+  lucid_classifier_ss: 2
+  lucid_pred_proba_ss0: 0.04
+  lucid_pred_proba_ss1: 0.3
+  lucid_pred_proba_ss2: 0.66
+online_estimation:
+  summary_path: BERT_large.model
+  parser_arg_1: wiki
+  parser_arg_2: 8

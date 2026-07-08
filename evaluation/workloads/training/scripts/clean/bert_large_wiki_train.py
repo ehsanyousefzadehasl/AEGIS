@@ -63,6 +63,12 @@ def parse_args() -> argparse.Namespace:
         default=100,
         help="Report training progress every N steps",
     )
+    parser.add_argument(
+        "--max_steps",
+        type=int,
+        default=None,
+        help="Stop each epoch after this many optimizer steps",
+    )
     return parser.parse_args()
 
 
@@ -182,11 +188,15 @@ def train_one_epoch(
     optimizer: AdamW,
     device: torch.device,
     report_every: int,
+    max_steps: int | None,
 ) -> float:
     model.train()
     total_loss = 0.0
+    completed_steps = 0
 
     for step, batch in enumerate(tqdm(train_dataloader), start=1):
+        if max_steps is not None and step > max_steps:
+            break
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
         labels = batch["labels"].to(device)
@@ -204,11 +214,12 @@ def train_one_epoch(
         optimizer.step()
 
         total_loss += loss.item()
+        completed_steps += 1
 
         if report_every > 0 and step % report_every == 0:
             print(f"epoch={epoch} step={step} loss={loss.item():.4f}")
 
-    avg_loss = total_loss / len(train_dataloader)
+    avg_loss = total_loss / max(completed_steps, 1)
     print(f"Epoch {epoch} completed. Average loss: {avg_loss:.4f}")
     return avg_loss
 
@@ -273,6 +284,7 @@ def main() -> None:
                     optimizer=optimizer,
                     device=device,
                     report_every=args.report_every,
+                    max_steps=args.max_steps,
                 )
 
     print(f"training_loop_time_s: {train_timer.elapsed_seconds:.2f}")

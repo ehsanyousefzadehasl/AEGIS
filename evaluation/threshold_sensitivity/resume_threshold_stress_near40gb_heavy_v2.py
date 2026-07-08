@@ -8,18 +8,18 @@ from pathlib import Path
 import pandas as pd
 
 
-OUTPUT_ROOT = Path("evaluation/threshold_sensitivity/results/threshold_stress_v1_selected_points")
-PLAN_JSONL = "evaluation/threshold_sensitivity/plans/threshold_stress_v1/progressive_trial_plan.jsonl"
-SOLO_RUNTIME_CSV = "evaluation/threshold_sensitivity/plans/threshold_stress_v1/stress_solo_runtimes.csv"
+OUTPUT_ROOT = Path("evaluation/threshold_sensitivity/results/threshold_stress_near40gb_heavy_v2_selected_points")
+PLAN_JSONL = "evaluation/threshold_sensitivity/plans/threshold_stress_near40gb_heavy_v2/progressive_trial_plan.jsonl"
+SOLO_RUNTIME_CSV = "evaluation/threshold_sensitivity/plans/threshold_stress_near40gb_heavy_v2/near40gb_heavy_v2_solo_runtimes.csv"
 
 # Exact threshold points, not a Cartesian grid.
 THRESHOLD_POINTS = [
+    ("admitall", 1.00, 1.00, 1.00),
     ("conservative", 0.00, 0.00, 0.00),
-    ("strict",       0.25, 0.10, 0.20),
-    ("moderate",     0.50, 0.25, 0.40),
-    ("selected",     0.65, 0.35, 0.50),
-    ("permissive",   0.80, 0.50, 0.60),
-    ("admitall",     1.00, 1.00, 1.00),
+    ("strict", 0.25, 0.10, 0.20),
+    ("moderate", 0.50, 0.25, 0.40),
+    ("selected", 0.65, 0.35, 0.50),
+    ("permissive", 0.80, 0.50, 0.60),
 ]
 
 EXPECTED_TRIALS = 2

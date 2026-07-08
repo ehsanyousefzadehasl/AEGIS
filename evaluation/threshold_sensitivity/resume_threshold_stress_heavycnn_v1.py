@@ -8,9 +8,9 @@ from pathlib import Path
 import pandas as pd
 
 
-OUTPUT_ROOT = Path("evaluation/threshold_sensitivity/results/threshold_stress_v1_selected_points")
-PLAN_JSONL = "evaluation/threshold_sensitivity/plans/threshold_stress_v1/progressive_trial_plan.jsonl"
-SOLO_RUNTIME_CSV = "evaluation/threshold_sensitivity/plans/threshold_stress_v1/stress_solo_runtimes.csv"
+OUTPUT_ROOT = Path("evaluation/threshold_sensitivity/results/threshold_stress_heavycnn_v1_selected_points")
+PLAN_JSONL = "evaluation/threshold_sensitivity/plans/threshold_stress_heavycnn_v1/progressive_trial_plan.jsonl"
+SOLO_RUNTIME_CSV = "evaluation/threshold_sensitivity/plans/threshold_stress_heavycnn_v1/heavycnn_solo_runtimes.csv"
 
 # Exact threshold points, not a Cartesian grid.
 THRESHOLD_POINTS = [
