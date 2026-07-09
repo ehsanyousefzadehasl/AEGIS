@@ -1,35 +1,61 @@
 # Paper Artifacts
 
-This folder is a curated index for paper-writing. It does not replace the raw experiment outputs; it points to the stable analysis tables and figures.
+This directory is a curated index for the AEGIS paper artifacts. It links paper-facing claims to stable analysis tables, figures, and generated reports. It is intended for writing, review, and artifact navigation; it does not replace the raw experiment outputs.
 
-## Source locations
+## What this directory contains
+
+| File | Purpose |
+|---|---|
+| [`claims_and_evidence.md`](claims_and_evidence.md) | Paper-facing claims and the evidence supporting them. |
+| [`figure_index.md`](figure_index.md) | Generated figure paths grouped by analysis. |
+| [`figure_gallery.md`](figure_gallery.md) | Visual gallery of selected generated figures. |
+| [`tables/solo_profile_anchor_comparison.md`](tables/solo_profile_anchor_comparison.md) | Comparison of launch, first-memory, and activity-filtered profile anchors. |
+| [`tables/first_gpu_activity_window_stability.md`](tables/first_gpu_activity_window_stability.md) | Stability of shorter first-observed-GPU-activity windows against a 200s reference. |
+| [`tables/risk_component_ablation_rollup.md`](tables/risk_component_ablation_rollup.md) | Summary of mean, median, p95, EWMA, and combined risk components. |
+| [`tables/memory_safety_summary.md`](tables/memory_safety_summary.md) | Memory-safety summary for profile windows and workload memory requirements. |
+| [`tables/solo_profile_memory_peak_summary.md`](tables/solo_profile_memory_peak_summary.md) | Solo-profile memory peak summary. |
+| [`tables/first_gpu_activity_memory_stability.md`](tables/first_gpu_activity_memory_stability.md) | Memory stability of first-observed-GPU-activity windows. |
+| [`tables/first_gpu_activity_delay_summary.md`](tables/first_gpu_activity_delay_summary.md) | Delay from dispatch to first observed GPU activity. |
+
+## Source analyses
+
+The curated tables and figures are derived from three analysis groups.
 
 ### Solo profile anchor analyses
 
-- Activity-filtered solo profile analysis: `evaluation/profiling/solo/analysis/`
-- First-memory anchored solo profile analysis: `evaluation/profiling/solo/analysis_first_memory_anchor/`
-- Launch anchored solo profile analysis: `evaluation/profiling/solo/analysis_launch_anchor/`
+These compare fixed profile windows against full solo-run behavior:
+
+```text
+evaluation/profiling/solo/analysis/
+evaluation/profiling/solo/analysis_first_memory_anchor/
+evaluation/profiling/solo/analysis_launch_anchor/
+```
 
 ### First-observed-GPU-activity threshold-window analysis
 
-- Suite directory: `evaluation/threshold_sensitivity/solo_runs/combined_1gpu_threshold_windows_with_llama_20260509_202117`
-- Window analysis: `evaluation/threshold_sensitivity/solo_runs/combined_1gpu_threshold_windows_with_llama_20260509_202117/window_analysis`
-- Summaries: `evaluation/threshold_sensitivity/summaries/`
-- Figures: `evaluation/figures/first_gpu_activity_windows_w(30, 40, 60, 120)s_vs_w200s/`
+This analysis evaluates 30s, 40s, 60s, and 120s post-activity windows against a 200s reference.
 
-## Curated files
+Primary figure folders:
 
-- `claims_and_evidence.md`: paper-facing claims and where the evidence lives.
-- `figure_index.md`: figure paths grouped by experiment.
-- `tables/solo_profile_anchor_comparison.md`: launch vs first-memory vs activity-filtered comparison.
-- `tables/first_gpu_activity_window_stability.md`: stability of shorter windows vs 200s.
-- `tables/risk_component_ablation_rollup.md`: mean/median/p95/EWMA/risk ablation.
-- `tables/memory_safety_summary.md`: 200s-window memory peak vs full-run peak and workload memory requirement.
-- `figure_gallery.md`: visual gallery of selected generated figures.
-- `tables/solo_profile_memory_peak_summary.md`: 200s observed memory peak vs full-run observed memory peak from solo profiles.
-- `tables/first_gpu_activity_memory_stability.md`: first-GPU-activity memory usage windows vs the 200s reference.
-- `tables/first_gpu_activity_delay_summary.md`: delay from dispatch to first observed GPU activity.
+```text
+evaluation/figures/first_gpu_activity_windows_w30s_vs_w200s/
+evaluation/figures/first_gpu_activity_windows_w40s_vs_w200s/
+evaluation/figures/first_gpu_activity_windows_w60s_vs_w200s/
+evaluation/figures/first_gpu_activity_windows_w120s_vs_w200s/
+```
+
+### Representative evaluation reports
+
+Main generated reports are tracked under:
+
+```text
+evaluation/experiments/results/final_representative_evaluation_analysis/
+evaluation/experiments/results/or_placement_sensitivity_analysis/
+evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/
+evaluation/experiments/results/estimator_sensitivity_analysis/
+evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/
+```
 
 ## Terminology note
 
-The current threshold-window pipeline uses a first-observed-GPU-activity anchor. Some internal CSV columns may still use legacy names such as `ttfk_wait_seconds`; interpret those as wait time until the job is first observed as active on GPU, not as exact CUDA-kernel-launch instrumentation.
+The threshold-window pipeline uses a first-observed-GPU-activity anchor. Some internal CSV columns retain legacy names such as `ttfk_wait_seconds`; interpret those as the delay until the job is first observed as active on the GPU, not exact CUDA kernel-launch instrumentation.
