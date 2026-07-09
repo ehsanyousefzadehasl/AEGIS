@@ -99,7 +99,7 @@ evaluation/threshold_sensitivity/solo_runs/
 
 evaluation/threshold_sensitivity/results/
 # Threshold sensitivity generated artifacts
-evaluation/threshold_sensitivity/reports/
+evaluation/threshold_sensitivity/reports/*
 evaluation/threshold_sensitivity/results/*/analysis/
 evaluation/threshold_sensitivity/results/*/figures/
 evaluation/threshold_sensitivity/**/__pycache__/
@@ -147,43 +147,44 @@ evaluation/lucid/results/**/*.jsonl
 
 !evaluation/experiments/traces/smoke_4jobs.csv
 
-evaluation/experiments/results/
+evaluation/experiments/results/*
 
 !evaluation/threshold_sensitivity/manifests/threshold_stress_v1.csv
-# Curated generated reports kept for paper/artifact navigation.
+# Curated analysis snapshots retained for artifact/reviewer navigation.
 !evaluation/experiments/results/final_representative_evaluation_analysis/
-!evaluation/experiments/results/final_representative_evaluation_analysis/report.md
-!evaluation/experiments/results/final_representative_evaluation_analysis/figures/
-!evaluation/experiments/results/final_representative_evaluation_analysis/figures/*.png
+!evaluation/experiments/results/final_representative_evaluation_analysis/**/*.md
+!evaluation/experiments/results/final_representative_evaluation_analysis/**/*.csv
+!evaluation/experiments/results/final_representative_evaluation_analysis/**/*.png
 
 !evaluation/experiments/results/or_placement_sensitivity_analysis/
-!evaluation/experiments/results/or_placement_sensitivity_analysis/report.md
-!evaluation/experiments/results/or_placement_sensitivity_analysis/figures/
-!evaluation/experiments/results/or_placement_sensitivity_analysis/figures/*.png
+!evaluation/experiments/results/or_placement_sensitivity_analysis/**/*.md
+!evaluation/experiments/results/or_placement_sensitivity_analysis/**/*.csv
+!evaluation/experiments/results/or_placement_sensitivity_analysis/**/*.png
 
 !evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/
-!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/report.md
-!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/figures/
-!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/figures/*.png
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/*.md
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/*.csv
+!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/*.png
 
 !evaluation/experiments/results/estimator_sensitivity_analysis/
-!evaluation/experiments/results/estimator_sensitivity_analysis/report.md
-!evaluation/experiments/results/estimator_sensitivity_analysis/figures/
-!evaluation/experiments/results/estimator_sensitivity_analysis/figures/*.png
+!evaluation/experiments/results/estimator_sensitivity_analysis/**/*.md
+!evaluation/experiments/results/estimator_sensitivity_analysis/**/*.csv
+!evaluation/experiments/results/estimator_sensitivity_analysis/**/*.png
 
 !evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/
-!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/report.md
-!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/figures/
-!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/figures/*.png
-
-!evaluation/experiments/results/estimator_sensitivity_analysis/
-!evaluation/experiments/results/estimator_sensitivity_analysis/estimator_sensitivity_report.md
-!evaluation/experiments/results/estimator_sensitivity_analysis/figures/
-!evaluation/experiments/results/estimator_sensitivity_analysis/figures/*.png
-
-# Allow nested curated report figures, including per-trace subfolders.
-!evaluation/experiments/results/final_representative_evaluation_analysis/**/*.png
-!evaluation/experiments/results/or_placement_sensitivity_analysis/**/*.png
-!evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/*.png
-!evaluation/experiments/results/estimator_sensitivity_analysis/**/*.png
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/**/*.md
+!evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/**/*.csv
 !evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/**/*.png
+
+# Keep curated snapshots lightweight: PNG/CSV/Markdown are tracked; PDF duplicates and raw timeline samples stay local.
+evaluation/experiments/results/final_representative_evaluation_analysis/**/*.pdf
+evaluation/experiments/results/final_representative_evaluation_analysis/**/dcgmi_timeline_samples.csv
+
+evaluation/experiments/results/or_placement_sensitivity_analysis/**/*.pdf
+
+evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/*.pdf
+evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/**/dcgmi_timeline_samples.csv
+
+evaluation/experiments/results/estimator_sensitivity_analysis/**/*.pdf
+
+evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/**/*.pdf
