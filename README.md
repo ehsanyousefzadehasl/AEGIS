@@ -21,16 +21,14 @@ This repository contains the AEGIS scheduler, workload specifications, evaluatio
 
 For paper and artifact review, start from the curated entry points below.
 
-| Document | Description |
-|---|---|
-| [`evaluation/PAPER_ARTIFACT_WORKFLOW.md`](evaluation/PAPER_ARTIFACT_WORKFLOW.md) | Overview of the profiling, threshold-window, and paper-artifact workflow. |
-| [`evaluation/paper_artifacts/README.md`](evaluation/paper_artifacts/README.md) | Curated index of paper-facing tables, figures, and evidence files. |
-| [`evaluation/paper_artifacts/claims_and_evidence.md`](evaluation/paper_artifacts/claims_and_evidence.md) | Mapping from paper claims to supporting tables and figures. |
-| [`evaluation/experiments/results/final_representative_evaluation_analysis/report.md`](evaluation/experiments/results/final_representative_evaluation_analysis/report.md) | Final representative evaluation across the Philly, Saturn, and Venus traces. |
-| [`evaluation/experiments/results/or_placement_sensitivity_analysis/report.md`](evaluation/experiments/results/or_placement_sensitivity_analysis/report.md) | Placement-policy sensitivity analysis. |
-| [`evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/report.md`](evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/report.md) | Runtime-pressure threshold ablation. |
-| [`evaluation/experiments/results/estimator_sensitivity_analysis/estimator_sensitivity_report.md`](evaluation/experiments/results/estimator_sensitivity_analysis/estimator_sensitivity_report.md) | Memory-estimator sensitivity analysis. |
-| [`evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/report.md`](evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/report.md) | Threshold sweep report. |
+- [Artifact workflow](evaluation/PAPER_ARTIFACT_WORKFLOW.md): overview of the profiling, threshold-window, and paper-artifact workflow.
+- [Paper artifact index](evaluation/paper_artifacts/README.md): curated index of paper-facing tables, figures, and evidence files.
+- [Claims and evidence](evaluation/paper_artifacts/claims_and_evidence.md): mapping from paper claims to supporting tables and figures.
+- [Final representative evaluation](evaluation/experiments/results/final_representative_evaluation_analysis/report.md): cross-trace evaluation on Philly, Saturn, and Venus.
+- [Placement sensitivity](evaluation/experiments/results/or_placement_sensitivity_analysis/report.md): comparison of placement choices.
+- [Runtime-pressure threshold ablation](evaluation/experiments/results/runtime_pressure_threshold_ablation_combined_analysis/report.md): effect of the runtime pressure gates.
+- [Memory-estimator sensitivity](evaluation/experiments/results/estimator_sensitivity_analysis/estimator_sensitivity_report.md): impact of memory-estimator choice.
+- [Threshold sweep](evaluation/threshold_sensitivity/reports/threshold_sweep_v1_fixed_clean/report.md): threshold trade-off report.
 
 ## Reproducing analyses
 
