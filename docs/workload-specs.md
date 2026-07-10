@@ -121,7 +121,9 @@ These fields summarize GPU activity from a profiling run.
 
 ### Lucid-style placement
 
-Lucid-style placement uses class labels derived from profiling or classification. Workload specifications may include fields such as:
+Lucid-style placement assigns each workload to a sharing-sensitivity class and uses that class during placement. In the Lucid workflow used in this repository, the training data for the Lucid classifier is built from pairwise collocation experiments: workloads are run together, their observed sharing behavior is labeled, and those labels form the dataset used to train the classifier. The classifier is then used to assign Lucid-compatible labels to unseen workloads.
+
+The Lucid pairwise calibration data, labels, and classifier-derived metadata are kept under `evaluation/lucid` - [check this notebooks](../evaluation/lucid/notebooks/lucid_classifier_inspection.ipynb) - and are used by the Lucid-compatible baseline configuration.
 
 ```yaml
 profile:
@@ -130,7 +132,6 @@ profile:
   lucid_label_source: predicted_classifier_lucid_faithful
 ```
 
-The exact fields depend on the Lucid-compatible baseline configuration being used.
 
 ## Adding a new workload
 
