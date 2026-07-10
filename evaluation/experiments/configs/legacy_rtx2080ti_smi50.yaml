@@ -23,7 +23,7 @@ recovery:
   max_step_mib: 8192
 risk:
   runtime_pressure_backend: nvidia_smi
-  gpu_utilization_threshold: 70.0
+  gpu_utilization_threshold: 50.0
   smact_threshold: 0.65
   smocc_threshold: 0.35
   drama_threshold: 0.5
@@ -36,3 +36,5 @@ gpu_ids:
 - 5
 - 6
 - 7
+runtime_pressure_backend: nvidia_smi
+gpu_utilization_threshold: 50.0

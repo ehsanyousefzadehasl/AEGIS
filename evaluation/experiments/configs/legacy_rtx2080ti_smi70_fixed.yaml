@@ -36,3 +36,5 @@ gpu_ids:
 - 5
 - 6
 - 7
+runtime_pressure_backend: nvidia_smi
+gpu_utilization_threshold: 70.0
