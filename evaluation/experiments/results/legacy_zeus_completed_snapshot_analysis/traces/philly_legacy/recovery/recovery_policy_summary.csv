@@ -1,0 +1,5 @@
+trace_name,run_label,submitted_job_count,jobs_with_failed_attempts,recovered_job_count,recovery_stopped_job_count,failed_attempt_count,recovered_attempt_count,recovery_queue_wait_mean_s,recovery_queue_wait_p95_s,recovery_queue_wait_max_s,recovery_gap_mean_s,recovery_gap_p95_s,total_failed_runtime_s,total_recovery_queue_wait_s,total_recovery_gap_s,total_recovery_overhead_s
+philly_legacy,exclusive,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+philly_legacy,fixed_smi70,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+philly_legacy,fixed_smi80,60,0,0,0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+philly_legacy,memory_only_interference,60,1,1,0,1,1,5805.777193,5805.777193,5805.777193,5807.975099,5807.975099,47.654096,5805.777193,5807.975099,5855.629195
