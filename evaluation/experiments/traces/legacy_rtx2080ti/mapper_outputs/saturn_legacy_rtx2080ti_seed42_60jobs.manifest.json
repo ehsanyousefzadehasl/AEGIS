@@ -38,7 +38,7 @@
   "inputs": {
     "source_trace_path": "/data/eyousefzadeh/dl-trace-mapper/data/raw/helios/saturn/cluster_log.csv",
     "source_trace_sha256": "f991918de22dd88fd87ed4f4d8b3b8beb34a19a57007037298c08e48d56c2377",
-    "workload_catalog_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_inputs/legacy_11gb_workload_catalog.csv",
+    "workload_catalog_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_inputs/legacy_11gb_workload_catalog.csv",
     "workload_catalog_sha256": "f752e6b085f6d4805a49ca97cc0f4e3d877092206c507a944194e8aa90f1ab6e"
   },
   "manifest_version": 1,
@@ -92,11 +92,11 @@
     }
   },
   "output": {
-    "exclusive_job_metrics_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.exclusive_jobs.csv",
-    "exclusive_summary_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.exclusive_summary.json",
-    "execution_trace_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.execution.csv",
+    "exclusive_job_metrics_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.exclusive_jobs.csv",
+    "exclusive_summary_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.exclusive_summary.json",
+    "execution_trace_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.execution.csv",
     "execution_trace_sha256": "f68872d3e1d2344aca9d16f2a13de531a1301f2f8717b6891fadbf48209b6b7d",
-    "trace_path": "/data/eyousefzadeh/AEGIS/evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.csv",
+    "trace_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.csv",
     "trace_sha256": "b6d00204ba355842b97e13093adcd5c7ed7b4af67c04d313195b7933c1daec17"
   },
   "selection": {
