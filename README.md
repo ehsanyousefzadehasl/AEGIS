@@ -4,7 +4,22 @@ AEGIS is a monitoring-guided GPU training scheduler for improving GPU cluster th
 
 This repository contains the AEGIS scheduler, workload specifications, evaluation runners, and curated paper artifacts.
 
+## Quickstart
+
+To run AEGIS locally, start the scheduler in one terminal and submit workload specifications from another:
+
+```bash
+python main.py
+```
+
+```bash
+python submit.py --task evaluation/workloads/training/specs/yaml/mnist_bs32_1gpu.yaml
+```
+
+See the [quickstart guide](docs/quickstart.md) for configuration notes, workload-spec examples, and policy-dependent fields.
+
 ## What is included
+
 
 | Area | Location |
 |---|---|
