@@ -1,0 +1,15 @@
+{
+  "arrival_span_s": 38480.0,
+  "jct_mean_s": 3233.360333333333,
+  "jct_p50_s": 2497.340000000001,
+  "jct_p95_s": 8291.986500000003,
+  "jct_p99_s": 8602.1165,
+  "job_count": 60,
+  "makespan_s": 44211.21,
+  "scheduling_model": "arrival_order_earliest_available_exclusive_gpus",
+  "server_gpu_count": 8,
+  "waiting_mean_s": 747.7060000000001,
+  "waiting_p50_s": 0.0,
+  "waiting_p95_s": 3980.0894999999946,
+  "waiting_p99_s": 5681.170899999999
+}

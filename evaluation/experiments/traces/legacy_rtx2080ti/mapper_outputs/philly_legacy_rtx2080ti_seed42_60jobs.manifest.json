@@ -1,0 +1,203 @@
+{
+  "configuration": {
+    "config_path": "dl-trace-mapper/examples/configs/local/philly_legacy_rtx2080ti_seed42_60jobs.yaml",
+    "duration_matching": "nearest_quantile",
+    "gpu_demand_matching": "exact",
+    "maximum_peak_memory_per_gpu_mib": null,
+    "minimum_jobs_by_gpu_count": {},
+    "preserve_arrivals": true,
+    "requested_job_count": 60,
+    "seed": 42,
+    "selection_method": "representative",
+    "simulation": {
+      "enabled": true,
+      "server_gpu_count": 8
+    },
+    "source_cluster": "philly",
+    "source_format": "philly",
+    "supported_gpu_counts": [
+      1
+    ],
+    "unsupported_gpu_policy": "filter"
+  },
+  "exclusive_simulation": {
+    "arrival_span_s": 10593.0,
+    "jct_mean_s": 4641.319166666667,
+    "jct_p50_s": 2877.0200000000004,
+    "jct_p95_s": 13307.721500000001,
+    "jct_p99_s": 15589.182899999994,
+    "job_count": 60,
+    "makespan_s": 27003.589999999997,
+    "scheduling_model": "arrival_order_earliest_available_exclusive_gpus",
+    "server_gpu_count": 8,
+    "waiting_mean_s": 2155.6648333333337,
+    "waiting_p50_s": 0.0,
+    "waiting_p95_s": 9488.220000000001,
+    "waiting_p99_s": 10453.338999999998
+  },
+  "inputs": {
+    "source_trace_path": "dl-trace-mapper/data/raw/philly/cluster_job_log",
+    "source_trace_sha256": "aedddbb94523e7ddf454284ce3f3211ce7175f16dd189e5f00195603c65472c6",
+    "workload_catalog_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_inputs/legacy_11gb_workload_catalog.csv",
+    "workload_catalog_sha256": "f752e6b085f6d4805a49ca97cc0f4e3d877092206c507a944194e8aa90f1ab6e"
+  },
+  "manifest_version": 1,
+  "mapping": {
+    "catalog_workload_count_after_memory_filter": 36,
+    "catalog_workload_count_before_memory_filter": 36,
+    "catalog_workload_count_excluded_by_memory": 0,
+    "mapped_job_count": 60,
+    "runtime_quantile_distance_max": 0.014043583535109039,
+    "runtime_quantile_distance_mean": 0.007021791767554493,
+    "runtime_quantile_distance_p50": 0.007021791767554478,
+    "runtime_quantile_distance_p95": 0.013559322033898313,
+    "unique_workload_count": 36,
+    "workload_usage": {
+      "efficientnet_cifar100_bs128_20e_1gpu": 1,
+      "efficientnet_cifar100_bs128_50e_1gpu": 2,
+      "efficientnet_cifar100_bs32_20e_1gpu": 2,
+      "efficientnet_cifar100_bs32_50e_1gpu": 1,
+      "efficientnet_cifar100_bs64_20e_1gpu": 1,
+      "efficientnet_cifar100_bs64_50e_1gpu": 2,
+      "efficientnet_imagenet_bs32_1gpu": 2,
+      "efficientnet_imagenet_bs64_1gpu": 1,
+      "inception_imagenet_bs32_1gpu": 1,
+      "inception_imagenet_bs64_1gpu": 2,
+      "mnist_bs32_1gpu": 2,
+      "mobilenet_cifar100_bs128_20e_1gpu": 1,
+      "mobilenet_cifar100_bs128_50e_1gpu": 2,
+      "mobilenet_cifar100_bs32_20e_1gpu": 1,
+      "mobilenet_cifar100_bs32_50e_1gpu": 2,
+      "mobilenet_cifar100_bs64_20e_1gpu": 2,
+      "mobilenet_cifar100_bs64_50e_1gpu": 2,
+      "mobilenet_imagenet_bs32_1gpu": 2,
+      "mobilenet_imagenet_bs64_1gpu": 1,
+      "resnet18_cifar100_bs128_20e_1gpu": 1,
+      "resnet18_cifar100_bs128_50e_1gpu": 2,
+      "resnet18_cifar100_bs32_20e_1gpu": 1,
+      "resnet18_cifar100_bs32_50e_1gpu": 1,
+      "resnet18_cifar100_bs64_20e_1gpu": 2,
+      "resnet18_cifar100_bs64_50e_1gpu": 2,
+      "resnet34_cifar100_bs128_20e_1gpu": 2,
+      "resnet34_cifar100_bs128_50e_1gpu": 2,
+      "resnet34_cifar100_bs32_20e_1gpu": 2,
+      "resnet34_cifar100_bs32_50e_1gpu": 2,
+      "resnet34_cifar100_bs64_20e_1gpu": 2,
+      "resnet34_cifar100_bs64_50e_1gpu": 2,
+      "resnet50_imagenet_bs32_1gpu": 2,
+      "resnet50_imagenet_bs64_1gpu": 2,
+      "unet_voc_1gpu": 2,
+      "vgg16_imagenet_bs32_1gpu": 2,
+      "xception_imagenet_bs32_1gpu": 1
+    }
+  },
+  "output": {
+    "exclusive_job_metrics_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/philly_legacy_rtx2080ti_seed42_60jobs.exclusive_jobs.csv",
+    "exclusive_summary_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/philly_legacy_rtx2080ti_seed42_60jobs.exclusive_summary.json",
+    "execution_trace_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/philly_legacy_rtx2080ti_seed42_60jobs.execution.csv",
+    "execution_trace_sha256": "b296b0d26c1d93b35449df63fc2ea488d80473db7fb1f8eebc0b429b51c28036",
+    "trace_path": "evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/philly_legacy_rtx2080ti_seed42_60jobs.csv",
+    "trace_sha256": "a005ff6aa74cb2455916cfd8f4571f05eca2ade97ed06c3db5e9733057f21fba"
+  },
+  "selection": {
+    "candidate_window_count": 1326,
+    "eligible_end_index_exclusive": 76055,
+    "eligible_job_count": 77287,
+    "eligible_start_index": 75995,
+    "first_source_job_id": "application_1513627406021_0116",
+    "last_source_job_id": "application_1513627406021_0279",
+    "minimum_jobs_by_gpu_count": {},
+    "original_first_submit_time_s": 9125453.0,
+    "original_last_submit_time_s": 9136046.0,
+    "representativeness": {
+      "acceptance_constraints": {
+        "maximum_gpu_fraction_deviation": 0.05,
+        "maximum_runtime_cdf_deviation": 0.1
+      },
+      "components": {
+        "burst_fraction_distance": 0.03194349200598634,
+        "gpu_demand_distance": 0.0,
+        "gpu_service_distance": 0.0,
+        "interarrival_distance": 0.0,
+        "runtime_cdf_distance": 0.01590759118609858
+      },
+      "selected_maximum_gpu_fraction_deviation": 0.0,
+      "selected_maximum_runtime_cdf_deviation": 0.019443330271153858,
+      "selected_profile": {
+        "duration_p50_s": 1038.0,
+        "duration_p95_s": 4699.199999999952,
+        "gpu_demand_fractions": {
+          "1": 1.0
+        },
+        "gpu_service_fractions": {
+          "1": 1.0
+        },
+        "interarrival_p50_s": 3.5,
+        "interarrival_p95_s": 600.0,
+        "job_count": 60,
+        "runtime_cdf": {
+          "under_10m": 0.38333333333333336,
+          "under_1d": 1.0,
+          "under_1h": 0.8166666666666667,
+          "under_6h": 0.9666666666666667
+        },
+        "supported_gpu_counts": [
+          1
+        ],
+        "total_gpu_service_s": 161128.0,
+        "zero_interarrival_fraction": 0.13333333333333333
+      },
+      "target_profile": {
+        "duration_p50_s": 1101.0,
+        "duration_p95_s": 17451.399999999965,
+        "gpu_demand_fractions": {
+          "1": 1.0
+        },
+        "gpu_service_fractions": {
+          "1": 1.0
+        },
+        "interarrival_p50_s": 7.0,
+        "interarrival_p95_s": 600.0,
+        "job_count": 77287,
+        "runtime_cdf": {
+          "under_10m": 0.4004036901419385,
+          "under_1d": 0.9846545990916972,
+          "under_1h": 0.7972233363955128,
+          "under_6h": 0.9548953899103342
+        },
+        "supported_gpu_counts": [
+          1
+        ],
+        "total_gpu_service_s": 589094651.0,
+        "zero_interarrival_fraction": 0.08472317466068033
+      },
+      "total_score": 0.00716483151543382,
+      "weights": {
+        "burst_fraction": 0.05,
+        "gpu_demand": 0.25,
+        "gpu_service": 0.15,
+        "interarrival": 0.2,
+        "runtime_cdf": 0.35
+      }
+    },
+    "requested_job_count": 60,
+    "selected_arrival_span_s": 10593.0,
+    "selected_jobs_by_gpu_count": {
+      "1": 60
+    },
+    "selection_method": "best_representative_contiguous_eligible_window",
+    "source_job_count": 83140,
+    "supported_gpu_counts": [
+      1
+    ]
+  },
+  "source_counts": {
+    "eligible_job_count": 77287,
+    "normalized_job_count": 83140,
+    "unsupported_job_count": 5853
+  },
+  "tool": {
+    "name": "dl-trace-mapper",
+    "version": "0.1.0"
+  }
+}
