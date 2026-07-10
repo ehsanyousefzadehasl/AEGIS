@@ -1,0 +1,17 @@
+version: 1
+experiment_name: legacy_zeus_venus_gapfix600_fixed_smi80
+repetitions: 1
+runner:
+  base_config: evaluation/experiments/configs/legacy_rtx2080ti_smi80_fixed.yaml
+  results_dir: evaluation/experiments/results
+  delay_scale: 1.0
+  startup_wait_s: 10
+  eval_idle_exit_minutes: 120
+  run_timeout_minutes: 1440
+traces:
+- name: venus_gapfix600
+  csv: evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/venus_legacy_rtx2080ti_seed42_60jobs_gapfix600.execution.csv
+configurations:
+- label: fixed_smi80
+  policy: OR-MAGM
+  estimator: None

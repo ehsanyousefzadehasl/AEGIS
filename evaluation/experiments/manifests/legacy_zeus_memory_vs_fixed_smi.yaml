@@ -1,0 +1,38 @@
+version: 1
+experiment_name: legacy_zeus_memory_vs_fixed_smi
+repetitions: 1
+runner:
+  base_config: evaluation/experiments/configs/legacy_rtx2080ti_memory_only.yaml
+  results_dir: evaluation/experiments/results
+  delay_scale: 1.0
+  startup_wait_s: 10
+  eval_idle_exit_minutes: 30
+  run_timeout_minutes: 1440
+traces:
+- name: saturn_legacy
+  csv: evaluation/experiments/traces/legacy_rtx2080ti/mapper_outputs/saturn_legacy_rtx2080ti_seed42_60jobs.execution.csv
+configurations:
+- label: exclusive
+  policy: exclusive
+  estimator: None
+- label: memory_only_interference
+  policy: OR-MAGM
+  estimator: None
+- label: fixed_smi80
+  policy: OR-MAGM
+  estimator: None
+- label: fixed_smi70
+  policy: OR-MAGM
+  estimator: None
+- label: fixed_smi60
+  policy: OR-MAGM
+  estimator: None
+- label: fixed_smi50
+  policy: OR-MAGM
+  estimator: None
+- label: horus_baseline
+  policy: HORUS
+  estimator: horus
+- label: lucid_baseline
+  policy: LUCID
+  estimator: None
