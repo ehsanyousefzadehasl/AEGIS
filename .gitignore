@@ -158,3 +158,15 @@ evaluation/profiling/solo/legacy_rtx2080ti/manifests/remaining/
 evaluation/profiling/solo/legacy_rtx2080ti/manifests/retry_failed_1gpu.txt
 evaluation/profiling/solo/legacy_rtx2080ti/manifests/shortlist_1gpu.txt
 evaluation/profiling/solo/legacy_rtx2080ti/manifests/shortlist_2gpu.txt
+
+# Legacy RTX 2080 Ti Lucid calibration raw outputs.
+evaluation/lucid/legacy_rtx2080ti/*_pairwise_runner.log
+evaluation/lucid/legacy_rtx2080ti/results/pairwise_runs/
+evaluation/lucid/legacy_rtx2080ti/results/solo_runs/
+# Keep curated legacy RTX 2080 Ti Lucid calibration metadata.
+!evaluation/lucid/legacy_rtx2080ti/
+!evaluation/lucid/legacy_rtx2080ti/manifests/
+!evaluation/lucid/legacy_rtx2080ti/manifests/**/*.csv
+!evaluation/lucid/legacy_rtx2080ti/results/
+!evaluation/lucid/legacy_rtx2080ti/results/lucid_*.csv
+!evaluation/lucid/legacy_rtx2080ti/results/pairwise_results.csv
