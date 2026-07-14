@@ -1,6 +1,10 @@
 # AEGIS
 
-AEGIS is a monitoring-guided GPU training scheduler for improving GPU cluster throughput through controlled job collocation. The scheduler separates two decisions that are often conflated: memory feasibility is handled as a hard admission constraint, while runtime interference risk is estimated from short GPU-activity-anchored telemetry windows.
+<p align="center">
+  <img src="docs/assets/aegis.png" alt="AEGIS logo" width="360">
+</p>
+
+AEGIS is a server-scale runtime scheduling system for controlled collocation of deep learning training workloads on shared multi-GPU servers. It separates memory feasibility from runtime-pressure eligibility, temporarily withholds GPUs after each placement until meaningful GPU activity is observed, and uses activity-anchored telemetry to decide when further collocation is appropriate. AEGIS supports configurable memory inputs and placement policies, and includes OOM-aware recovery that retries failed jobs under progressively safer memory conditions.
 
 This repository contains the AEGIS scheduler, workload specifications, evaluation runners, and curated paper artifacts.
 
